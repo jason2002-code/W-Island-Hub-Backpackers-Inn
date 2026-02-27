@@ -1,0 +1,37 @@
+ /* Custom Styles & Utilities */
+        body { overflow-x: hidden; }
+        
+        /* Loading Screen */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; z-index: 9999;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+        }
+        .w-logo {
+            font-family: 'Playfair Display', serif; font-size: 5rem; color: #0ea5e9; border: 4px solid #0ea5e9;
+            width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+        }
+
+        /* Marquee Animation */
+        .marquee-container { overflow: hidden; white-space: nowrap; position: relative; }
+        .marquee-content { display: inline-block; animation: scroll-left 25s linear infinite; }
+        .marquee-content.reverse { animation: scroll-right 25s linear infinite; }
+        @keyframes scroll-right { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+        .marquee-item { display: inline-block; width: 300px; height: 200px; margin-right: 1rem; border-radius: 0.5rem; overflow: hidden; cursor: pointer; position: relative; }
+        .marquee-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+        .marquee-item:hover img { transform: scale(1.1); }
+
+        /* Page Transitions */
+        .page-section { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
+        .page-section.active { display: block; opacity: 1; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+        
+        /* Dashboard Card Hover */
+        .dash-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .dash-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        #admin-sidebar { transition: transform 0.3s ease-in-out; }
