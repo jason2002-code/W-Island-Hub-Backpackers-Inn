@@ -15,6 +15,9 @@ if (session_status() == PHP_SESSION_NONE) {
         <!-- ================= BOOKING SUMMARY AND ROOMS PAGE================= -->
          <?php include "user/book_room.php"; ?>
          <!-- ================= ROOMS PAGE================= -->
+          
+
+ 
 
          <?php include "user/rooms.php"; ?>
 
@@ -22,11 +25,14 @@ if (session_status() == PHP_SESSION_NONE) {
          <?php include "user/contact.php"; ?>
        <!-- ================= ABOUT PAGE================= -->
          <?php include "user/about.php"; ?>
+
          <!-- ================= REGISTER AND LOGIN PAGE================= -->   
-         <?php include "user/register.php"; ?>
-          <?php include "user/login.php"; ?>
+        <?php include "user/register.php"; ?>
+        <?php include "user/login.php"; ?>
 
+      
 
+ 
        </main>
      
         <!-- ================= FOOTER ================= -->

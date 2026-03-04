@@ -1,6 +1,6 @@
 <?php
 if (session_status() == PHP_SESSION_NONE) {
-    session_start();
+   session_start();
 }
 
 // Store the user's role before destroying the session
@@ -11,10 +11,10 @@ session_destroy();
 
 // Redirect based on user role
 if ($userRole === 'admin') {
-    // Admin logout - redirect to main site (index.php)
+-   // Admin logout - redirect to main site (index.php)
     header("Location: index.php");
 } else {
     // Regular user logout - redirect to index.php (user dashboard/login)
     header("Location: index.php");
 }
-exit;
+-exit;

@@ -53,13 +53,16 @@ function addRoom() {
     
     $data = json_decode(file_get_contents('php://input'), true);
     
+    // Debug: Log the received data
+    error_log("Received data: " . print_r($data, true));
+    
     $name = $data['name'] ?? null;
     $type = $data['type'] ?? null;
     $price = $data['price'] ?? null;
     $description = $data['description'] ?? null;
     $image = $data['image'] ?? 'assets/image/rooms/default.jpg';
     $capacity = $data['capacity'] ?? 2;
-    $amenities = $data['amenities'] ?? '';
+    $amenities = $data['amenities'] ?? null;
     
     if (!$name || !$type || !$price) {
         echo json_encode(['success' => false, 'message' => 'Name, type and price are required']);
@@ -67,8 +70,22 @@ function addRoom() {
     }
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO rooms (name, type, price, description, image, capacity, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')");
-        $stmt->execute([$name, $type, $price, $description, $image, $capacity, $amenities]);
+        // Check if status column exists
+        $stmt = $pdo->query("DESCRIBE rooms");
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $hasStatus = in_array('status', $columns);
+        
+        error_log("Room columns: " . print_r($columns, true));
+        
+        if ($hasStatus) {
+            $sql = "INSERT INTO rooms (name, type, price, description, image, capacity, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$name, $type, $price, $description, $image, $capacity, $amenities]);
+        } else {
+            $sql = "INSERT INTO rooms (name, type, price, description, image, capacity, amenities) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$name, $type, $price, $description, $image, $capacity, $amenities]);
+        }
         
         echo json_encode(['success' => true, 'message' => 'Room added successfully', 'id' => $pdo->lastInsertId()]);
         

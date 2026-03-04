@@ -91,8 +91,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 <a onclick="showAdminSection('manage-users'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-users w-5"></i> Users
                 </a>
-                <a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+<a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-comment-dots w-5"></i> Reports/Feedback
+                </a>
+                <a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+                    <i class="fas fa-images w-5"></i> Carousel/Sliders
                 </a>
             </nav>
 
@@ -145,7 +148,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 <?php include 'manage_bookings.php'; ?>
                 <?php include 'manage_rooms.php'; ?>
                 <?php include 'manage_users.php'; ?>
-                <?php include 'reports.php'; ?>
+<?php include 'reports.php'; ?>
+                <?php include 'manage_sliders.php'; ?>
             </div>
         </div>
     </div>
@@ -166,7 +170,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 'manage-bookings': 'Booking Management',
                 'manage-rooms': 'Room Inventory',
                 'manage-users': 'User Management',
-                'manage-reports': 'Guest Feedback'
+'manage-reports': 'Guest Feedback',
+                'manage-sliders': 'Carousel & Sliders'
             };
             document.getElementById('admin-page-title').innerText = titles[sectionId] || 'Admin Panel';
         }

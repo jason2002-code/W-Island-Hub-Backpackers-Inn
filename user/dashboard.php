@@ -1,6 +1,7 @@
 
  <!-- ================= HOME PAGE ================= -->
         <div id="home" class="page-section active">
+            
             <!-- Hero Carousel Section -->
             <div id="hero-carousel" class="relative h-[85vh] w-full overflow-hidden bg-brand-dark group">
                 <!-- Slides Container -->

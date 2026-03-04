@@ -15,6 +15,7 @@
                     <a onclick="router('about')" class="cursor-pointer hover:text-brand-blue transition font-medium">About</a>
                     <a onclick="router('contact')" class="cursor-pointer hover:text-brand-blue transition font-medium">Contact</a>
                     
+                   
                     <div id="auth-buttons" class="flex items-center">
                         <!-- Injected via JS based on auth state -->
                     </div>

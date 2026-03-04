@@ -18,7 +18,7 @@
                         </div>
                     </div>
                     <div class="rounded-2xl overflow-hidden shadow-2xl">
-                         <img src="https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Interior">
+<img src="assets/image/background.jpg" alt="Interior">
                     </div>
                 </div>
                 

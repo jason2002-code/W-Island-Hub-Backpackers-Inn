@@ -23,7 +23,7 @@
                 type: "Dorm", 
                 price: 15, 
                 capacity: 1, 
-                image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                image: "assets/image/background.jpg",
                 desc: "Cozy bunk in a mixed dorm with A/C and locker.",
                 amenities: ["WiFi", "A/C", "Shared Bath", "Locker"],
                 rating: 4.5
@@ -34,7 +34,7 @@
                 type: "Standard", 
                 price: 45, 
                 capacity: 2, 
-                image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                image: "assets/image/background.jpg",
                 desc: "Private room with queen bed and garden view.",
                 amenities: ["WiFi", "A/C", "Private Bath", "TV"],
                 rating: 4.7
@@ -45,7 +45,7 @@
                 type: "Deluxe", 
                 price: 85, 
                 capacity: 2, 
-                image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                image: "assets/image/background.jpg",
                 desc: "Premium room with balcony overlooking the sea.",
                 amenities: ["WiFi", "A/C", "Bath", "Balcony", "Breakfast"],
                 rating: 4.9
@@ -56,7 +56,7 @@
                 type: "Family", 
                 price: 120, 
                 capacity: 4, 
-                image: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+                image: "assets/image/background.jpg",
                 desc: "Spacious suite perfect for families or groups.",
                 amenities: ["WiFi", "Kitchenette", "Living Area", "2 Baths"],
                 rating: 4.8
@@ -67,20 +67,20 @@
         appState.rooms = defaultRooms;
 
         const marqueeImages = [
-            "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=400&q=80",
-            "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=400&q=80",
-            "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?auto=format&fit=crop&w=400&q=80",
-            "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=400&q=80",
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80",
-            "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=400&q=80"
+            "assets/image/background.jpg",
+            "assets/image/background.jpg",
+            "assets/image/background.jpg",
+            "assets/image/background.jpg",
+            "assets/image/background.jpg",
+            "assets/image/background.jpg"
         ];
         
         // --- HERO CAROUSEL LOGIC ---
         const heroSlides = [
-            "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80", // Pool
-            "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80", // Room
-            "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80", // Family Room
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"  // Beach
+            "assets/image/background.jpg",
+            "assets/image/background.jpg",
+            "assets/image/background.jpg",
+            "assets/image/background.jpg"
         ];
         
         let currentSlideIdx = 0;
@@ -274,7 +274,7 @@
             `).join('');
         }
 
-        // Handle client-side routing and page navigation
+// Handle client-side routing and page navigation
         function router(pageId) {
             // Close mobile menu if open
             const menu = document.getElementById('mobile-menu');
@@ -302,19 +302,20 @@
 
             // Logic triggers based on page
             if (pageId === 'rooms') renderRooms();
+
             
             // Navbar visibility
             const nav = document.getElementById('navbar');
             const footer = document.getElementById('main-footer');
         }
 
-        // Update the authentication UI based on user state
+// Update the authentication UI based on user state
         function updateAuthUI() {
             const container = document.getElementById('auth-buttons');
             const mobileContainer = document.getElementById('mobile-auth-buttons');
             
             let html = '';
-        if (appState.currentUser) {
+        if (appState.currentUser) {            
                 const dashboardLink = appState.currentUser.role === 'admin' 
                     ? `<a href="admin/dashboard.php" class="text-sm font-bold mr-2 cursor-pointer text-brand-blue block md:inline mb-2 md:mb-0">Admin Panel</a>` 
                     : `<a href="user/profile.php" class="text-sm font-bold mr-2 cursor-pointer text-brand-blue block md:inline mb-2 md:mb-0">My Profile</a>`;
@@ -326,7 +327,7 @@
                         <button onclick="logout()" class="text-sm border border-red-500 text-red-500 px-3 py-1 rounded hover:bg-red-50 transition w-full md:w-auto">Logout</button>
                     </div>
                 `;
-            } else {
+            } else {  
                 html = `
                     <div class="flex items-center md:space-x-4">
                         <a onclick="router('login')" class="text-brand-dark hover:text-brand-blue font-medium cursor-pointer px-4 transition">Login</a>
@@ -432,13 +433,15 @@
             updateIndicator('req-special', hasSpecial);
         });
 
-        // Log out the current user
-        function logout() {
-            appState.currentUser = null;
-            saveState(); // Clears sessionStorage
-            // Redirect to logout script to destroy server session and then redirect to homepage
+// Log out the current user
+      function logout() {
+              appState.currentUser = null;
+              saveState(); // Clears sessionStorage
+              // Set flag to indicate user just logged out (for redirect handling)
+              sessionStorage.setItem('w_justLoggedOut', 'true');
+              // Redirect to logout.php for server-side session cleanup
             window.location.href = 'logout.php';
-        }
+      }
 
         // --- BOOKING LOGIC ---
 

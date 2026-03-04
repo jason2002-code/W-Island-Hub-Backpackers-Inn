@@ -111,20 +111,31 @@ function createBooking($data) {
 
     $userId = $data['user_id'] ?? null;
     $roomId = $data['room_id'] ?? null;
-    $checkIn = $data['checkIn'] ?? null;
-    $checkOut = $data['checkOut'] ?? null;
+    $checkIn = $data['checkIn'] ?? $data['check_in'] ?? null;
+    $checkOut = $data['checkOut'] ?? $data['check_out'] ?? null;
     $total = $data['total'] ?? 0;
+    $nights = $data['nights'] ?? 1;
+    $guestName = $data['guestName'] ?? $data['guest_name'] ?? 'Guest';
+    $paymentMethod = $data['paymentMethod'] ?? $data['payment_method'] ?? 'Pay at Hotel';
     
     if (!$userId || !$roomId || !$checkIn || !$checkOut) {
-        echo json_encode(['success' => false, 'message' => 'Missing required booking details']);
+        echo json_encode(['success' => false, 'message' => 'Missing required booking details. user_id: ' . $userId . ', room_id: ' . $roomId]);
+        exit;
+    }
+
+    // Validate that room exists
+    $stmt = $pdo->prepare("SELECT id FROM rooms WHERE id = ?");
+    $stmt->execute([$roomId]);
+    if ($stmt->rowCount() === 0) {
+        echo json_encode(['success' => false, 'message' => 'Room not found with ID: ' . $roomId]);
         exit;
     }
 
     try {
         $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
         
-        $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, check_in, check_out, total_price, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'Pending', NOW())");
-        $stmt->execute([$refId, $userId, $roomId, $checkIn, $checkOut, $total]);
+        $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())");
+        $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $total, $paymentMethod]);
         
         echo json_encode([
             'success' => true, 

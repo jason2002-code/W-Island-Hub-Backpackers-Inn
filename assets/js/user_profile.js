@@ -1,0 +1,180 @@
+// ================= USER PROFILE (GUEST MANAGEMENT) =================
+        function renderUserProfile(isEditing = false) {
+            const user = appState.currentUser;
+            
+            // 1. Render Profile Card (View or Edit mode)
+            let profileHTML = '';
+            if(isEditing) {
+                profileHTML = `
+                    <form onsubmit="saveProfile(event)" class="text-left space-y-3">
+                        <h3 class="text-lg font-bold text-brand-dark mb-4 text-center">Edit Profile</h3>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Full Name</label>
+                            <input type="text" id="edit-name" value="${user.name}" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Email Address</label>
+                            <input type="email" id="edit-email" value="${user.email}" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">New Password <span class="text-gray-400 text-[10px]">(leave blank to keep)</span></label>
+                            <input type="password" id="edit-pass" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none" placeholder="••••••••">
+                        </div>
+                        <div class="flex gap-2 mt-6">
+                            <button type="submit" class="flex-1 bg-brand-blue text-white py-2 rounded-lg text-sm font-bold hover:bg-sky-600 transition">Save</button>
+                            <button type="button" onclick="renderUserProfile(false)" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition">Cancel</button>
+                        </div>
+                    </form>
+                `;
+            } else {
+                profileHTML = `
+                    <div class="w-24 h-24 rounded-full bg-brand-blue text-white flex items-center justify-center text-3xl font-bold mx-auto mb-4">${user.name.charAt(0).toUpperCase()}</div>
+                    <h3 class="text-xl font-bold text-brand-dark">${user.name}</h3>
+                    <p class="text-gray-500 text-sm mb-4">${user.email}</p>
+                    <span class="px-3 py-1 bg-blue-50 text-brand-blue rounded-full text-xs font-bold uppercase tracking-wider">Guest Member</span>
+                    
+                    <button onclick="renderUserProfile(true)" class="mt-6 w-full border border-brand-blue text-brand-blue hover:bg-blue-50 py-2 rounded-lg transition font-medium text-sm">
+                        <i class="fas fa-user-edit mr-2"></i> Edit Profile
+                    </button>
+                    
+                    <hr class="my-6 border-gray-100">
+                    <button onclick="window.location.href = '../index.php'" class="w-full border border-brand-blue text-brand-blue hover:bg-blue-50 py-2 rounded-lg transition font-medium text-sm">
+                        <i class="fas fa-home mr-2"></i> Back to Dashboard
+                    </button>
+                `;
+            }
+            document.getElementById('profile-card-container').innerHTML = profileHTML;
+
+            const userBookings = appState.bookings.filter(b => b.userId === user.id).reverse();
+            const container = document.getElementById('user-bookings-container');
+            
+            if(userBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-bed text-4xl text-gray-200 mb-4"></i>
+                        <p class="text-gray-500 mb-4">You have no booking history.</p>
+                        <button onclick="router('rooms')" class="bg-brand-blue text-white px-6 py-2 rounded-lg font-medium">Explore Rooms</button>
+                    </div>`;
+            } else {
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        ${userBookings.map(b => {
+                            let statusColor = b.status === 'Confirmed' ? 'bg-green-100 text-green-700' : (b.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
+                            let cancelBtn = b.status === 'Pending' ? `<button onclick="cancelMyBooking('${b.id}')" class="text-sm text-red-500 hover:underline mt-2 inline-block">Cancel Booking</button>` : '';
+                            return `
+                                <div class="border border-gray-100 p-4 rounded-xl flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50 transition">
+                                    <div>
+                                        <div class="flex items-center gap-3 mb-1">
+                                            <h4 class="font-bold text-brand-dark text-lg">${b.roomName}</h4>
+                                            <span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${b.status}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-500"><i class="far fa-calendar-alt mr-1"></i> ${b.checkIn} to ${b.checkOut} (${b.nights} nights)</p>
+                                        <p class="text-xs text-gray-400 mt-1">Ref: ${b.id} • Booked on ${b.dateBooked}</p>
+                                        ${cancelBtn}
+                                    </div>
+                                    <div class="text-left md:text-right">
+                                        <p class="text-xs text-gray-500">Total Amount</p>
+                                        <p class="font-bold text-xl text-brand-blue">$${b.total}</p>
+                                        <p class="text-xs text-gray-400">Via ${b.paymentMethod}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        // Save profile changes to database
+        function saveProfile(e) {
+            e.preventDefault();
+            const newName = document.getElementById('edit-name').value.trim();
+            const newEmail = document.getElementById('edit-email').value.trim();
+            const newPass = document.getElementById('edit-pass').value.trim();
+
+            // First, update basic profile info to database
+            fetch('../actions/profile_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: appState.currentUser.id,
+                    name: newName,
+                    email: newEmail
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update local state
+                    appState.currentUser.name = newName;
+                    appState.currentUser.email = newEmail;
+                    saveState();
+                    
+                    // If password changed, update it too
+                    if (newPass && newPass.length >= 8) {
+                        return fetch('../actions/profile_action.php', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: appState.currentUser.id,
+                                current_password: '',
+                                new_password: newPass
+                            })
+                        });
+                    }
+                    return data;
+                } else {
+                    throw new Error(data.message);
+                }
+            })
+            .then(data => {
+                alert("Profile updated successfully!");
+                updateAuthUI();
+                renderUserProfile(false);
+            })
+            .catch(err => {
+                console.error('Profile update error:', err);
+                alert("Failed to update profile: " + err.message);
+            });
+        }
+
+        // Cancel booking - saves to database
+        function cancelMyBooking(bookingId) {
+            if(confirm("Are you sure you want to cancel this reservation?")) {
+                fetch('../actions/bookings_action.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: bookingId,
+                        status: 'Cancelled'
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update local state
+                        const idx = appState.bookings.findIndex(b => b.id === bookingId);
+                        if(idx > -1) {
+                            appState.bookings[idx].status = 'Cancelled';
+                        }
+                        saveState();
+                        renderUserProfile();
+                        alert("Booking cancelled successfully!");
+                    } else {
+                        alert("Failed to cancel booking: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Cancel booking error:', err);
+                    alert("Failed to cancel booking: " + err.message);
+                });
+            }
+        }
+
+        // Log out the current user
+        function logout() {
+            appState.currentUser = null;
+            saveState(); // Clears sessionStorage
+        
+            window.location.href = '../logout.php';
+        }

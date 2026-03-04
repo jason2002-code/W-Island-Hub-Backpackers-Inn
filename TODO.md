@@ -1,27 +1,17 @@
-# Task: Separate admin functions into separate PHP action files
+# TODO - Replace External Image URLs with Local Images
 
-## Plan:
-- [ ] Create actions/bookings_action.php - PHP functions for booking operations
-- [ ] Create actions/rooms_action.php - PHP functions for room operations  
-- [ ] Create actions/reports_action.php - PHP functions for reports/feedback operations
-- [ ] Update admin/dashboard.php to include all admin sections
-- [ ] Update admin/manage_bookings.php with booking management
-- [ ] Update admin/manage_rooms.php with room management
-- [ ] Update admin/reports.php with reports management
-- [ ] Update JavaScript to call new PHP endpoints
+## Tasks Completed
+- [x] Replace external image URL in user/about.php
+- [x] Replace external image URLs in assets/js/script.js (defaultRooms, marqueeImages, and heroSlides)
+- [x] Add carousel_sliders table to schema.sql
+- [x] Create actions/sliders_action.php (backend API)
+- [x] Create admin/manage_sliders.php (admin UI)
+- [x] Update admin/dashboard.php with slider management section
 
-## Files to Create:
-1. actions/bookings_action.php - getBookings, updateBookingStatus, deleteBooking
-2. actions/rooms_action.php - getRooms, addRoom, updateRoom, deleteRoom
-3. actions/reports_action.php - getReports, deleteReport
-
-## Files to Update:
-1. admin/dashboard.php - Include all admin section files
-2. admin/manage_bookings.php - Booking management UI
-3. admin/manage_rooms.php - Room management UI
-4. admin/reports.php - Reports management UI
-
-## Notes:
-- Follow the existing pattern from actions/users_action.php
-- Use database queries with PDO
-- Return JSON responses for AJAX calls
+## Summary
+1. **Image Replacement**: All external image URLs have been replaced with local images from `assets/image/background.jpg`
+2. **Admin Slider Management**: Added new "Carousel/Sliders" section in the admin dashboard that allows:
+   - Managing Hero Carousel images
+   - Managing Marquee Gallery images
+   - Adding, editing, deleting, and toggling slider visibility
+   - Using local images from assets/image/ folder

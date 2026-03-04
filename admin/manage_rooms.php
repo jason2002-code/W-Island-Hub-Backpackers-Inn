@@ -86,7 +86,7 @@
 
 <script>
 function loadRooms() {
-    fetch('actions/rooms_action.php')
+    fetch('../actions/rooms_action.php')
         .then(response => response.json())
         .then(data => {
             const container = document.getElementById('rooms-grid');
@@ -124,7 +124,7 @@ function showAddRoomModal() {
 }
 
 function editRoom(roomId) {
-    fetch('actions/rooms_action.php')
+    fetch('../actions/rooms_action.php')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -162,30 +162,41 @@ function saveRoom(event) {
     };
     
     const method = roomId ? 'PUT' : 'POST';
-    const url = roomId ? 'actions/rooms_action.php' : 'actions/rooms_action.php';
+    const url = roomId ? '../actions/rooms_action.php' : '../actions/rooms_action.php';
     
     if (roomId) {
         roomData.id = parseInt(roomId);
     }
+    
+    console.log("Sending data:", roomData);
     
     fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(roomData)
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            closeRoomModal();
-            loadRooms();
-        } else {
-            alert(data.message);
+    .then(response => {
+        console.log("Response status:", response.status);
+        return response.text();
+    })
+    .then(text => {
+        console.log("Raw response:", text);
+        try {
+            const data = JSON.parse(text);
+            if (data.success) {
+                alert(data.message);
+                closeRoomModal();
+                loadRooms();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch(e) {
+            alert('Parse error: ' + text);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error saving room');
+        alert('Error saving room: ' + error.message);
     });
 }
 
@@ -194,7 +205,7 @@ function deleteRoom(roomId) {
         return;
     }
     
-    fetch('actions/rooms_action.php?id=' + roomId, {
+    fetch('../actions/rooms_action.php?id=' + roomId, {
         method: 'DELETE'
     })
     .then(response => response.json())
