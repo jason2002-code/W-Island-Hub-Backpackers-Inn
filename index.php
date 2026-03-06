@@ -11,15 +11,11 @@ if (session_status() == PHP_SESSION_NONE) {
     <main class="pt-20 min-h-screen">
 
        <?php include "user/dashboard.php"; ?>
+      
 
         <!-- ================= BOOKING SUMMARY AND ROOMS PAGE================= -->
          <?php include "user/book_room.php"; ?>
-         <!-- ================= ROOMS PAGE================= -->
-          
-
- 
-
-         <?php include "user/rooms.php"; ?>
+      
 
        <!-- ================= CONTACT PAGE================= -->
          <?php include "user/contact.php"; ?>
@@ -42,6 +38,6 @@ if (session_status() == PHP_SESSION_NONE) {
         <!-- JAVASCRIPT LOGIC -->
       
        <script src="assets/js/script.js"></script>
-       <script src="assets/js/admin_dash.js"></script>
+     
     </body>
 </html>

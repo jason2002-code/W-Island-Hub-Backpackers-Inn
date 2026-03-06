@@ -7,7 +7,12 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    getBookings();
+    // Check if this is a count request
+    if (isset($_GET['action']) && $_GET['action'] === 'count') {
+        getBookingCounts();
+    } else {
+        getBookings();
+    }
 } elseif ($method === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     if (isset($input['action']) && $input['action'] === 'create') {
@@ -48,6 +53,7 @@ function getBookings() {
                 'id' => $b['id'],
                 'ref_id' => $b['ref_id'],
                 'guestName' => $b['guest_name'],
+                'guestEmail' => $b['guest_email'] ?? '',
                 'roomName' => $b['room_name'],
                 'checkIn' => $b['check_in'],
                 'checkOut' => $b['check_out'],
@@ -168,6 +174,46 @@ function deleteBooking() {
         $stmt->execute([$bookingId]);
         
         echo json_encode(['success' => true, 'message' => 'Booking deleted successfully']);
+        
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+function getBookingCounts() {
+    $pdo = getDB();
+    
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+    
+    try {
+        // Get count by status
+        $stmt = $pdo->prepare("
+            SELECT status, COUNT(*) as count 
+            FROM bookings 
+            GROUP BY status
+        ");
+        $stmt->execute();
+        
+        $counts = [
+            'total' => 0,
+            'pending' => 0,
+            'confirmed' => 0,
+            'cancelled' => 0
+        ];
+        
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $status = strtolower($row['status']);
+            $counts[$status] = (int)$row['count'];
+            $counts['total'] += (int)$row['count'];
+        }
+        
+        echo json_encode([
+            'success' => true, 
+            'counts' => $counts
+        ]);
         
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);

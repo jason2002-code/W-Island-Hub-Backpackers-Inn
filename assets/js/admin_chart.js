@@ -216,10 +216,13 @@
                         </div>
                     </div>
                 </div>
+                
             `;
             
             initCharts();
+            
         }
+        
 
         // Start App
         window.addEventListener('DOMContentLoaded', initAdmin);

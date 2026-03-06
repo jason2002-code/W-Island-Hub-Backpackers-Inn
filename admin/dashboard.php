@@ -3,13 +3,16 @@
 session_start();
 
 // Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    // Redirect to main site if not logged in as admin
-    header('Location: ../index.php');
-    exit;
+if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
+    // PHP session is valid - allow access
+    $isValidSession = true;
+} else {
+    // PHP session is not valid - check if JavaScript sessionStorage has admin data
+    // This handles the case where user clicked "Back to Main Site" which destroys PHP session
+    // but sessionStorage still has the user data
+    $isValidSession = false;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,6 +59,48 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
        .page-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+
+    <script>
+        // Check if admin session is valid via JavaScript (fallback when PHP session was destroyed)
+        const checkAdminSession = function() {
+            if (!<?php echo $isValidSession ? 'true' : 'false'; ?>) {
+                // PHP session is invalid - check sessionStorage
+                const storedUser = sessionStorage.getItem('w_currentUser') || localStorage.getItem('w_currentUser');
+                if (storedUser) {
+                    const user = JSON.parse(storedUser);
+                    if (user && user.role === 'admin') {
+                        // SessionStorage has admin data - reinitialize PHP session via AJAX
+                        fetch('../actions/reinit_session.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: user.id, role: user.role, name: user.name, email: user.email })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Session reinitialized - reload page
+                                window.location.reload();
+                            } else {
+                                // Failed to reinitialize - redirect to main site
+                                window.location.href = '../index.php';
+                            }
+                        })
+                        .catch(() => window.location.href = '../index.php');
+                        return true;
+                    }
+                }
+                // No valid session - redirect
+                window.location.href = '../index.php';
+                return true;
+            }
+            return false;
+        };
+        
+        // Run session check immediately
+        if (checkAdminSession()) {
+            // Redirecting...
+        }
+    </script>
 </head>
 <body class="bg-gray-50 text-slate-800 font-sans">
 
@@ -79,8 +124,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 <a onclick="showAdminSection('admin-overview'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition text-brand-purple bg-blue-50 font-medium">
                     <i class="fas fa-chart-pie w-5"></i> Dashboard
                 </a>
-                <a onclick="showAdminSection('manage-bookings'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+                <a onclick="showAdminSection('manage-bookings'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition" id="nav-bookings">
                     <i class="fas fa-calendar-alt w-5"></i> Bookings
+                    <span id="booking-count-badge" class="ml-auto bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
                 </a>
                 <a onclick="showAdminSection('manage-rooms'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-door-open w-5"></i> Rooms
@@ -91,7 +137,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 <a onclick="showAdminSection('manage-users'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-users w-5"></i> Users
                 </a>
-<a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+                <a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-comment-dots w-5"></i> Reports/Feedback
                 </a>
                 <a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
@@ -148,7 +194,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 <?php include 'manage_bookings.php'; ?>
                 <?php include 'manage_rooms.php'; ?>
                 <?php include 'manage_users.php'; ?>
-<?php include 'reports.php'; ?>
+                <?php include 'reports.php'; ?>
                 <?php include 'manage_sliders.php'; ?>
             </div>
         </div>
@@ -156,7 +202,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
     <!-- JAVASCRIPT LOGIC -->
     <script src="../assets/js/admin_chart.js"></script>
+   
     <script>
+        // Explicitly initialize admin dashboard after script loads
+        if (typeof initAdmin === 'function') {
+            initAdmin();
+        }
+        
         function showAdminSection(sectionId) {
             // Hide all sections
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
@@ -170,12 +222,30 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
                 'manage-bookings': 'Booking Management',
                 'manage-rooms': 'Room Inventory',
                 'manage-users': 'User Management',
-'manage-reports': 'Guest Feedback',
+                'manage-reports': 'Guest Feedback',
                 'manage-sliders': 'Carousel & Sliders'
             };
             document.getElementById('admin-page-title').innerText = titles[sectionId] || 'Admin Panel';
         }
+
+        // Load booking counts for sidebar badge
+        function loadBookingCounts() {
+            fetch('actions/bookings_action.php?action=count')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.counts.pending > 0) {
+                        const badge = document.getElementById('booking-count-badge');
+                        badge.textContent = data.counts.pending;
+                        badge.classList.remove('hidden');
+                    }
+                })
+                .catch(error => console.error('Error loading booking counts:', error));
+        }
+
+        // Load counts on page load
+        document.addEventListener('DOMContentLoaded', loadBookingCounts);
     </script>
-    
+   
+  
 </body>
 </html>

@@ -34,7 +34,7 @@
 
 <script>
 function loadUsers() {
-    fetch('actions/users_action.php')
+    fetch('../actions/users_action.php')
         .then(response => response.json())
         .then(data => {
             const tbody = document.getElementById('users-table-body');
@@ -72,7 +72,7 @@ function deleteUser(userId) {
         return;
     }
     
-    fetch('actions/users_action.php?id=' + userId, {
+    fetch('../actions/users_action.php?id=' + userId, {
         method: 'DELETE'
     })
     .then(response => response.json())

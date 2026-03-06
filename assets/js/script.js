@@ -219,17 +219,29 @@
             }
         }
 
-        // Fetch rooms from the database
+// Fetch rooms from the database
         function fetchRooms() {
             fetch('actions/rooms_action.php')
                 .then(res => res.json())
                 .then(data => {
                     if(data.success && data.rooms.length > 0) {
-                        appState.rooms = data.rooms;
-                        // If currently on rooms page, re-render
-                        if(document.getElementById('rooms') && document.getElementById('rooms').classList.contains('active')) {
-                            renderRooms();
-                        }
+                        // Transform database fields to match frontend expectations
+                        appState.rooms = data.rooms.map(room => ({
+                            id: room.id,
+                            name: room.name,
+                            type: room.type,
+                            price: parseFloat(room.price) || 0,
+                            capacity: parseInt(room.capacity) || 1,
+                            image: room.image || 'assets/image/background.jpg',
+                            desc: room.description || room.desc || '',
+                            amenities: typeof room.amenities === 'string' 
+                                ? JSON.parse(room.amenities || '[]') 
+                                : (room.amenities || []),
+                            rating: parseFloat(room.rating) || 5.0,
+                            status: room.status || 'Available'
+                        }));
+                        
+                        // Rooms are now rendered via PHP, no need to re-render with JS
                     }
                 })
                 .catch(err => console.error('Failed to load rooms:', err));
@@ -301,7 +313,7 @@
             }
 
             // Logic triggers based on page
-            if (pageId === 'rooms') renderRooms();
+            // Rooms are now rendered via PHP directly, no need for JS rendering
 
             
             // Navbar visibility
