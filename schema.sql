@@ -129,13 +129,9 @@ CREATE TABLE IF NOT EXISTS `carousel_sliders` (
 --
 
 INSERT INTO `carousel_sliders` (`id`, `title`, `image_url`, `type`, `sort_order`, `is_active`) VALUES
-(1, 'Hero Slide 1', 'assets/image/background.jpg', 'hero', 1, 1),
-(2, 'Hero Slide 2', 'assets/image/background.jpg', 'hero', 2, 1),
-(3, 'Hero Slide 3', 'assets/image/background.jpg', 'hero', 3, 1),
-(4, 'Hero Slide 4', 'assets/image/background.jpg', 'hero', 4, 1),
-(5, 'Marquee Image 1', 'assets/image/background.jpg', 'marquee', 1, 1),
-(6, 'Marquee Image 2', 'assets/image/background.jpg', 'marquee', 2, 1),
-(7, 'Marquee Image 3', 'assets/image/background.jpg', 'marquee', 3, 1),
-(8, 'Marquee Image 4', 'assets/image/background.jpg', 'marquee', 4, 1),
-(9, 'Marquee Image 5', 'assets/image/background.jpg', 'marquee', 5, 1),
-(10, 'Marquee Image 6', 'assets/image/background.jpg', 'marquee', 6, 1);
+(1, 'Hero Welcome', 'assets/image/background.jpg', 'hero', 1, 1),
+(2, 'Hero Room', 'assets/image/69b3bfd75e102.jpg', 'hero', 2, 1),
+(3, 'Hero Gallery', 'assets/image/69b3c84d5988d.jpg', 'hero', 3, 1),
+(4, 'Gallery 1', 'assets/image/background.jpg', 'marquee', 1, 1),
+(5, 'Gallery 2', 'assets/image/69b3bfd75e102.jpg', 'marquee', 2, 1),
+(6, 'Gallery 3', 'assets/image/69b3c84d5988d.jpg', 'marquee', 3, 1);

@@ -31,7 +31,7 @@
                             height="100%" 
                             frameborder="0" 
                             style="border:0" 
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3924.6272958810756!2d123.99617307584883!3d10.37161966528775!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33a9a3b2b8b0e77d%3A0x6b1c3c3c3c3c3c3c!2sMactan%20Island!5e0!3m2!1sen!2sph!4v1680000000000!5m2!1sen!2sph" 
+                            src="https://www.google.com/maps/embed?pb=!3m2!1sen!2sph!4v1773839985257!5m2!1sen!2sph!6m8!1m7!1szHZuFCclv2jgA4bBC2k8Lg!2m2!1d9.602317850938597!2d123.8082172682524!3f116.79589647239351!4f-12.777956511199221!5f0.7820865974627469" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" 
                             allowfullscreen>
                         </iframe>
                     </div>

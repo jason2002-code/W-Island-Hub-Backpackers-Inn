@@ -1,13 +1,15 @@
 <?php
+/**
+ * BOOKINGS API ACTION
+ * Handles CRUD for bookings + dashboard counts.
+ */
 require_once '../config/db.php';
 
 header('Content-Type: application/json');
 
-// Handle requests
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    // Check if this is a count request
     if (isset($_GET['action']) && $_GET['action'] === 'count') {
         getBookingCounts();
     } else {
@@ -23,18 +25,17 @@ if ($method === 'GET') {
 } elseif ($method === 'DELETE') {
     deleteBooking();
 } else {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    echo json_encode(['success' => false, 'message' => 'Invalid method']);
     exit;
 }
 
+// Gets all bookings with user/room details for admin list
 function getBookings() {
     $pdo = getDB();
-    
     if (!$pdo) {
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-    
     try {
         $stmt = $pdo->prepare("
             SELECT b.*, r.name as room_name, r.price as room_price, u.name as guest_name, u.email as guest_email 
@@ -44,11 +45,8 @@ function getBookings() {
             ORDER BY b.created_at DESC
         ");
         $stmt->execute();
-        
         $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Format for compatibility
-        $formattedBookings = array_map(function($b) {
+        $formatted = array_map(function($b) {
             return [
                 'id' => $b['id'],
                 'ref_id' => $b['ref_id'],
@@ -62,160 +60,120 @@ function getBookings() {
                 'created_at' => $b['created_at']
             ];
         }, $bookings);
-        
-        echo json_encode([
-            'success' => true, 
-            'bookings' => $formattedBookings
-        ]);
-        
+        echo json_encode(['success' => true, 'bookings' => $formatted]);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Query failed: ' . $e->getMessage()]);
     }
 }
 
+// Updates booking status (Pending->Confirmed->Cancelled) with validation
 function updateBookingStatus($data) {
     $pdo = getDB();
-    
     if (!$pdo) {
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-    
     $bookingId = $data['id'] ?? null;
     $status = $data['status'] ?? null;
-    
     if (!$bookingId || !$status) {
-        echo json_encode(['success' => false, 'message' => 'Booking ID and status are required']);
+        echo json_encode(['success' => false, 'message' => 'ID and status required']);
         exit;
     }
-    
-    // Validate status
-    $allowedStatuses = ['Pending', 'Confirmed', 'Cancelled'];
-    if (!in_array($status, $allowedStatuses)) {
+    $allowed = ['Pending', 'Confirmed', 'Cancelled'];
+    if (!in_array($status, $allowed)) {
         echo json_encode(['success' => false, 'message' => 'Invalid status']);
         exit;
     }
-    
     try {
         $stmt = $pdo->prepare("UPDATE bookings SET status = ? WHERE id = ?");
         $stmt->execute([$status, $bookingId]);
-        
-        echo json_encode(['success' => true, 'message' => 'Booking status updated successfully']);
-        
+        echo json_encode(['success' => true, 'message' => 'Status updated']);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'DB error']);
     }
 }
 
+// Creates new booking reservation with validation and ref ID
 function createBooking($data) {
     $pdo = getDB();
-    
     if (!$pdo) {
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-
     $userId = $data['user_id'] ?? null;
     $roomId = $data['room_id'] ?? null;
-    $checkIn = $data['checkIn'] ?? $data['check_in'] ?? null;
-    $checkOut = $data['checkOut'] ?? $data['check_out'] ?? null;
+    $checkIn = $data['check_in'] ?? $data['checkIn'] ?? null;
+    $checkOut = $data['check_out'] ?? $data['checkOut'] ?? null;
     $total = $data['total'] ?? 0;
     $nights = $data['nights'] ?? 1;
-    $guestName = $data['guestName'] ?? $data['guest_name'] ?? 'Guest';
-    $paymentMethod = $data['paymentMethod'] ?? $data['payment_method'] ?? 'Pay at Hotel';
-    
+    $guestName = $data['guest_name'] ?? $data['guestName'] ?? 'Guest';
+    $paymentMethod = $data['payment_method'] ?? $data['paymentMethod'] ?? 'Pay at Hotel';
     if (!$userId || !$roomId || !$checkIn || !$checkOut) {
-        echo json_encode(['success' => false, 'message' => 'Missing required booking details. user_id: ' . $userId . ', room_id: ' . $roomId]);
+        echo json_encode(['success' => false, 'message' => 'Missing details']);
         exit;
     }
-
-    // Validate that room exists
+    $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    if ($stmt->fetchColumn() === 'admin') {
+        echo json_encode(['success' => false, 'message' => 'Admins cannot book']);
+        exit;
+    }
     $stmt = $pdo->prepare("SELECT id FROM rooms WHERE id = ?");
     $stmt->execute([$roomId]);
     if ($stmt->rowCount() === 0) {
-        echo json_encode(['success' => false, 'message' => 'Room not found with ID: ' . $roomId]);
+        echo json_encode(['success' => false, 'message' => 'Room not found']);
         exit;
     }
-
     try {
         $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
-        
         $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())");
         $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $total, $paymentMethod]);
-        
-        echo json_encode([
-            'success' => true, 
-            'message' => 'Booking created successfully',
-            'ref_id' => $refId
-        ]);
-        
+        echo json_encode(['success' => true, 'message' => 'Booking created', 'ref_id' => $refId]);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'DB error: ' . $e->getMessage()]);
     }
 }
 
+// Deletes specific booking
 function deleteBooking() {
     $pdo = getDB();
-    
     if (!$pdo) {
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-    
     $bookingId = $_GET['id'] ?? null;
-    
     if (!$bookingId) {
-        echo json_encode(['success' => false, 'message' => 'Booking ID is required']);
+        echo json_encode(['success' => false, 'message' => 'ID required']);
         exit;
     }
-    
     try {
         $stmt = $pdo->prepare("DELETE FROM bookings WHERE id = ?");
         $stmt->execute([$bookingId]);
-        
-        echo json_encode(['success' => true, 'message' => 'Booking deleted successfully']);
-        
+        echo json_encode(['success' => true, 'message' => 'Deleted']);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'DB error']);
     }
 }
 
+// Counts bookings by status for dashboard badges
 function getBookingCounts() {
     $pdo = getDB();
-    
     if (!$pdo) {
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-    
     try {
-        // Get count by status
-        $stmt = $pdo->prepare("
-            SELECT status, COUNT(*) as count 
-            FROM bookings 
-            GROUP BY status
-        ");
+        $stmt = $pdo->prepare("SELECT status, COUNT(*) as count FROM bookings GROUP BY status");
         $stmt->execute();
-        
-        $counts = [
-            'total' => 0,
-            'pending' => 0,
-            'confirmed' => 0,
-            'cancelled' => 0
-        ];
-        
+        $counts = ['total' => 0, 'pending' => 0, 'confirmed' => 0, 'cancelled' => 0];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $status = strtolower($row['status']);
             $counts[$status] = (int)$row['count'];
             $counts['total'] += (int)$row['count'];
         }
-        
-        echo json_encode([
-            'success' => true, 
-            'counts' => $counts
-        ]);
-        
+        echo json_encode(['success' => true, 'counts' => $counts]);
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'DB error']);
     }
 }
+?>

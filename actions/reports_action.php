@@ -10,6 +10,8 @@ if ($method === 'GET') {
     getReports();
 } elseif ($method === 'POST') {
     addReport();
+} elseif ($method === 'PUT') {
+    updateReportStatus();
 } elseif ($method === 'DELETE') {
     deleteReport();
 } else {
@@ -100,6 +102,35 @@ function deleteReport() {
         $stmt->execute([$reportId]);
         
         echo json_encode(['success' => true, 'message' => 'Report deleted successfully']);
+        
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+function updateReportStatus() {
+    $pdo = getDB();
+    
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+    
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    $reportId = $data['id'] ?? null;
+    $status = $data['status'] ?? null;
+    
+    if (!$reportId || !$status) {
+        echo json_encode(['success' => false, 'message' => 'Report ID and status are required']);
+        exit;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("UPDATE reports SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $reportId]);
+        
+        echo json_encode(['success' => true, 'message' => 'Report status updated successfully']);
         
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);

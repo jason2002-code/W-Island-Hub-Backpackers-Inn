@@ -1,4 +1,9 @@
 <?php
+/**
+ * ADMIN DASHBOARD
+ * Main container for the administration panel.
+ * Loads sub-modules via PHP include and handles session security.
+ */
 // Start session and check if user is logged in
 session_start();
 
@@ -61,6 +66,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
     </style>
 
     <script>
+        // SESSION RECOVERY: Checks if PHP session expired but JS session remains valid
         // Check if admin session is valid via JavaScript (fallback when PHP session was destroyed)
         const checkAdminSession = function() {
             if (!<?php echo $isValidSession ? 'true' : 'false'; ?>) {
@@ -178,6 +184,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
                 </div>
             </header>
 
+            <!-- MAIN CONTENT CONTAINER -->
             <!-- Dynamic Content -->
             <div class="p-4 sm:p-8 max-w-7xl mx-auto" id="admin-content">
                 <!-- Dashboard Overview Section -->

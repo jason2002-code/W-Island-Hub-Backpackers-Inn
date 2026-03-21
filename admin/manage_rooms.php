@@ -61,8 +61,22 @@
                     </div>
                     
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Amenities (comma separated)</label>
+                        <input type="text" id="room-amenities" placeholder="WiFi, A/C, Breakfast, Pool Access" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
+                    </div>
+                    
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                        <input type="url" id="room-image" placeholder="https://..." class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
+                        <input type="text" id="room-image" placeholder="assets/image/your-image.jpg" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
+                        <input type="file" id="room-image-file" accept="image/*" class="hidden" onchange="previewRoomImage(event)">
+                        <p class="text-xs text-gray-500 mt-1">Select an image below to upload it automatically on save.</p>
+                        <div id="room-image-preview-container" class="mt-2 text-center p-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                            <img id="room-preview-img" src="" alt="Click to select image" class="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition hidden" onclick="document.getElementById('room-image-file').click();">
+                            <div id="room-preview-placeholder" class="cursor-pointer text-gray-400 hover:text-brand-purple transition" onclick="document.getElementById('room-image-file').click();">
+                                <i class="fas fa-image text-3xl mb-2"></i>
+                                <p class="text-sm">Click to browse</p>
+                            </div>
+                        </div>
                     </div>
                     
                     <div>
@@ -85,6 +99,7 @@
 </div>
 
 <script>
+// Loads all rooms from the backend API (actions/rooms_action.php) and dynamically renders them as cards in the grid
 function loadRooms() {
     fetch('../actions/rooms_action.php')
         .then(response => response.json())
@@ -94,14 +109,14 @@ function loadRooms() {
             if (data.success && data.rooms.length > 0) {
                 container.innerHTML = data.rooms.map(room => `
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 flex gap-4 transition hover:shadow-md">
-                        <img src="${room.image}" class="w-24 h-24 object-cover rounded-xl bg-gray-200" alt="${room.name}">
+                        <img src="${room.image.startsWith('http') ? room.image : '../' + room.image}" class="w-24 h-24 object-cover rounded-xl bg-gray-200" alt="${room.name}">
                         <div class="flex-1 flex flex-col justify-center">
                             <h4 class="font-bold text-gray-800">${room.name}</h4>
                             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${room.type}</p>
                             <p class="text-brand-purple font-bold text-lg">$${room.price} <span class="text-xs text-gray-400 font-normal">/night</span></p>
                             <div class="mt-3 flex gap-3 text-xs">
-                                <button onclick="editRoom(${room.id})" class="text-blue-500 hover:underline">Edit</button>
-                                <button onclick="deleteRoom(${room.id})" class="text-red-400 hover:underline">Remove</button>
+                                <button onclick="editRoom('${room.id}')" class="text-blue-500 hover:underline">Edit</button>
+                                <button onclick="deleteRoom('${room.id}')" class="text-red-400 hover:underline">Remove</button>
                             </div>
                         </div>
                     </div>
@@ -116,19 +131,40 @@ function loadRooms() {
         });
 }
 
+// Handle image preview when a file is selected
+function previewRoomImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('room-preview-img').src = e.target.result;
+            document.getElementById('room-preview-img').classList.remove('hidden');
+            document.getElementById('room-preview-placeholder').classList.add('hidden');
+            document.getElementById('room-image').value = 'assets/image/' + file.name;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Opens the room management modal in 'Add New Room' mode and resets the form fields
 function showAddRoomModal() {
     document.getElementById('room-modal-title').innerText = 'Add New Room';
     document.getElementById('room-form').reset();
     document.getElementById('room-id').value = '';
+    document.getElementById('room-preview-img').src = '';
+    document.getElementById('room-preview-img').classList.add('hidden');
+    document.getElementById('room-preview-placeholder').classList.remove('hidden');
+    document.getElementById('room-image-file').value = '';
     document.getElementById('room-modal').classList.remove('hidden');
 }
 
+// Fetches details of specific room by ID and populates the modal form for editing
 function editRoom(roomId) {
     fetch('../actions/rooms_action.php')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const room = data.rooms.find(r => r.id === roomId);
+                const room = data.rooms.find(r => r.id == roomId);
                 if (room) {
                     document.getElementById('room-modal-title').innerText = 'Edit Room';
                     document.getElementById('room-id').value = room.id;
@@ -138,42 +174,84 @@ function editRoom(roomId) {
                     document.getElementById('room-capacity').value = room.capacity;
                     document.getElementById('room-image').value = room.image;
                     document.getElementById('room-description').value = room.description || '';
+                    
+                    document.getElementById('room-image-file').value = '';
+                    if (room.image) {
+                        const imgUrl = room.image.startsWith('http') ? room.image : '../' + room.image;
+                        document.getElementById('room-preview-img').src = imgUrl;
+                        document.getElementById('room-preview-img').classList.remove('hidden');
+                        document.getElementById('room-preview-placeholder').classList.add('hidden');
+                    } else {
+                        document.getElementById('room-preview-img').classList.add('hidden');
+                        document.getElementById('room-preview-placeholder').classList.remove('hidden');
+                    }
+
+                    // Handle amenities parsing (JSON string to comma-separated)
+                    let amenitiesVal = '';
+                    try {
+                        // If it's a string looking like JSON array
+                        if (room.amenities && typeof room.amenities === 'string' && room.amenities.trim().startsWith('[')) {
+                            const parsed = JSON.parse(room.amenities);
+                            if (Array.isArray(parsed)) amenitiesVal = parsed.join(', ');
+                        } else if (room.amenities) {
+                            // Fallback for plain text
+                            amenitiesVal = room.amenities;
+                        }
+                    } catch (e) {
+                        amenitiesVal = room.amenities || '';
+                    }
+                    document.getElementById('room-amenities').value = amenitiesVal;
+                    
                     document.getElementById('room-modal').classList.remove('hidden');
                 }
             }
         });
 }
 
+// Hides and closes the room add/edit modal, optionally resetting form
 function closeRoomModal() {
     document.getElementById('room-modal').classList.add('hidden');
 }
 
+// Handles room form submission: validates, formats amenities as JSON, sends POST/PUT to API, refreshes list on success
 function saveRoom(event) {
     event.preventDefault();
     
     const roomId = document.getElementById('room-id').value;
-    const roomData = {
-        name: document.getElementById('room-name').value,
-        type: document.getElementById('room-type').value,
-        price: parseFloat(document.getElementById('room-price').value),
-        capacity: parseInt(document.getElementById('room-capacity').value),
-        image: document.getElementById('room-image').value || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-        description: document.getElementById('room-description').value
-    };
     
-    const method = roomId ? 'PUT' : 'POST';
-    const url = roomId ? '../actions/rooms_action.php' : '../actions/rooms_action.php';
-    
+    // Process amenities from comma-separated string to JSON string
+    const amenitiesRaw = document.getElementById('room-amenities').value;
+    const amenitiesArray = amenitiesRaw.split(',').map(item => item.trim()).filter(item => item !== '');
+    const amenitiesJson = JSON.stringify(amenitiesArray);
+
+    const formData = new FormData();
+    formData.append('name', document.getElementById('room-name').value);
+    formData.append('type', document.getElementById('room-type').value);
+    formData.append('price', parseFloat(document.getElementById('room-price').value));
+    formData.append('capacity', parseInt(document.getElementById('room-capacity').value));
+    formData.append('image', document.getElementById('room-image').value || 'assets/image/background.jpg');
+    formData.append('description', document.getElementById('room-description').value);
+    formData.append('amenities', amenitiesJson);
+
+    const fileInput = document.getElementById('room-image-file');
+    if (fileInput.files.length > 0) {
+        formData.append('image_file', fileInput.files[0]);
+    }
+
+    let url = '../actions/rooms_action.php';
+    let method = 'POST'; // We always use POST for FormData
+
     if (roomId) {
-        roomData.id = parseInt(roomId);
+        formData.append('id', parseInt(roomId));
+        formData.append('_method', 'PUT'); // Tell the backend it's an update
+        url = `../actions/rooms_action.php?id=${roomId}`; // Keep query param just in case
     }
     
-    console.log("Sending data:", roomData);
+    console.log("Sending data");
     
     fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roomData)
+        body: formData
     })
     .then(response => {
         console.log("Response status:", response.status);
@@ -200,6 +278,7 @@ function saveRoom(event) {
     });
 }
 
+// Prompts confirmation then sends DELETE request to API to remove room, refreshes grid on success
 function deleteRoom(roomId) {
     if (!confirm('Are you sure you want to delete this room?')) {
         return;

@@ -2,7 +2,7 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-// Require user to be logged in
+// Require user to be logged in as guest
 if (!isset($_SESSION['user_id'])) {
     header("Location: user/login.php");
     exit();
@@ -35,6 +35,7 @@ $jsBookings = array_map(function($b) {
     return [
         'id' => $b['id'],
         'roomName' => $b['room_name'] ?? 'Room',
+        'roomId' => $b['room_id'] ?? null,
         'checkIn' => $b['check_in'] ?? $b['checkIn'] ?? '',
         'checkOut' => $b['check_out'] ?? $b['checkOut'] ?? '',
         'nights' => $b['nights'] ?? 1,
@@ -45,10 +46,15 @@ $jsBookings = array_map(function($b) {
         'userId' => $b['user_id']
     ];
 }, $bookings);
+
+// Fetch User Reports safely (handles if admin_response column hasn't been used yet)
+$reportStmt = $pdo->prepare("SELECT * FROM reports WHERE user_id = ? ORDER BY created_at DESC");
+$reportStmt->execute([$_SESSION['user_id']]);
+$userReports = $reportStmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
  <!-- ================= NEW: CUSTOMER DASHBOARD / PROFILE ================= -->
-        <div id="user-profile" class="page-section">
+        <div id="user-profile" class="page-section active">
             <div class="bg-brand-dark text-white py-12 text-center">
                 <h1 class="text-4xl font-serif font-bold">My Guest Profile</h1>
                 <p class="mt-2 text-brand-sand">Manage your details and view your booking history</p>
@@ -64,18 +70,69 @@ $jsBookings = array_map(function($b) {
                     
                     <!-- Booking History -->
                     <div class="md:col-span-2">
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
                             <div class="p-6 border-b border-gray-50 flex justify-between items-center">
                                 <h3 class="text-lg font-bold text-brand-dark"><i class="fas fa-history mr-2 text-brand-blue"></i> Booking History</h3>
+                                <button onclick="openReportModal()" class="bg-yellow-500 text-white hover:bg-yellow-600 px-4 py-2 rounded-lg text-sm font-bold shadow transition flex items-center">
+                                    <i class="fas fa-comment-dots mr-2"></i> Submit Feedback
+                                </button>
                             </div>
                         <div class="p-6" id="user-bookings-container">
                             <!-- Bookings populated via JS -->
+                        </div>
+                        </div>
+                        
+                        <!-- My Feedback & Reports -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-6 border-b border-gray-50 flex justify-between items-center">
+                                <h3 class="text-lg font-bold text-brand-dark"><i class="fas fa-comments mr-2 text-brand-blue"></i> My Feedback & Reports</h3>
+                            </div>
+                            <div class="p-6" id="user-reports-container">
+                                <!-- Reports populated via JS -->
                         </div>
                     </div>
 
                 </div>
             </div>
         </div>
+
+<!-- Report/Feedback Modal -->
+<div id="report-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-brand-dark">Submit Report / Feedback</h3>
+            <button onclick="closeReportModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="report-form" onsubmit="submitReport(event)">
+            <input type="hidden" id="report-booking-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select id="report-type" class="w-full border rounded p-2 focus:ring-2 focus:ring-brand-blue outline-none" required>
+                        <option value="feedback">General Feedback</option>
+                        <option value="complaint">Complaint</option>
+                        <option value="suggestion">Suggestion</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <input type="text" id="report-subject" class="w-full border rounded p-2 focus:ring-2 focus:ring-brand-blue outline-none" placeholder="E.g., AC not working, Great service" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                    <textarea id="report-message" rows="4" class="w-full border rounded p-2 focus:ring-2 focus:ring-brand-blue outline-none" placeholder="Please describe the issue or feedback..." required></textarea>
+                </div>
+            </div>
+            <div class="mt-6">
+                <button type="submit" class="w-full bg-brand-blue hover:bg-sky-600 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    Submit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?php include '../includes/footer.php'; ?>
 
@@ -85,6 +142,7 @@ $jsBookings = array_map(function($b) {
     window.appState = {
         currentUser: <?php echo json_encode($user); ?>,
         bookings: <?php echo json_encode($jsBookings); ?>,
+        reports: <?php echo json_encode($userReports); ?>,
         users: [] // Empty for security
     };
 
@@ -117,4 +175,4 @@ $jsBookings = array_map(function($b) {
 </script>
 
 <!-- Profile Management Script -->
-<script src="../assets/js/user_profile.js"> </script>
+<script src="../assets/js/user_profile.js?v=<?php echo time(); ?>"></script>

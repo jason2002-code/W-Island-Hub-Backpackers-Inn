@@ -14,9 +14,22 @@
     </div>
 </div>
 
+<!-- Reply Modal -->
+<div id="reply-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-xl font-bold mb-4">Reply to Guest</h3>
+        <input type="hidden" id="reply-report-id">
+        <textarea id="reply-message" rows="4" class="w-full border rounded p-2 focus:ring-2 focus:ring-brand-blue outline-none mb-4" placeholder="Type your response here..."></textarea>
+        <div class="flex gap-2">
+            <button onclick="submitReply()" class="flex-1 bg-brand-blue text-white py-2 rounded font-bold hover:bg-sky-600 transition">Send Reply</button>
+            <button onclick="closeReplyModal()" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded font-bold hover:bg-gray-200 transition">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
 function loadReports() {
-    fetch('actions/reports_action.php')
+    fetch('../actions/reports_action.php')
         .then(response => response.json())
         .then(data => {
             const container = document.getElementById('reports-list');
@@ -42,10 +55,21 @@ function loadReports() {
                             <p class="text-xs text-gray-400 mt-2">
                                 From: ${report.user_name || 'Guest'} | ${report.created_at}
                             </p>
+                            ${report.admin_response ? `
+                                <div class="mt-3 p-3 bg-blue-50 border-l-4 border-brand-blue rounded-r text-sm">
+                                    <strong class="text-brand-blue block mb-1">Your Response:</strong>
+                                    <span class="text-gray-700">${report.admin_response}</span>
+                                </div>
+                            ` : ''}
                         </div>
-                        <button onclick="deleteReport(${report.id})" class="text-gray-300 hover:text-red-500 transition px-2">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="openReplyModal(${report.id})" class="text-blue-500 hover:text-blue-700 transition px-2" title="Reply to Guest"><i class="fas fa-reply"></i></button>
+                            ${report.status !== 'Resolved' ? `<button onclick="updateReportStatus(${report.id}, 'Resolved')" class="text-green-500 hover:text-green-700 transition px-2" title="Mark as Resolved"><i class="fas fa-check"></i></button>` : ''}
+                            ${report.status === 'Resolved' ? `<button onclick="updateReportStatus(${report.id}, 'Pending')" class="text-yellow-500 hover:text-yellow-700 transition px-2" title="Mark as Pending"><i class="fas fa-undo"></i></button>` : ''}
+                            <button onclick="deleteReport(${report.id})" class="text-gray-300 hover:text-red-500 transition px-2" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 `).join('');
             } else {
@@ -84,12 +108,36 @@ function getStatusColor(status) {
     return colors[status] || 'bg-gray-100 text-gray-700';
 }
 
+function updateReportStatus(reportId, status) {
+    if (!confirm('Mark this report as ' + status + '?')) {
+        return;
+    }
+    
+    fetch('../actions/reports_action.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reportId, status: status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadReports();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating report status');
+    });
+}
+
 function deleteReport(reportId) {
     if (!confirm('Delete this report?')) {
         return;
     }
     
-    fetch('actions/reports_action.php?id=' + reportId, {
+    fetch('../actions/reports_action.php?id=' + reportId, {
         method: 'DELETE'
     })
     .then(response => response.json())
@@ -104,6 +152,38 @@ function deleteReport(reportId) {
     .catch(error => {
         console.error('Error:', error);
         alert('Error deleting report');
+    });
+}
+
+function openReplyModal(reportId) {
+    document.getElementById('reply-report-id').value = reportId;
+    document.getElementById('reply-message').value = '';
+    document.getElementById('reply-modal').classList.remove('hidden');
+    document.getElementById('reply-modal').classList.add('flex');
+}
+
+function closeReplyModal() {
+    document.getElementById('reply-modal').classList.add('hidden');
+    document.getElementById('reply-modal').classList.remove('flex');
+}
+
+function submitReply() {
+    const reportId = document.getElementById('reply-report-id').value;
+    const message = document.getElementById('reply-message').value;
+    
+    if (!message.trim()) return alert('Please enter a message');
+    
+    fetch('../actions/save_report_reply.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report_id: reportId, message: message })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            closeReplyModal();
+            loadReports();
+        } else alert('Error: ' + data.message);
     });
 }
 

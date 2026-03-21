@@ -1,3 +1,8 @@
+/**
+ * MAIN CLIENT-SIDE LOGIC
+ * Handles routing, state management, booking calculations, and UI updates.
+ */
+
 // --- DATA & STATE MANAGEMENT ---
         let appState = {
             currentUser: JSON.parse(sessionStorage.getItem('w_currentUser')) || null,
@@ -5,7 +10,7 @@
             bookings: []
         };
 
-        // Save state to sessionStorage (this function was missing!)
+        // Persist current user state to browser storage (Session & Local)
         const saveState = () => {
             if(appState.currentUser) {
                 sessionStorage.setItem('w_currentUser', JSON.stringify(appState.currentUser));
@@ -66,47 +71,55 @@
         // Initialize rooms in state
         appState.rooms = defaultRooms;
 
-        const marqueeImages = [
-            "assets/image/background.jpg",
-            "assets/image/background.jpg",
-            "assets/image/background.jpg",
-            "assets/image/background.jpg",
-            "assets/image/background.jpg",
-            "assets/image/background.jpg"
-        ];
+
         
         // --- HERO CAROUSEL LOGIC ---
-        const heroSlides = [
-            "assets/image/background.jpg",
-            "assets/image/background.jpg",
-            "assets/image/background.jpg",
-            "assets/image/background.jpg"
-        ];
-        
         let currentSlideIdx = 0;
         let slideTimer;
 
-        // Initialize the hero carousel logic and DOM elements
-        function initHeroCarousel() {
+// Fetch hero slides from server and initialize the carousel
+async function initHeroCarousel() {
             const container = document.getElementById('hero-slides');
             const dotsContainer = document.getElementById('hero-dots');
             
             if(!container) return;
 
-            // Generate Slides
-            container.innerHTML = heroSlides.map((img, i) => `
-                <div class="hero-slide absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${i === 0 ? 'opacity-100' : 'opacity-0'}">
-                    <img src="${img}" class="w-full h-full object-cover" alt="Slide ${i}">
-                    <div class="absolute inset-0 bg-black/30"></div>
-                </div>
-            `).join('');
+            try {
+                const res = await fetch('actions/sliders_action.php?action=get_all');
+                const data = await res.json();
+                
+                // Filter only 'hero' type sliders
+                const heroSlides = data.success ? data.sliders.filter(s => s.type === 'hero') : [];
+                const slides = heroSlides.length > 0 
+                    ? heroSlides 
+                    : [{image_url: 'assets/image/background.jpg'}]; // Fallback
 
-            // Generate Dots
-            dotsContainer.innerHTML = heroSlides.map((_, i) => `
-                <button onclick="goToSlide(${i})" class="hero-dot w-3 h-3 rounded-full transition-all duration-300 cursor-pointer ${i === 0 ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'}"></button>
-            `).join('');
-            
-            startSlideTimer();
+                // Generate Slides
+                container.innerHTML = slides.map((slide, i) => `
+                    <div class="hero-slide absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${i === 0 ? 'opacity-100' : 'opacity-0'}">
+                        <img src="${slide.image_url}" class="w-full h-full object-cover" alt="Hero Slide ${i}">
+                        <div class="absolute inset-0 bg-black/30"></div>
+                    </div>
+                `).join('');
+
+                // Generate Dots
+                dotsContainer.innerHTML = slides.map((_, i) => `
+                    <button onclick="goToSlide(${i})" class="hero-dot w-3 h-3 rounded-full transition-all duration-300 cursor-pointer ${i === 0 ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'}"></button>
+                `).join('');
+                
+                startSlideTimer();
+            } catch (err) {
+                console.error('Hero carousel load failed:', err);
+                // Fallback to single placeholder slide
+                container.innerHTML = `
+                    <div class="hero-slide absolute inset-0 w-full h-full">
+                        <img src="assets/image/background.jpg" class="w-full h-full object-cover" alt="Fallback">
+                        <div class="absolute inset-0 bg-black/30"></div>
+                    </div>
+                `;
+                dotsContainer.innerHTML = '<button class="hero-dot w-3 h-3 rounded-full bg-white scale-125"></button>';
+                startSlideTimer();
+            }
         }
 
         // Display a specific slide by index
@@ -133,7 +146,7 @@
             });
         }
 
-        // Advance to the next slide
+        // Advance to the next slide automatically
         function nextSlide() {
             showSlide(currentSlideIdx + 1);
             resetSlideTimer();
@@ -168,9 +181,18 @@
 
        
 
-        // Main initialization function for the app
-        function init() {
-            // Fallback to hide loader after 5 seconds
+        /**
+         * Application Entry Point
+         * Initializes loader, animations, mobile nav, and data fetching.
+         */
+        async function init() {
+            // Force hide loader immediately to unstick
+            const loader = document.getElementById('loader');
+            if(loader) {
+                loader.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+            // Safety timeout: Ensure loader disappears even if scripts fail
             setTimeout(() => {
                 const loader = document.getElementById('loader');
                 if(loader && loader.style.display !== 'none') {
@@ -182,12 +204,15 @@
             // Loader Animation
             if(window.gsap) {
                 const tl = gsap.timeline({
-                    onComplete: () => {
+                    onComplete: async () => {
                         const loader = document.getElementById('loader');
                         if(loader) {
                             loader.style.display = 'none';
                             document.body.style.overflow = 'auto';
                         }
+                        // Load sliders after loader
+                        await initHeroCarousel();
+                        await setupMarquee();
                     }
                 });
                 tl.to(".w-logo", { rotation: 360, duration: 2, ease: "elastic.out(1, 0.3)" })
@@ -199,10 +224,10 @@
                     loader.style.display = 'none';
                     document.body.style.overflow = 'auto';
                 }
+                // Load sliders
+                await initHeroCarousel();
+                await setupMarquee();
             }
-
-            initHeroCarousel();
-            setupMarquee();
             updateAuthUI();
             setupMobileNav();
             fetchRooms(); // Fetch real data
@@ -219,7 +244,7 @@
             }
         }
 
-// Fetch rooms from the database
+// Fetch active rooms from the backend and update application state
         function fetchRooms() {
             fetch('actions/rooms_action.php')
                 .then(res => res.json())
@@ -273,26 +298,46 @@
             }
         }
 
-        // Setup the scrolling marquee gallery
-        function setupMarquee() {
+        // Fetch and render the infinite scrolling marquee gallery
+async function setupMarquee() {
             const track = document.getElementById('marquee-track');
             if (!track) return;
-            // Duplicate images to create seamless loop
-            const images = [...marqueeImages, ...marqueeImages];
-            track.innerHTML = images.map(src => `
-                <div class="marquee-item" onclick="router('rooms')">
-                    <img src="${src}" alt="Gallery Image">
-                </div>
-            `).join('');
+            
+            try {
+                const res = await fetch('actions/sliders_action.php?action=get_all');
+                const data = await res.json();
+                
+                const marqueeImages = data.success ? data.sliders.filter(s => s.type === 'marquee') : [];
+                const images = marqueeImages.length > 0 
+                    ? marqueeImages 
+                    : [{image_url: 'assets/image/background.jpg'}];
+                
+                // Duplicate for seamless loop
+                const allImages = [...images, ...images];
+                track.innerHTML = allImages.map(slide => `
+                    <div class="marquee-item" onclick="router('rooms')">
+                        <img src="${slide.image_url}" alt="Gallery Image">
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Marquee load failed:', err);
+                // Fallback
+                const fallbackImages = Array(12).fill({image_url: 'assets/image/background.jpg'});
+                track.innerHTML = fallbackImages.map(slide => `
+                    <div class="marquee-item" onclick="router('rooms')">
+                        <img src="${slide.image_url}" alt="Gallery Image">
+                    </div>
+                `).join('');
+            }
         }
 
-// Handle client-side routing and page navigation
+// Simple Client-Side Router: Toggles visibility of page sections based on ID
         function router(pageId) {
             // Close mobile menu if open
             const menu = document.getElementById('mobile-menu');
             if(menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
 
-            // Protected Routes
+            // Security: Redirect admins or protect routes
             if (pageId === 'admin-dashboard' || pageId === 'admin') {
                 if (appState.currentUser && appState.currentUser.role === 'admin') {
                     window.location.href = 'admin/dashboard.php';
@@ -321,7 +366,7 @@
             const footer = document.getElementById('main-footer');
         }
 
-// Update the authentication UI based on user state
+// Toggle between "Login/Signup" and "User Profile/Logout" buttons in navbar
         function updateAuthUI() {
             const container = document.getElementById('auth-buttons');
             const mobileContainer = document.getElementById('mobile-auth-buttons');
@@ -332,9 +377,11 @@
                     ? `<a href="admin/dashboard.php" class="text-sm font-bold mr-2 cursor-pointer text-brand-blue block md:inline mb-2 md:mb-0">Admin Panel</a>` 
                     : `<a href="user/profile.php" class="text-sm font-bold mr-2 cursor-pointer text-brand-blue block md:inline mb-2 md:mb-0">My Profile</a>`;
                 
+                const firstName = appState.currentUser.name ? appState.currentUser.name.split(' ')[0] : 'Guest';
+
                 html = `
                     <div class="flex flex-col md:flex-row md:items-center md:ml-4">
-                        <span class="text-sm mr-2 block md:inline mb-2 md:mb-0">Hi, ${appState.currentUser.name.split(' ')[0]}</span>
+                        <span class="text-sm mr-2 block md:inline mb-2 md:mb-0">Hi, ${firstName}</span>
                         ${dashboardLink}
                         <button onclick="logout()" class="text-sm border border-red-500 text-red-500 px-3 py-1 rounded hover:bg-red-50 transition w-full md:w-auto">Logout</button>
                     </div>
@@ -348,13 +395,16 @@
                 `;
             }
             
-            container.innerHTML = html;
-            mobileContainer.innerHTML = html; 
+        if (container) container.innerHTML = html;
+        if (mobileContainer) mobileContainer.innerHTML = html; 
         }
 
         // --- AUTHENTICATION ---
 
-        document.getElementById('login-form').addEventListener('submit', (e) => {
+        // Handle Login Form Submission
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
@@ -380,9 +430,13 @@
                 }
             })
             .catch(err => console.error('Login Error:', err));
-        });
+            });
+        }
 
-        document.getElementById('register-form').addEventListener('submit', (e) => {
+        // Handle Registration Form Submission
+        const registerForm = document.getElementById('register-form');
+        if (registerForm) {
+            registerForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value;
@@ -416,10 +470,13 @@
                 }
             })
             .catch(err => console.error('Registration Error:', err));
-        });
+            });
+        }
 
         // Real-time password strength validation
-        document.getElementById('reg-pass').addEventListener('input', function(e) {
+        const regPassInput = document.getElementById('reg-pass');
+        if (regPassInput) {
+            regPassInput.addEventListener('input', function(e) {
             const password = e.target.value;
             
             // Validate each requirement
@@ -443,7 +500,8 @@
             updateIndicator('req-lowercase', hasLowercase);
             updateIndicator('req-number', hasNumber);
             updateIndicator('req-special', hasSpecial);
-        });
+            });
+        }
 
 // Log out the current user
       function logout() {
@@ -499,11 +557,17 @@
 
         let pendingBooking = null;
 
-        // Start the booking process for a selected room
+        // Initialize booking: Calculate costs, dates, and show summary
         function initiateBooking(roomId) {
             if(!appState.currentUser) {
                 alert("Please login to book a room.");
                 router('login');
+                return;
+            }
+
+            // Prevent admins from booking
+            if(appState.currentUser.role === 'admin') {
+                alert("Admins are not allowed to book rooms. Please login as a guest.");
                 return;
             }
 
@@ -541,7 +605,7 @@
             document.getElementById('summary-nights').innerText = nights;
             document.getElementById('summary-total').innerText = `$${total}`;
             
-            // Auto fill user details
+            // Auto-fill form with logged-in user details
             document.getElementById('book-name').value = appState.currentUser.name;
             document.getElementById('book-email').value = appState.currentUser.email;
 
@@ -554,7 +618,10 @@
             router('booking-summary');
         }
 
-        document.getElementById('booking-form').addEventListener('submit', (e) => {
+        // Submit the final booking to the server
+        const bookingForm = document.getElementById('booking-form');
+        if (bookingForm) {
+            bookingForm.addEventListener('submit', (e) => {
             e.preventDefault();
             
             if (!appState.currentUser) {
@@ -562,12 +629,21 @@
                 return;
             }
 
+            if(appState.currentUser.role === 'admin') {
+                alert("Admins are not allowed to book rooms.");
+                return;
+            }
+
             const booking = {
                 action: 'create',
                 user_id: appState.currentUser.id,
                 room_id: pendingBooking.roomId,
-                ...pendingBooking,
-                paymentMethod: document.querySelector('input[name="payment"]:checked').value
+                check_in: pendingBooking.checkIn,
+                check_out: pendingBooking.checkOut,
+                nights: pendingBooking.nights,
+                total: pendingBooking.total,
+                guest_name: document.getElementById('book-name').value,
+                payment_method: document.querySelector('input[name="payment"]:checked').value
             };
 
             fetch('actions/bookings_action.php', {
@@ -585,7 +661,21 @@
                 }
             })
             .catch(err => console.error('Booking Error:', err));
-        });
+            });
+        }
 
         // Initialize App
-        window.addEventListener('DOMContentLoaded', init);
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', init);
+        } else {
+            init(); // DOM is already loaded
+        }
+        
+        // Ultimate fallback: ensure loader is removed no matter what happens
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            if (loader && loader.style.display !== 'none') {
+                loader.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }, 1500);

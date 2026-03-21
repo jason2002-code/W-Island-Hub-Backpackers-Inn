@@ -1,7 +1,7 @@
 <?php
 /**
- * Database Configuration
- * W Island Hub Backpackers Inn
+ * DATABASE CONFIGURATION
+ * Handles connection to MySQL database using PDO.
  */
 
 // Database credentials - CHECK THESE IN XAMPP
@@ -10,6 +10,7 @@ define('DB_NAME', 'w_island_hub');
 define('DB_USER', 'root');
 define('DB_PASS', ''); // Default XAMPP has no password
 
+// Detect if the request is an API call (expects JSON) to handle errors gracefully
 // Check if this is an API call that expects JSON
 $isApiCall = false;
 if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
