@@ -1,4 +1,4 @@
- body { overflow: hidden; }
+
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #6C5DD3; border-radius: 4px; }

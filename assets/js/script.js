@@ -185,26 +185,38 @@ async function initHeroCarousel() {
          * Application Entry Point
          * Initializes loader, animations, mobile nav, and data fetching.
          */
+        const LOADER_MIN_DURATION = 3500; // Minimum 2.5s loader time (user feedback)
+        let loaderStartTime = 0;
+
         async function init() {
-            // Force hide loader immediately to unstick
-            const loader = document.getElementById('loader');
-            if(loader) {
-                loader.style.display = 'none';
-                document.body.style.overflow = 'auto';
+            console.log('Loader init started at', performance.now());
+            loaderStartTime = performance.now();
+            
+            // Guarantee loader is visible on initialization (fixes browser caching/soft refresh issues)
+            const initialLoader = document.getElementById('loader');
+            if (initialLoader) {
+                initialLoader.style.display = 'flex !important';
+                initialLoader.style.transform = 'translateY(0px)';
+                initialLoader.style.opacity = '1';
+                initialLoader.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
             }
-            // Safety timeout: Ensure loader disappears even if scripts fail
+
+            // Safety timeout: MINIMUM 4.5s display time for visibility on refresh
             setTimeout(() => {
                 const loader = document.getElementById('loader');
                 if(loader && loader.style.display !== 'none') {
-                    loader.style.display = 'none';
-                    document.body.style.overflow = 'auto';
+                    console.log('Fallback timeout hideLoader after', LOADER_MIN_DURATION, 'ms');
+                    hideLoader();
                 }
-            }, 5000);
+            }, LOADER_MIN_DURATION);
 
-            // Loader Animation
+            // Loader Animation with extended timing
             if(window.gsap) {
                 const tl = gsap.timeline({
                     onComplete: async () => {
+                        const elapsed = performance.now() - loaderStartTime;
+                        console.log('GSAP loader complete after', elapsed.toFixed(0), 'ms');
                         const loader = document.getElementById('loader');
                         if(loader) {
                             loader.style.display = 'none';
@@ -215,19 +227,33 @@ async function initHeroCarousel() {
                         await setupMarquee();
                     }
                 });
-                tl.to(".w-logo", { rotation: 360, duration: 2, ease: "elastic.out(1, 0.3)" })
-                  .to("#loader", { y: "-100%", duration: 0.8, ease: "power4.in", delay: 0.5 });
+                // Extended: 2.5s spin + 1s delay + 1s out = 4.5s
+                tl.to(".w-logo", { rotation: 360, duration: 1.5, ease: "elastic.out(1, 0.3)" })
+                  .to("#loader", { y: "-100%", duration: 1, ease: "power4.in", delay: 1 }); // Adjusted for ~2.5s total
             } else {
-                // Hide loader immediately if GSAP not available
-                const loader = document.getElementById('loader');
-                if(loader) {
-                    loader.style.display = 'none';
-                    document.body.style.overflow = 'auto';
-                }
-                // Load sliders
-                await initHeroCarousel();
-                await setupMarquee();
+                // Fallback: Extended 4.5s
+                setTimeout(async () => {
+                    const loader = document.getElementById('loader');
+                    if(loader) {
+                        loader.classList.add('hidden'); // Triggers CSS opacity fade
+                        setTimeout(() => {
+                            hideLoader();
+                        }, 600); // Adjusted for 2.5s
+                    }
+                    // Load sliders
+                    await initHeroCarousel();
+                    await setupMarquee();
+                }, LOADER_MIN_DURATION);
             }
+            // Add window.onload for hard refresh handling - respect min duration
+            window.addEventListener('load', () => {
+                const elapsed = performance.now() - loaderStartTime;
+                console.log('Window fully loaded after', elapsed.toFixed(0), 'ms - Loader handling');
+                if (elapsed >= LOADER_MIN_DURATION) {
+                    hideLoader();
+                }
+            });
+            
             updateAuthUI();
             setupMobileNav();
             fetchRooms(); // Fetch real data
@@ -236,10 +262,10 @@ async function initHeroCarousel() {
             const hash = window.location.hash.replace('#', '');
             if(hash) router(hash);
 
-            // GSAP Animations
+            // GSAP Animations - increased delay to match loader
             if(window.gsap) {
                 gsap.from(".gsap-hero-text", {
-                    y: 50, opacity: 0, duration: 1, stagger: 0.2, delay: 2.8, ease: "power3.out"
+                    y: 50, opacity: 0, duration: 1, stagger: 0.2, delay: 3.8, ease: "power3.out" // Adjusted for shorter loader
                 });
             }
         }
@@ -259,9 +285,16 @@ async function initHeroCarousel() {
                             capacity: parseInt(room.capacity) || 1,
                             image: room.image || 'assets/image/background.jpg',
                             desc: room.description || room.desc || '',
-                            amenities: typeof room.amenities === 'string' 
-                                ? JSON.parse(room.amenities || '[]') 
-                                : (room.amenities || []),
+                            amenities: (() => {
+                                if (typeof room.amenities === 'string') {
+                                    try {
+                                        return JSON.parse(room.amenities || '[]');
+                                    } catch(e) {
+                                        return room.amenities.split(',').map(s => s.trim());
+                                    }
+                                }
+                                return room.amenities || [];
+                            })(),
                             rating: parseFloat(room.rating) || 5.0,
                             status: room.status || 'Available'
                         }));
@@ -347,23 +380,51 @@ async function setupMarquee() {
                 return;
             }
 
-            // Hide all pages
-            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-            
-            // Show specific page
-            const target = document.getElementById(pageId);
-            if(target) {
-                target.classList.add('active');
-                window.scrollTo(0,0);
+            const loader = document.getElementById('loader');
+            if (loader) {
+                if (window.gsap) {
+                    gsap.set("#loader", { y: "0%", opacity: 1, display: "flex" });
+                    gsap.set(".w-logo", { rotation: 0 });
+                } else {
+                    loader.style.display = 'flex';
+                    loader.style.transform = 'translateY(0px)';
+                    loader.style.opacity = '1';
+                    loader.classList.remove('hidden');
+                }
+                document.body.style.overflow = 'hidden';
             }
 
-            // Logic triggers based on page
-            // Rooms are now rendered via PHP directly, no need for JS rendering
+            setTimeout(() => {
+                // Hide all pages
+                document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+                
+                // Show specific page
+                const target = document.getElementById(pageId);
+                if(target) {
+                    target.classList.add('active');
+                    window.scrollTo(0,0);
+                }
 
-            
-            // Navbar visibility
-            const nav = document.getElementById('navbar');
-            const footer = document.getElementById('main-footer');
+                if (loader) {
+                    console.log('Router loader hide after 800ms');
+                    if (window.gsap) {
+                        const tl = gsap.timeline({
+                            onComplete: () => {
+                                loader.style.display = 'none';
+                                document.body.style.overflow = 'auto';
+                            }
+                        });
+                        tl.to(".w-logo", { rotation: 360, duration: 0.8, ease: "power2.out" })
+                          .to("#loader", { opacity: 0, y: "-20%", duration: 0.6, ease: "power2.inOut" });
+                    } else {
+                        loader.style.opacity = '0';
+                        setTimeout(() => {
+                            loader.style.display = 'none';
+                            document.body.style.overflow = 'auto';
+                        }, 600);
+                    }
+                }
+            }, 800); // Extended simulated load time for page transitions
         }
 
 // Toggle between "Login/Signup" and "User Profile/Logout" buttons in navbar
@@ -374,23 +435,28 @@ async function setupMarquee() {
             let html = '';
         if (appState.currentUser) {            
                 const dashboardLink = appState.currentUser.role === 'admin' 
-                    ? `<a href="admin/dashboard.php" class="text-sm font-bold mr-2 cursor-pointer text-brand-blue block md:inline mb-2 md:mb-0">Admin Panel</a>` 
-                    : `<a href="user/profile.php" class="text-sm font-bold mr-2 cursor-pointer text-brand-blue block md:inline mb-2 md:mb-0">My Profile</a>`;
+                    ? `<a href="admin/dashboard.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">Admin Panel</a>` 
+                    : `<a href="user/profile.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">My Profile</a>`;
                 
                 const firstName = appState.currentUser.name ? appState.currentUser.name.split(' ')[0] : 'Guest';
 
                 html = `
-                    <div class="flex flex-col md:flex-row md:items-center md:ml-4">
-                        <span class="text-sm mr-2 block md:inline mb-2 md:mb-0">Hi, ${firstName}</span>
+                    <div class="flex flex-col md:flex-row md:items-center gap-3">
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-white md:bg-gray-50 rounded-full md:border border-gray-100 md:shadow-sm justify-center md:justify-start">
+                            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-xs font-bold shadow-inner">
+                                ${firstName.charAt(0).toUpperCase()}
+                            </div>
+                            <span class="text-sm font-semibold text-gray-700 tracking-wide pr-1">Hi, ${firstName}</span>
+                        </div>
                         ${dashboardLink}
-                        <button onclick="logout()" class="text-sm border border-red-500 text-red-500 px-3 py-1 rounded hover:bg-red-50 transition w-full md:w-auto">Logout</button>
+                        <button onclick="logout()" class="text-sm font-semibold border border-red-200 text-red-500 px-4 py-2 rounded-full hover:bg-red-50 hover:border-red-300 transition-all w-full md:w-auto shadow-sm">Logout</button>
                     </div>
                 `;
             } else {  
                 html = `
-                    <div class="flex items-center md:space-x-4">
-                        <a onclick="router('login')" class="text-brand-dark hover:text-brand-blue font-medium cursor-pointer px-4 transition">Login</a>
-                        <a onclick="router('register')" class="bg-brand-blue hover:bg-sky-600 text-white px-4 py-2 rounded-full font-medium transition shadow-md cursor-pointer text-center">Sign Up</a>
+                    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
+                        <a onclick="router('login')" class="text-gray-600 hover:text-brand-dark font-semibold cursor-pointer px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all text-sm tracking-wide text-center">Login</a>
+                        <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg hover:-translate-y-0.5 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-md cursor-pointer text-sm tracking-wide text-center">Sign Up</a>
                     </div>
                 `;
             }
@@ -671,11 +737,24 @@ async function setupMarquee() {
             init(); // DOM is already loaded
         }
         
-        // Ultimate fallback: ensure loader is removed no matter what happens
-        setTimeout(() => {
-            const loader = document.getElementById('loader');
-            if (loader && loader.style.display !== 'none') {
+// Helper function to cleanly hide loader
+function hideLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) {
+        if (window.gsap) {
+            gsap.to("#loader", {opacity: 0, duration: 0.5, onComplete: () => {
                 loader.style.display = 'none';
                 document.body.style.overflow = 'auto';
-            }
-        }, 1500);
+            }});
+        } else {
+            loader.classList.add('hidden');
+            setTimeout(() => {
+                loader.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }, 500);
+        }
+    }
+}
+
+// Ultimate fallback: ensure loader is removed no matter what happens (extended)
+setTimeout(hideLoader, 6000); // Adjusted fallback for 2.5s loader

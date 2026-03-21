@@ -7,7 +7,11 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    getReports();
+    if (isset($_GET['action']) && $_GET['action'] === 'stats') {
+        getDashboardStats();
+    } else {
+        getReports();
+    }
 } elseif ($method === 'POST') {
     addReport();
 } elseif ($method === 'PUT') {

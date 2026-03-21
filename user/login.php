@@ -1,25 +1,45 @@
-<!-- ================= Login Page ================= -->
-<div id="login" class="page-section">
-            <div class="min-h-[80vh] flex items-center justify-center bg-slate-100 px-4">
-                <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-                    <h2 class="text-2xl font-bold mb-6 text-center text-brand-dark">Login</h2>
-                    <form id="login-form" class="space-y-4">
+ <!-- ================= NEW REDESIGNED AUTH PAGES ================= -->
+        <div id="login" class="page-section bg-[#e8e8e8]">
+            <div class="min-h-screen flex items-center justify-center px-4 relative pb-20 pt-10">
+                
+                <div class="bg-white p-10 md:p-12 rounded-[40px] shadow-[0_30px_60px_rgba(0,0,0,0.08)] w-full max-w-md relative mt-10">
+                    <h2 class="text-[2.5rem] font-black mb-10 text-center text-brand-cyan tracking-tight">Sign In</h2>
+                    
+                    <form id="login-form" class="space-y-5">
                         <div>
-                            <label class="block text-sm text-gray-600">Email Address</label>
-                            <input type="email" id="login-email" class="w-full border rounded-lg p-3" required>
+                            <input type="email" id="login-email" placeholder="E-mail" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600">Password</label>
-                            <input type="password" id="login-password" class="w-full border rounded-lg p-3" required>
+                            <input type="password" id="login-password" placeholder="Password" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
-                        <button type="submit" class="w-full bg-brand-blue text-white font-bold py-3 rounded-lg hover:bg-sky-600">Sign In</button>
+                        
+                        <div class="text-left pl-2 pt-1 pb-4">
+                            <a href="#" class="text-brand-cyan text-xs font-semibold hover:underline">Forgot Password ?</a>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-brand-cyan text-white text-lg font-bold py-4 rounded-full shadow-[0_10px_25px_rgba(29,179,232,0.4)] hover:bg-[#189bc9] hover:shadow-[0_12px_25px_rgba(29,179,232,0.5)] transition transform hover:-translate-y-0.5">Sign In</button>
                     </form>
-                    <p class="mt-4 text-center text-sm text-gray-600">
-                        Don't have an account? <a onclick="router('register')" class="text-brand-blue cursor-pointer font-bold">Register</a>
-                    </p>
-                    <div class="mt-4 p-3 bg-blue-50 text-xs rounded text-blue-800">
-                        <p><strong>Admin:</strong> admin@wisland.com / admin123</p>
-                        <p><strong>User:</strong> guest@wisland.com / guest123</p>
+
+                    <div class="mt-8">
+                        <p class="text-center text-xs text-gray-400 font-medium mb-6">Or Sign in with</p>
+                        <div class="flex justify-center gap-5">
+                            <button class="w-12 h-12 bg-[#252525] text-white rounded-full flex items-center justify-center shadow-[0_8px_15px_rgba(0,0,0,0.15)] hover:-translate-y-1 transition text-lg"><i class="fab fa-google"></i></button>
+                            <button class="w-12 h-12 bg-[#252525] text-white rounded-full flex items-center justify-center shadow-[0_8px_15px_rgba(0,0,0,0.15)] hover:-translate-y-1 transition text-xl"><i class="fab fa-apple"></i></button>
+                            <button class="w-12 h-12 bg-[#252525] text-white rounded-full flex items-center justify-center shadow-[0_8px_15px_rgba(0,0,0,0.15)] hover:-translate-y-1 transition text-lg flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="w-4 h-4 fill-current"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.6 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 text-center">
+                        <a href="#" class="text-brand-cyan text-[11px] font-medium hover:underline tracking-wide">Learn user licence agreement</a>
+                    </div>
+
+                    <!-- Toggle to Register -->
+                    <div class="mt-6 pt-6 border-t border-gray-100 text-center">
+                        <p class="text-xs text-gray-500 font-medium">
+                            Don't have an account? <a onclick="router('register')" class="text-brand-cyan cursor-pointer font-bold hover:underline">Register</a>
+                        </p>
                     </div>
                 </div>
             </div>

@@ -1,36 +1,29 @@
  <!-- ================= REGISTER PAGE ================= -->
- <div id="register" class="page-section">
-            <div class="min-h-[80vh] flex items-center justify-center bg-slate-100 px-4">
-                <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-                    <h2 class="text-2xl font-bold mb-6 text-center text-brand-dark">Register</h2>
-                    <form id="register-form" class="space-y-4">
+<div id="register" class="page-section bg-[#e8e8e8]">
+            <div class="min-h-screen flex items-center justify-center px-4 relative pb-20 pt-10">
+                <div class="bg-white p-10 md:p-12 rounded-[40px] shadow-[0_30px_60px_rgba(0,0,0,0.08)] w-full max-w-md relative mt-10">
+                    <h2 class="text-[2.5rem] font-black mb-10 text-center text-brand-cyan tracking-tight">Sign Up</h2>
+                    
+                    <form id="register-form" class="space-y-5">
                         <div>
-                            <label class="block text-sm text-gray-600">Full Name</label>
-                            <input type="text" id="reg-name" class="w-full border rounded-lg p-3" required>
+                            <input type="text" id="reg-name" placeholder="Full Name" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600">Email Address</label>
-                            <input type="email" id="reg-email" class="w-full border rounded-lg p-3" required>
+                            <input type="email" id="reg-email" placeholder="E-mail" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600">Password</label>
-                            <input type="password" id="reg-pass" class="w-full border rounded-lg p-3" required>
-                            <div id="password-requirements" class="mt-2 text-xs text-gray-500">
-                                <p>Password must contain:</p>
-                                <ul class="list-disc list-inside">
-                                    <li id="req-length">At least 8 characters</li>
-                                    <li id="req-uppercase">At least one uppercase letter</li>
-                                    <li id="req-lowercase">At least one lowercase letter</li>
-                                    <li id="req-number">At least one number</li>
-                                    <li id="req-special">At least one special character</li>
-                                </ul>
-                            </div>
+                            <input type="password" id="reg-pass" placeholder="Password" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
-                        <button type="submit" class="w-full bg-brand-blue text-white font-bold py-3 rounded-lg hover:bg-sky-600">Create Account</button>
+                        
+                        <button type="submit" class="w-full bg-brand-cyan text-white text-lg font-bold py-4 rounded-full shadow-[0_10px_25px_rgba(29,179,232,0.4)] hover:bg-[#189bc9] hover:shadow-[0_12px_25px_rgba(29,179,232,0.5)] transition transform hover:-translate-y-0.5 mt-4">Sign Up</button>
                     </form>
-                    <p class="mt-4 text-center text-sm text-gray-600">
-                        Already have an account? <a onclick="router('login')" class="text-brand-blue cursor-pointer font-bold">Login</a>
-                    </p>
+
+                    <!-- Toggle to Login -->
+                    <div class="mt-8 pt-6 border-t border-gray-100 text-center">
+                        <p class="text-xs text-gray-500 font-medium">
+                            Already have an account? <a onclick="router('login')" class="text-brand-cyan cursor-pointer font-bold hover:underline">Sign In</a>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

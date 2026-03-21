@@ -4,7 +4,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 // Require user to be logged in as guest
 if (!isset($_SESSION['user_id'])) {
-    header("Location: user/login.php");
+    header("Location: ../index.php#login");
     exit();
 }
 
@@ -163,8 +163,15 @@ $userReports = $reportStmt->fetchAll(PDO::FETCH_ASSOC);
     document.addEventListener('DOMContentLoaded', function() {
         const loader = document.getElementById('loader');
         if(loader) {
-            loader.style.display = 'none';
-            document.body.style.overflow = 'auto';
+            if (window.gsap) {
+                gsap.to("#loader", { opacity: 0, duration: 0.5, onComplete: () => {
+                    loader.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }});
+            } else {
+                loader.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
         }
         
         // Render the profile using the loaded data

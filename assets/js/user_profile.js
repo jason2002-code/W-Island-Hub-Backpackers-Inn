@@ -162,7 +162,7 @@ function saveProfile(e) {
                                 current_password: '',
                                 new_password: newPass
                             })
-                        });
+                        }).then(res => res.json());
                     }
                     return data;
                 } else {
@@ -170,6 +170,9 @@ function saveProfile(e) {
                 }
             })
             .then(data => {
+                if (data && data.success === false) {
+                    throw new Error(data.message || "Failed to update profile details");
+                }
                 alert("Profile updated successfully!");
                 updateAuthUI();
                 renderUserProfile(false);
