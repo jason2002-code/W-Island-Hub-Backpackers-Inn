@@ -53,6 +53,5 @@
     <!-- Loading Screen -->
     <div id="loader">
         <div class="w-logo">W</div>
-        <div class="loader-spinner"></div>
         <p class="mt-4 text-brand-blue font-bold tracking-widest text-sm uppercase">Island Hub</p>
     </div>

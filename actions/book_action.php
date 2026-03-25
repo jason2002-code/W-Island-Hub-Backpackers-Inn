@@ -26,6 +26,9 @@ switch ($action) {
     case 'check_availability':
         checkAvailability($input);
         break;
+    case 'get_room_availability':
+        getRoomAvailability($input);
+        break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
         exit;
@@ -72,7 +75,7 @@ function createDirectBooking($data) {
         $totalPrice = $room['price'] * $nights;
         
         // Generate reference ID
-        $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
+$refId = 'BK-' . strtoupper(substr(uniqid(), -6));
         
         // Insert booking
         $stmt = $pdo->prepare("
@@ -121,11 +124,11 @@ function checkAvailability($data) {
     try {
         // Check for overlapping confirmed bookings
         $stmt = $pdo->prepare("
-            SELECT COUNT(*) FROM bookings 
+            SELECT COUNT(*) as count FROM bookings 
             WHERE room_id = ? 
             AND status IN ('Pending', 'Confirmed')
             AND (
-                (check_in <= ? AND check_out > ?)
+                (check_in <= ? AND check_out > ?) 
                 OR (check_in < ? AND check_out >= ?)
                 OR (check_in >= ? AND check_out <= ?)
             )
@@ -144,10 +147,88 @@ function checkAvailability($data) {
             'success' => true,
             'available' => $isAvailable,
             'room' => $room,
-            'message' => $isAvailable ? 'Room is available' : 'Room is not available for selected dates'
+            'overlaps' => $overlapCount,
+            'message' => $isAvailable ? 'Room is available for selected dates' : 'Room not available - already booked on overlapping dates'
         ]);
         
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
 }
+
+/**
+ * Get upcoming availability info for a specific room
+ * Returns occupied periods and next vacant date
+ */
+function getRoomAvailability($data) {
+    $pdo = getDB();
+    
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+    
+    $roomId = $data['room_id'] ?? null;
+    
+    if (!$roomId) {
+        echo json_encode(['success' => false, 'message' => 'Room ID required']);
+        exit;
+    }
+    
+    try {
+        $today = date('Y-m-d');
+        
+        // Get upcoming bookings
+        $stmt = $pdo->prepare("
+            SELECT ref_id, guest_name, check_in, check_out, status, created_at 
+            FROM bookings 
+            WHERE room_id = ? AND status IN ('Pending', 'Confirmed') 
+            AND check_out > ?
+            ORDER BY check_in ASC
+        ");
+        $stmt->execute([$roomId, $today]);
+        $upcoming = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $occupiedRanges = [];
+        $nextVacant = null;
+        $isOpenNow = true;
+        
+        foreach ($upcoming as $booking) {
+            $occupiedRanges[] = [
+                'ref' => $booking['ref_id'],
+                'guest' => $booking['guest_name'],
+                'from' => $booking['check_in'],
+                'to' => $booking['check_out']
+            ];
+            
+            if ($booking['check_in'] <= $today) {
+                $isOpenNow = false;
+            }
+        }
+        
+        if (!empty($occupiedRanges)) {
+            // Next vacant is after last checkout +1 day
+            $lastCheckout = end($upcoming)['check_out'];
+            $nextVacantDate = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
+            $nextVacant = $nextVacantDate;
+        }
+        
+        // Get room details
+        $stmt = $pdo->prepare("SELECT name, status FROM rooms WHERE id = ?");
+        $stmt->execute([$roomId]);
+        $room = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'success' => true,
+            'room' => $room ?? ['name' => 'Room ' . $roomId],
+            'occupied_ranges' => $occupiedRanges,
+            'next_vacant' => $nextVacant,
+            'is_currently_available' => $isOpenNow && empty($occupiedRanges),
+            'message' => $isOpenNow && empty($occupiedRanges) ? 'Room available now' : 'Check occupied periods'
+        ]);
+        
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
+}
+

@@ -185,87 +185,53 @@ async function initHeroCarousel() {
          * Application Entry Point
          * Initializes loader, animations, mobile nav, and data fetching.
          */
-        const LOADER_MIN_DURATION = 3500; // Minimum 2.5s loader time (user feedback)
-        let loaderStartTime = 0;
+
 
         async function init() {
-            console.log('Loader init started at', performance.now());
-            loaderStartTime = performance.now();
-            
-            // Guarantee loader is visible on initialization (fixes browser caching/soft refresh issues)
-            const initialLoader = document.getElementById('loader');
-            if (initialLoader) {
-                initialLoader.style.display = 'flex !important';
-                initialLoader.style.transform = 'translateY(0px)';
-                initialLoader.style.opacity = '1';
-                initialLoader.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
+            // Simple fast loader: 1.5s total
+            document.body.style.overflow = 'hidden';
 
-            // Safety timeout: MINIMUM 4.5s display time for visibility on refresh
-            setTimeout(() => {
-                const loader = document.getElementById('loader');
-                if(loader && loader.style.display !== 'none') {
-                    console.log('Fallback timeout hideLoader after', LOADER_MIN_DURATION, 'ms');
-                    hideLoader();
-                }
-            }, LOADER_MIN_DURATION);
-
-            // Loader Animation with extended timing
             if(window.gsap) {
                 const tl = gsap.timeline({
                     onComplete: async () => {
-                        const elapsed = performance.now() - loaderStartTime;
-                        console.log('GSAP loader complete after', elapsed.toFixed(0), 'ms');
                         const loader = document.getElementById('loader');
                         if(loader) {
                             loader.style.display = 'none';
-                            document.body.style.overflow = 'auto';
                         }
-                        // Load sliders after loader
+                        document.body.style.overflow = 'auto';
+                        // Init content
                         await initHeroCarousel();
                         await setupMarquee();
                     }
                 });
-                // Extended: 2.5s spin + 1s delay + 1s out = 4.5s
-                tl.to(".w-logo", { rotation: 360, duration: 1.5, ease: "elastic.out(1, 0.3)" })
-                  .to("#loader", { y: "-100%", duration: 1, ease: "power4.in", delay: 1 }); // Adjusted for ~2.5s total
+                tl.to(".w-logo", { rotation: 360, duration: 1.2, ease: "elastic.out(1, 0.3)" })
+                  .to("#loader", { y: "-100%", duration: 0.6, ease: "power4.in", delay: 0.7 });
             } else {
-                // Fallback: Extended 4.5s
+                // Fallback: 1.5s CSS fade
                 setTimeout(async () => {
                     const loader = document.getElementById('loader');
                     if(loader) {
-                        loader.classList.add('hidden'); // Triggers CSS opacity fade
+                        loader.classList.add('hidden');
                         setTimeout(() => {
-                            hideLoader();
-                        }, 600); // Adjusted for 2.5s
+                            loader.style.display = 'none';
+                            document.body.style.overflow = 'auto';
+                        }, 500);
                     }
-                    // Load sliders
                     await initHeroCarousel();
                     await setupMarquee();
-                }, LOADER_MIN_DURATION);
+                }, 2500);
             }
-            // Add window.onload for hard refresh handling - respect min duration
-            window.addEventListener('load', () => {
-                const elapsed = performance.now() - loaderStartTime;
-                console.log('Window fully loaded after', elapsed.toFixed(0), 'ms - Loader handling');
-                if (elapsed >= LOADER_MIN_DURATION) {
-                    hideLoader();
-                }
-            });
             
             updateAuthUI();
             setupMobileNav();
-            fetchRooms(); // Fetch real data
+            fetchRooms();
 
-            // Check if URL has hash to route
             const hash = window.location.hash.replace('#', '');
             if(hash) router(hash);
 
-            // GSAP Animations - increased delay to match loader
             if(window.gsap) {
                 gsap.from(".gsap-hero-text", {
-                    y: 50, opacity: 0, duration: 1, stagger: 0.2, delay: 3.8, ease: "power3.out" // Adjusted for shorter loader
+                    y: 50, opacity: 0, duration: 1, stagger: 0.2, delay: 0.2, ease: "power3.out"
                 });
             }
         }
@@ -380,51 +346,15 @@ async function setupMarquee() {
                 return;
             }
 
-            const loader = document.getElementById('loader');
-            if (loader) {
-                if (window.gsap) {
-                    gsap.set("#loader", { y: "0%", opacity: 1, display: "flex" });
-                    gsap.set(".w-logo", { rotation: 0 });
-                } else {
-                    loader.style.display = 'flex';
-                    loader.style.transform = 'translateY(0px)';
-                    loader.style.opacity = '1';
-                    loader.classList.remove('hidden');
-                }
-                document.body.style.overflow = 'hidden';
+            // Hide all pages
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            
+            // Show specific page
+            const target = document.getElementById(pageId);
+            if(target) {
+                target.classList.add('active');
+                window.scrollTo(0,0);
             }
-
-            setTimeout(() => {
-                // Hide all pages
-                document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-                
-                // Show specific page
-                const target = document.getElementById(pageId);
-                if(target) {
-                    target.classList.add('active');
-                    window.scrollTo(0,0);
-                }
-
-                if (loader) {
-                    console.log('Router loader hide after 800ms');
-                    if (window.gsap) {
-                        const tl = gsap.timeline({
-                            onComplete: () => {
-                                loader.style.display = 'none';
-                                document.body.style.overflow = 'auto';
-                            }
-                        });
-                        tl.to(".w-logo", { rotation: 360, duration: 0.8, ease: "power2.out" })
-                          .to("#loader", { opacity: 0, y: "-20%", duration: 0.6, ease: "power2.inOut" });
-                    } else {
-                        loader.style.opacity = '0';
-                        setTimeout(() => {
-                            loader.style.display = 'none';
-                            document.body.style.overflow = 'auto';
-                        }, 600);
-                    }
-                }
-            }, 800); // Extended simulated load time for page transitions
         }
 
 // Toggle between "Login/Signup" and "User Profile/Logout" buttons in navbar
@@ -623,65 +553,184 @@ async function setupMarquee() {
 
         let pendingBooking = null;
 
-        // Initialize booking: Calculate costs, dates, and show summary
-        function initiateBooking(roomId) {
-            if(!appState.currentUser) {
-                alert("Please login to book a room.");
+        // Availability check form handler
+        const availabilityForm = document.getElementById('check-availability-form');
+        if (availabilityForm) {
+            availabilityForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const checkIn = document.getElementById('check-in-date').value;
+                const checkOut = document.getElementById('check-out-date').value;
+                if (!checkIn || !checkOut) {
+                    alert('Please select dates');
+                    return;
+                }
+                // Update room statuses
+                document.querySelectorAll('[data-room-id]').forEach(roomEl => {
+                    const roomId = roomEl.dataset.roomId;
+                    checkRoomAvailability(roomId, checkIn, checkOut);
+                });
+            });
+        }
+
+        async function checkRoomAvailability(roomId, checkIn, checkOut) {
+            try {
+                const response = await fetch('actions/book_action.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'check_availability',
+                        room_id: roomId,
+                        check_in: checkIn,
+                        check_out: checkOut
+                    })
+                });
+                const data = await response.json();
+                const statusBadge = document.querySelector(`[data-room-id="${roomId}"] .room-status-badge`);
+                if (statusBadge) {
+                    statusBadge.textContent = data.available ? 'Available ✓' : 'Occupied ✗';
+                    statusBadge.className = `room-status-badge px-2 py-1 rounded text-xs font-bold ${data.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function showOccupiedModal(room, ranges, nextVacant) {
+            const modal = document.createElement('div');
+            modal.id = 'occupied-modal';
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold text-gray-800">${room.name} Status</h3>
+                        <button onclick="document.getElementById('occupied-modal').remove()" class="text-3xl font-bold text-gray-500 hover:text-gray-700">&times;</button>
+                    </div>
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-lg mb-3 text-gray-700">Upcoming Bookings:</h4>
+                        ${ranges.map(r => `
+                            <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+                                <div class="flex justify-between">
+                                    <span class="font-medium">${r.ref}</span>
+                                    <span class="text-sm text-gray-600">${r.from} → ${r.to}</span>
+                                </div>
+                                <div class="text-xs text-gray-500">Guest: ${r.guest}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${nextVacant ? `
+                        <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6 text-center">
+                            <h4 class="font-bold text-xl text-green-800 mb-1">Next Available</h4>
+                            <div class="text-2xl font-bold text-green-700">${nextVacant}</div>
+                        </div>
+                    ` : ''}
+                    <button onclick="setSuggestedDates('${nextVacant}'); document.getElementById('occupied-modal').remove();" 
+                            class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 px-6 rounded-xl font-semibold text-lg shadow-lg transition-all">
+                        Use Suggested Dates
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function setSuggestedDates(nextVacant) {
+            if (nextVacant) {
+                const checkInEl = document.getElementById('check-in-date');
+                checkInEl.value = nextVacant;
+                const tomorrow = new Date(nextVacant);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                document.getElementById('check-out-date').value = tomorrow.toISOString().split('T')[0];
+                checkInEl.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Initialize booking with availability checks
+        async function initiateBooking(roomId) {
+            if (!appState.currentUser || appState.currentUser.role === 'admin') {
+                alert('Please login as guest user to book.');
                 router('login');
                 return;
             }
 
-            // Prevent admins from booking
-            if(appState.currentUser.role === 'admin') {
-                alert("Admins are not allowed to book rooms. Please login as a guest.");
-                return;
-            }
-
             const room = appState.rooms.find(r => r.id === roomId);
-            const checkInInput = document.getElementById('check-in-date').value;
-            const checkOutInput = document.getElementById('check-out-date').value;
+            if (!room) return;
 
-            // Default dates if not selected in filter
-            let checkIn = checkInInput ? new Date(checkInInput) : new Date();
-            let checkOut = checkOutInput ? new Date(checkOutInput) : new Date();
-            
-            if(!checkInInput) checkOut.setDate(checkOut.getDate() + 1);
+            try {
+                // Get room availability
+                const availRes = await fetch('actions/book_action.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'get_room_availability', room_id: roomId})
+                });
+                const availData = await availRes.json();
 
-            const nights = Math.max(1, Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24)));
-            const tax = 15;
-            const total = (room.price * nights) + tax;
+                if (!availData.is_currently_available && availData.occupied_ranges?.length > 0) {
+                    showOccupiedModal(room, availData.occupied_ranges, availData.next_vacant);
+                    return;
+                }
 
-            pendingBooking = {
-                roomId: room.id,
-                roomName: room.name,
-                checkIn: checkIn.toISOString().split('T')[0],
-                checkOut: checkOut.toISOString().split('T')[0],
-                nights,
-                pricePerNight: room.price,
-                tax,
-                total,
-                status: 'Pending'
-            };
+                // Get selected dates
+                const checkIn = document.getElementById('check-in-date').value || new Date().toISOString().split('T')[0];
+                const checkOut = document.getElementById('check-out-date').value || new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0];
 
-            // Populate Summary
-            document.getElementById('summary-room-name').innerText = room.name;
-            document.getElementById('summary-room-desc').innerText = room.type;
-            document.getElementById('summary-room-img').src = room.image;
-            document.getElementById('summary-price').innerText = `$${room.price}`;
-            document.getElementById('summary-nights').innerText = nights;
-            document.getElementById('summary-total').innerText = `$${total}`;
-            
-            // Auto-fill form with logged-in user details
-            document.getElementById('book-name').value = appState.currentUser.name;
-            document.getElementById('book-email').value = appState.currentUser.email;
+                // Specific date check
+                const checkRes = await fetch('actions/book_action.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'check_availability',
+                        room_id: roomId,
+                        check_in: checkIn,
+                        check_out: checkOut
+                    })
+                });
+                const checkData = await checkRes.json();
 
-            document.getElementById('booking-details-content').innerHTML = `
-                <div class="flex justify-between"><span>Check-In:</span> <strong>${pendingBooking.checkIn}</strong></div>
-                <div class="flex justify-between"><span>Check-Out:</span> <strong>${pendingBooking.checkOut}</strong></div>
-                <div class="flex justify-between"><span>Guests:</span> <strong>${document.getElementById('guest-count').value || 1}</strong></div>
-            `;
+                if (!checkData.available) {
+                    alert('Dates not available: ' + checkData.message);
+                    return;
+                }
 
-            router('booking-summary');
+                // All good - create pending booking
+                const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000));
+                const total = (room.price * nights) + 15; // tax
+
+                pendingBooking = {
+                    roomId: parseInt(roomId),
+                    roomName: room.name,
+                    checkIn,
+                    checkOut,
+                    nights: Math.max(1, nights),
+                    total,
+                    pricePerNight: room.price
+                };
+
+                // Update summary UI
+                document.getElementById('summary-room-img').src = room.image;
+                document.getElementById('summary-room-name').textContent = room.name;
+                document.getElementById('summary-room-desc').textContent = room.type;
+                document.getElementById('summary-price').textContent = '$' + room.price;
+                document.getElementById('summary-nights').textContent = pendingBooking.nights;
+                document.getElementById('summary-total').textContent = '$' + total.toFixed(2);
+
+                document.getElementById('booking-details-content').innerHTML = `
+                    <div class="p-4 bg-green-50 border rounded-lg mb-4">
+                        <div class="flex justify-between"><span>Check In:</span> <strong>${checkIn}</strong></div>
+                        <div class="flex justify-between"><span>Check Out:</span> <strong>${checkOut}</strong></div>
+                        <div class="flex justify-between"><span>Room:</span> <strong>${room.name}</strong></div>
+                        <div class="flex justify-between text-green-700 font-bold mt-2">
+                            <span>Availability OK</span><i class="fas fa-check-circle ml-1"></i>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('book-name').value = appState.currentUser.name;
+                document.getElementById('book-email').value = appState.currentUser.email;
+
+                router('booking-summary');
+            } catch (error) {
+                console.error('Booking init error:', error);
+                alert('Unable to verify availability. Please try again.');
+            }
         }
 
         // Submit the final booking to the server
@@ -737,24 +786,4 @@ async function setupMarquee() {
             init(); // DOM is already loaded
         }
         
-// Helper function to cleanly hide loader
-function hideLoader() {
-    const loader = document.getElementById('loader');
-    if (loader) {
-        if (window.gsap) {
-            gsap.to("#loader", {opacity: 0, duration: 0.5, onComplete: () => {
-                loader.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }});
-        } else {
-            loader.classList.add('hidden');
-            setTimeout(() => {
-                loader.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }, 500);
-        }
-    }
-}
 
-// Ultimate fallback: ensure loader is removed no matter what happens (extended)
-setTimeout(hideLoader, 6000); // Adjusted fallback for 2.5s loader
