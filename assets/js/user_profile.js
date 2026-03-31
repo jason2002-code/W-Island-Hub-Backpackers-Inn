@@ -30,7 +30,10 @@
                         </div>
                         <div>
                             <label class="block text-xs text-gray-500 mb-1">New Password <span class="text-gray-400 text-[10px]">(leave blank to keep)</span></label>
-                            <input type="password" id="edit-pass" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none" placeholder="••••••••">
+                            <div class="password-wrapper">
+                                <input type="password" id="edit-pass" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none pr-10" placeholder="••••••••">
+                                <i class="fas fa-eye password-toggle-icon" id="toggle-edit-pass" onclick="togglePassword('edit-pass', 'toggle-edit-pass')"></i>
+                            </div>
                         </div>
                         <div class="flex gap-2 mt-6">
                             <button type="submit" class="flex-1 bg-brand-blue text-white py-2 rounded-lg text-sm font-bold hover:bg-sky-600 transition">Save</button>

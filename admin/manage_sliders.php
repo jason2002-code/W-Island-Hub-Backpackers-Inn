@@ -158,8 +158,10 @@ function bulkToggle(status) {
 }
 
 // Public functions for HTML buttons
-// Button handler - calls bulkToggle(true) to enable all selected sliders\nfunction bulkEnableSelected() { bulkToggle(true); }
-// Button handler for disabling selected sliders - calls bulkToggle(false)\nfunction bulkDisableSelected() { bulkToggle(false); }
+// Button handler - calls bulkToggle(true) to enable all selected sliders
+function bulkEnableSelected() { bulkToggle(true); }
+// Button handler for disabling selected sliders - calls bulkToggle(false)
+function bulkDisableSelected() { bulkToggle(false); }
 
 // Enable all currently disabled sliders
 function enableAllDisabled() {

@@ -12,9 +12,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
     // PHP session is valid - allow access
     $isValidSession = true;
 } else {
-    // PHP session is not valid - check if JavaScript sessionStorage has admin data
-    // This handles the case where user clicked "Back to Main Site" which destroys PHP session
-    // but sessionStorage still has the user data
+    // PHP session is not valid. Redirect will be handled by JavaScript.
     $isValidSession = false;
 }
 ?>
@@ -56,6 +54,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
                 }
             }
         }
+
     </script>
 
     <style>
@@ -66,46 +65,18 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
     </style>
 
     <script>
-        // SESSION RECOVERY: Checks if PHP session expired but JS session remains valid
-        // Check if admin session is valid via JavaScript (fallback when PHP session was destroyed)
+        // Simple session check. If PHP session is invalid, redirect to the main site.
         const checkAdminSession = function() {
             if (!<?php echo $isValidSession ? 'true' : 'false'; ?>) {
-                // PHP session is invalid - check sessionStorage
-                const storedUser = sessionStorage.getItem('w_currentUser') || localStorage.getItem('w_currentUser');
-                if (storedUser) {
-                    const user = JSON.parse(storedUser);
-                    if (user && user.role === 'admin') {
-                        // SessionStorage has admin data - reinitialize PHP session via AJAX
-                        fetch('../actions/reinit_session.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ user_id: user.id, role: user.role, name: user.name, email: user.email })
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Session reinitialized - reload page
-                                window.location.reload();
-                            } else {
-                                // Failed to reinitialize - redirect to main site
-                                window.location.href = '../index.php';
-                            }
-                        })
-                        .catch(() => window.location.href = '../index.php');
-                        return true;
-                    }
-                }
-                // No valid session - redirect
+                // PHP session is invalid, redirect to the main site to force login.
                 window.location.href = '../index.php';
-                return true;
             }
-            return false;
         };
         
         // Run session check immediately
-        if (checkAdminSession()) {
-            // Redirecting...
-        }
+        checkAdminSession();
+
+
     </script>
 </head>
 <body class="bg-gray-50 text-slate-800 font-sans">
@@ -170,6 +141,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
                     <h2 class="text-xl font-bold text-brand-dark" id="admin-page-title">Analytics Overview</h2>
                 </div>
                 <div class="flex items-center gap-6">
+
                     <div class="relative hidden sm:block">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                         <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 w-48 transition">
@@ -237,7 +209,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
 
         // Load booking counts for sidebar badge
         function loadBookingCounts() {
-            fetch('actions/bookings_action.php?action=count')
+            fetch('../actions/bookings_action.php?action=count')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.counts.pending > 0) {

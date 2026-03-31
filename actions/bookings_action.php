@@ -38,7 +38,7 @@ function getBookings() {
     }
     try {
         $stmt = $pdo->prepare("
-            SELECT b.*, r.name as room_name, r.price as room_price, u.name as guest_name, u.email as guest_email 
+            SELECT b.*, r.name as room_name, r.price as room_price, COALESCE(b.guest_name, u.name) as final_guest_name, u.email as guest_email 
             FROM bookings b 
             LEFT JOIN rooms r ON b.room_id = r.id 
             LEFT JOIN users u ON b.user_id = u.id 
@@ -50,7 +50,7 @@ function getBookings() {
             return [
                 'id' => $b['id'],
                 'ref_id' => $b['ref_id'],
-                'guestName' => $b['guest_name'],
+                'guestName' => $b['final_guest_name'],
                 'guestEmail' => $b['guest_email'] ?? '',
                 'roomName' => $b['room_name'],
                 'checkIn' => $b['check_in'],

@@ -9,8 +9,9 @@
                         <div>
                             <input type="email" id="login-email" placeholder="E-mail" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
-                        <div>
-                            <input type="password" id="login-password" placeholder="Password" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
+                        <div class="password-wrapper">
+                            <input type="password" id="login-password" placeholder="Password" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 pr-12 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
+                            <i class="fas fa-eye password-toggle-icon" id="toggle-login-password" onclick="togglePassword('login-password', 'toggle-login-password')"></i>
                         </div>
                         
                         <div class="text-left pl-2 pt-1 pb-4">

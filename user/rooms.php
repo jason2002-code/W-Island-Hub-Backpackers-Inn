@@ -30,6 +30,9 @@ if ($pdo) {
     <?php else: ?>
         <?php foreach ($rooms as $room): 
             $amenities = is_array($room['amenities']) ? $room['amenities'] : json_decode($room['amenities'] ?? '[]', true);
+            if (!is_array($amenities)) {
+                $amenities = array_map('trim', explode(',', $room['amenities'] ?? ''));
+            }
             $rating = floatval($room['rating'] ?? 5.0);
             $stars = round($rating);
         ?>

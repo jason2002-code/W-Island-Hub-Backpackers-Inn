@@ -11,8 +11,9 @@
                         <div>
                             <input type="email" id="reg-email" placeholder="E-mail" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
                         </div>
-                        <div>
-                            <input type="password" id="reg-pass" placeholder="Password" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
+                        <div class="password-wrapper">
+                            <input type="password" id="reg-pass" placeholder="Password" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 pr-12 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
+                            <i class="fas fa-eye password-toggle-icon" id="toggle-reg-pass" onclick="togglePassword('reg-pass', 'toggle-reg-pass')"></i>
                         </div>
                         
                         <button type="submit" class="w-full bg-brand-cyan text-white text-lg font-bold py-4 rounded-full shadow-[0_10px_25px_rgba(29,179,232,0.4)] hover:bg-[#189bc9] hover:shadow-[0_12px_25px_rgba(29,179,232,0.5)] transition transform hover:-translate-y-0.5 mt-4">Sign Up</button>

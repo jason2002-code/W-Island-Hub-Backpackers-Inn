@@ -175,7 +175,7 @@ function updatePassword() {
         }
         
         // Check if current password matches
-        if ($currentPassword !== $user['password'] && !password_verify($currentPassword, $user['password'])) {
+        if (!password_verify($currentPassword, $user['password'])) {
             echo json_encode(['success' => false, 'message' => 'Current password is incorrect']);
             exit;
         }

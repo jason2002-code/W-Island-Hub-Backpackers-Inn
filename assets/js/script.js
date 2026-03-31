@@ -10,6 +10,10 @@
             bookings: []
         };
 
+
+
+
+
         // Persist current user state to browser storage (Session & Local)
         const saveState = () => {
             if(appState.currentUser) {
@@ -364,14 +368,15 @@ async function setupMarquee() {
             
             let html = '';
         if (appState.currentUser) {            
-                const dashboardLink = appState.currentUser.role === 'admin' 
-                    ? `<a href="admin/dashboard.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">Admin Panel</a>` 
+                const dashboardLink = appState.currentUser.role === 'admin'
+                    ? `<a href="admin/dashboard.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">Admin Panel</a>`
                     : `<a href="user/profile.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">My Profile</a>`;
                 
                 const firstName = appState.currentUser.name ? appState.currentUser.name.split(' ')[0] : 'Guest';
 
                 html = `
-                    <div class="flex flex-col md:flex-row md:items-center gap-3">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+
                         <div class="flex items-center gap-2 px-3 py-1.5 bg-white md:bg-gray-50 rounded-full md:border border-gray-100 md:shadow-sm justify-center md:justify-start">
                             <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-xs font-bold shadow-inner">
                                 ${firstName.charAt(0).toUpperCase()}
@@ -384,7 +389,8 @@ async function setupMarquee() {
                 `;
             } else {  
                 html = `
-                    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
+                    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+
                         <a onclick="router('login')" class="text-gray-600 hover:text-brand-dark font-semibold cursor-pointer px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all text-sm tracking-wide text-center">Login</a>
                         <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg hover:-translate-y-0.5 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-md cursor-pointer text-sm tracking-wide text-center">Sign Up</a>
                     </div>
@@ -396,6 +402,24 @@ async function setupMarquee() {
         }
 
         // --- AUTHENTICATION ---
+
+        // Professional Password Toggle Logic
+        window.togglePassword = function(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            if (input && icon) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        };
 
         // Handle Login Form Submission
         const loginForm = document.getElementById('login-form');
@@ -518,7 +542,7 @@ async function setupMarquee() {
                 const stars = Array(Math.round(room.rating)).fill('<i class="fas fa-star text-yellow-400 text-xs"></i>').join('');
                 
                 return `
-                <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col">
+                <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col">
                     <div class="h-48 overflow-hidden relative">
                          <img src="${room.image}" alt="${room.name}" class="w-full h-full object-cover transition duration-500 hover:scale-110">
                          <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-800">
@@ -610,7 +634,7 @@ async function setupMarquee() {
                         ${ranges.map(r => `
                             <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
                                 <div class="flex justify-between">
-                                    <span class="font-medium">${r.ref}</span>
+                                    <span class="font-medium text-gray-800">${r.ref}</span>
                                     <span class="text-sm text-gray-600">${r.from} → ${r.to}</span>
                                 </div>
                                 <div class="text-xs text-gray-500">Guest: ${r.guest}</div>
@@ -786,4 +810,3 @@ async function setupMarquee() {
             init(); // DOM is already loaded
         }
         
-

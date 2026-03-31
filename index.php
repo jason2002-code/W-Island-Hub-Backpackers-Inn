@@ -25,10 +25,8 @@ if (session_status() == PHP_SESSION_NONE) {
          <!-- ================= REGISTER AND LOGIN PAGE================= -->   
         <?php include "user/register.php"; ?>
         <?php include "user/login.php"; ?>
+        <?php include "user/rules.php"; ?>
 
-      
-
- 
        </main>
      
         <!-- ================= FOOTER ================= -->
@@ -38,6 +36,7 @@ if (session_status() == PHP_SESSION_NONE) {
         <!-- JAVASCRIPT LOGIC -->
       
        <script src="assets/js/script.js"></script>
+       
      
     </body>
 </html>

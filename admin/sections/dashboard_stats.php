@@ -12,9 +12,7 @@ $stats = [
 ];
 
 try {
-    // Suppress errors and don't exit
-    error_reporting(0);
-    @include_once __DIR__ . '/../../config/db.php';
+    include_once __DIR__ . '/../../config/db.php';
     
     if (function_exists('getDB')) {
         $pdo = getDB();
@@ -107,7 +105,7 @@ try {
 <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden">
     <div class="p-6 border-b border-gray-50 flex justify-between items-center">
         <h4 class="font-bold text-gray-700">Recent Bookings</h4>
-        <button onclick="renderAdminBookings()" class="text-sm text-brand-purple hover:underline">View All</button>
+        <button onclick="renderAdminBookings()" class="text-sm text-brand-purple hover:text-brand-blue transition hover:underline">View All</button>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-left">

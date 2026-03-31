@@ -10,16 +10,25 @@ error_log('sliders_action.php accessed: ' . $_SERVER['REQUEST_METHOD'] . ' ' . $
 session_start();
 require_once '../config/db.php';
 
-// Skip admin check for GET requests (public read), require for POST (write)
 $method = $_SERVER['REQUEST_METHOD'];
+$action = '';
+
+// Determine action based on request method for clarity and security
+if ($method === 'GET') {
+    $action = $_GET['action'] ?? '';
+} elseif ($method === 'POST') {
+    $action = $_POST['action'] ?? '';
+}
+
+// Security: Require admin role for any POST (write) operation
 if ($method === 'POST' && (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin')) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
-$action = $_REQUEST['action'] ?? '';  // FIXED: Use $_REQUEST for POST FormData compatibility
 error_log("Slider action: '$action'");
 
+// Route to the appropriate function based on the action
 switch ($action) {
     case 'get_all':
         getAllSliders();

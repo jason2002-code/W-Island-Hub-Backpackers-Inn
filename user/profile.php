@@ -23,7 +23,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 $bookingStmt = $pdo->prepare("
     SELECT b.*, r.name as room_name 
     FROM bookings b 
-    JOIN rooms r ON b.room_id = r.id 
+    LEFT JOIN rooms r ON b.room_id = r.id 
     WHERE b.user_id = ? 
     ORDER BY b.created_at DESC
 ");

@@ -22,6 +22,8 @@
                     </div>
                 </div>
                 
+
+                
                 <!-- Google Map -->
                 <div class="mt-20">
                     <h3 class="text-2xl font-bold mb-6 text-center">Find Us in Paradise</h3>

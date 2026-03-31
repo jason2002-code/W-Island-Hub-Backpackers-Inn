@@ -1,4 +1,4 @@
- <!-- Navigation (User Side) -->
+<!-- Navigation (User Side) -->
  
     <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all duration-300" id="navbar">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,6 +25,10 @@
                     </a>
                     <a onclick="router('contact')" class="relative cursor-pointer text-gray-600 hover:text-brand-dark transition-colors font-semibold group text-sm tracking-wide">
                         Contact
+                        <span class="absolute left-0 -bottom-1.5 w-0 h-0.5 bg-brand-cyan transition-all duration-300 ease-in-out group-hover:w-full rounded-full"></span>
+                    </a>
+                    <a onclick="router('rules')" class="relative cursor-pointer text-gray-600 hover:text-brand-dark transition-colors font-semibold group text-sm tracking-wide">
+                        Rules
                         <span class="absolute left-0 -bottom-1.5 w-0 h-0.5 bg-brand-cyan transition-all duration-300 ease-in-out group-hover:w-full rounded-full"></span>
                     </a>
                     
@@ -57,6 +61,9 @@
                 </a>
                 <a onclick="router('contact')" class="block py-3 px-6 text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan/10 rounded-xl transition-all font-medium flex items-center gap-3">
                     <i class="fas fa-envelope w-5 text-center text-brand-cyan/70"></i> Contact
+                </a>
+                <a onclick="router('rules')" class="block py-3 px-6 text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan/10 rounded-xl transition-all font-medium flex items-center gap-3">
+                    <i class="fas fa-gavel w-5 text-center text-brand-cyan/70"></i> Rules
                 </a>
             </div>
             <div id="mobile-auth-buttons" class="p-6 bg-gray-50/80 border-t border-gray-100 flex flex-col gap-3"></div>
