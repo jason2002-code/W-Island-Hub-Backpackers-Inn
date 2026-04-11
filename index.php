@@ -36,6 +36,7 @@ if (session_status() == PHP_SESSION_NONE) {
         <!-- JAVASCRIPT LOGIC -->
       
        <script src="assets/js/script.js"></script>
+       <script src="https://accounts.google.com/gsi/client" async defer></script>
        
      
     </body>

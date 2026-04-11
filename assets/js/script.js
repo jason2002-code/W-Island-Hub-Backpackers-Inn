@@ -523,6 +523,57 @@ async function setupMarquee() {
             });
         }
 
+        // --- REAL SOCIAL LOGIN ---
+        function handleSocialLogin(provider) {
+            if (provider === 'Google') {
+                if (typeof google === 'undefined') {
+                    alert('Google Auth SDK is still loading or blocked. Please try again.');
+                    return;
+                }
+                const client = google.accounts.oauth2.initTokenClient({
+                    // ⚠️ IMPORTANT: Replace this with your actual Client ID from Google Cloud Console
+                    client_id: 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com',
+                    scope: 'email profile',
+                    callback: (response) => {
+                        if (response.access_token) {
+                            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                                headers: { Authorization: `Bearer ${response.access_token}` }
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                processSocialLogin('Google', data.email, data.name);
+                            });
+                        }
+                    }
+                });
+                client.requestAccessToken(); // Triggers the real Google popup!
+            } else {
+                // Fallback simulation for Apple/X until their SDKs are configured
+                const email = prompt(`[${provider} Login]\n\nPlease enter your email address:`);
+                if (email) processSocialLogin(provider, email, email.split('@')[0]);
+            }
+        }
+
+        function processSocialLogin(provider, email, name) {
+            fetch('actions/social_login_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, name, provider })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    appState.currentUser = data.user;
+                    saveState();
+                    updateAuthUI();
+                    router('home');
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(err => console.error('Social Login Error:', err));
+        }
+
 // Log out the current user
       function logout() {
               appState.currentUser = null;
