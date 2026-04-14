@@ -51,7 +51,7 @@
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Price per Night ($)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Price per Night (₱)</label>
                         <input type="number" id="room-price" required min="0" step="0.01" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
                     </div>
                     
@@ -113,7 +113,7 @@ function loadRooms() {
                         <div class="flex-1 flex flex-col justify-center">
                             <h4 class="font-bold text-gray-800">${room.name}</h4>
                             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${room.type}</p>
-                            <p class="text-brand-purple font-bold text-lg">$${room.price} <span class="text-xs text-gray-400 font-normal">/night</span></p>
+                            <p class="text-brand-purple font-bold text-lg">₱${room.price} <span class="text-xs text-gray-400 font-normal">/night</span></p>
                             <div class="mt-3 flex gap-3 text-xs">
                                 <button onclick="editRoom('${room.id}')" class="text-blue-500 hover:underline">Edit</button>
                                 <button onclick="deleteRoom('${room.id}')" class="text-red-400 hover:underline">Remove</button>

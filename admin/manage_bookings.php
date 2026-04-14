@@ -139,7 +139,7 @@ function renderBookings(bookings) {
                 <td class="p-4">${booking.roomName || 'N/A'}</td>
                 <td class="p-4 text-gray-600">${formatDate(booking.checkIn)}</td>
                 <td class="p-4 text-gray-600">${formatDate(booking.checkOut)}</td>
-                <td class="p-4 font-bold text-brand-purple">$${parseFloat(booking.total).toFixed(2)}</td>
+                <td class="p-4 font-bold text-brand-purple">₱${parseFloat(booking.total).toFixed(2)}</td>
                 <td class="p-4">
                     <span class="px-2 py-1 rounded text-xs font-bold ${
                         booking.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 

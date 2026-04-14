@@ -613,7 +613,7 @@ async function setupMarquee() {
                         
                         <div class="mt-auto pt-4 border-t flex justify-between items-center">
                             <div>
-                                <span class="text-2xl font-bold text-brand-blue">$${room.price}</span>
+                                <span class="text-2xl font-bold text-brand-blue">₱${room.price}</span>
                                 <span class="text-gray-400 text-sm">/ night</span>
                             </div>
                             <button onclick="initiateBooking(${room.id})" class="bg-brand-dark hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition text-sm">
@@ -783,9 +783,9 @@ async function setupMarquee() {
                 document.getElementById('summary-room-img').src = room.image;
                 document.getElementById('summary-room-name').textContent = room.name;
                 document.getElementById('summary-room-desc').textContent = room.type;
-                document.getElementById('summary-price').textContent = '$' + room.price;
+                document.getElementById('summary-price').textContent = '₱' + room.price;
                 document.getElementById('summary-nights').textContent = pendingBooking.nights;
-                document.getElementById('summary-total').textContent = '$' + total.toFixed(2);
+                document.getElementById('summary-total').textContent = '₱' + total.toFixed(2);
 
                 document.getElementById('booking-details-content').innerHTML = `
                     <div class="p-4 bg-green-50 border rounded-lg mb-4">

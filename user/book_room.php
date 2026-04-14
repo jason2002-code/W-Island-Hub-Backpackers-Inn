@@ -108,7 +108,7 @@
                                 </div>
                                 <div class="flex justify-between mb-2">
                                     <span>Taxes & Fees</span>
-                                    <span id="summary-tax">$15.00</span>
+                                <span id="summary-tax">₱15.00</span>
                                 </div>
                                 <div class="flex justify-between mt-4 text-xl font-bold text-brand-blue border-t pt-4">
                                     <span>Total</span>

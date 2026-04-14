@@ -92,7 +92,7 @@ profileHTML = `
                                     </div>
                                     <div class="text-left md:text-right">
                                         <p class="text-xs text-gray-500">Total Amount</p>
-                                        <p class="font-bold text-xl text-brand-blue">$${b.total}</p>
+                                        <p class="font-bold text-xl text-brand-blue">₱${parseFloat(b.total).toFixed(2)}</p>
                                         <p class="text-xs text-gray-400">Via ${b.paymentMethod}</p>
                                     </div>
                                 </div>

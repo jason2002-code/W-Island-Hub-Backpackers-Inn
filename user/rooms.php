@@ -63,7 +63,7 @@ if ($pdo) {
                     
                     <div class="mt-auto pt-4 border-t flex justify-between items-center">
                         <div>
-                            <span class="text-2xl font-bold text-brand-blue">$<?php echo number_format($room['price'], 2); ?></span>
+<span class="text-2xl font-bold text-brand-blue">₱<?php echo number_format($room['price'], 2); ?></span>
                             <span class="text-gray-400 text-sm">/ night</span>
                         </div>
                         <button onclick="initiateBooking(<?php echo intval($room['id']); ?>)" class="bg-brand-dark hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition text-sm">
