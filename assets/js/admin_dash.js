@@ -12,9 +12,9 @@
                     <div class="dash-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between">
                         <div>
                             <p class="text-sm text-gray-400 font-medium">Total Revenue</p>
-                            <h3 class="text-2xl font-bold text-brand-dark mt-1">$${revenue.toLocaleString()}</h3>
+                            <h3 class="text-2xl font-bold text-brand-dark mt-1">₱${revenue.toLocaleString()}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xl"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="w-12 h-12 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xl"><i class="fas fa-peso-sign"></i></div>
                     </div>
                     <div class="dash-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between">
                         <div>
@@ -79,7 +79,7 @@
                                             <span class="font-medium text-gray-700">${b.guestName}</span>
                                         </td>
                                         <td class="p-4 text-gray-500">${b.roomName}</td>
-                                        <td class="p-4 font-bold text-gray-700">$${b.total}</td>
+                                        <td class="p-4 font-bold text-gray-700">₱${b.total}</td>
                                         <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-medium ${b.status === 'Confirmed' ? 'bg-green-100 text-green-600' : (b.status === 'Cancelled' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600')}">${b.status}</span></td>
                                     </tr>
                                 `).join('')}

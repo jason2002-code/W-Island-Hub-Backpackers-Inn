@@ -119,7 +119,7 @@
                 data: {
                     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
                     datasets: [{
-                        label: 'Revenue ($)',
+                        label: 'Revenue (₱)',
                         data: [1200, 1900, 3000, 5000, 4500, totalRev],
                         borderColor: '#6C5DD3',
                         backgroundColor: 'rgba(108, 93, 211, 0.1)',
@@ -130,8 +130,31 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { borderDash: [5, 5] } }, x: { grid: { display: false } } }
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += '₱' + context.parsed.y.toLocaleString();
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { borderDash: [5, 5] },
+                            ticks: { callback: function(value) { return '₱' + value; } }
+                        }, 
+                        x: { grid: { display: false } } 
+                    }
                 }
             });
 
@@ -175,9 +198,9 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between">
                         <div>
                             <p class="text-sm text-gray-400 font-medium">Total Revenue</p>
-                            <h3 class="text-2xl font-bold text-brand-dark mt-1">$${totalRevenue.toLocaleString()}</h3>
+                            <h3 class="text-2xl font-bold text-brand-dark mt-1">₱${totalRevenue.toLocaleString()}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xl"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="w-12 h-12 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xl"><i class="fas fa-peso-sign"></i></div>
                     </div>
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between">
                         <div>
