@@ -24,6 +24,9 @@ require_once 'config/db.php';
     <!-- Admin Specific CSS -->
     <link rel="stylesheet" href="../assets/css/admin.css">
     
+    <!-- Modern Notifications -->
+    <script src="../assets/js/notifications.js"></script>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -44,4 +47,5 @@ require_once 'config/db.php';
             }
         }
     </script>
+
 </head>

@@ -421,6 +421,73 @@ async function setupMarquee() {
             }
         };
 
+        // --- MODERN NOTIFICATIONS ---
+        window.showToast = function(message, type = 'info') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `modern-toast ${type}`;
+            
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+            if (type === 'error') icon = 'fa-exclamation-circle';
+            if (type === 'warning') icon = 'fa-exclamation-triangle';
+            
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3500);
+        };
+
+        window.showConfirm = function(message, onConfirm) {
+            let overlay = document.getElementById('custom-confirm-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'custom-confirm-overlay';
+                overlay.innerHTML = `
+                    <div class="custom-confirm-box">
+                        <h4>Confirmation</h4>
+                        <p id="custom-confirm-message"></p>
+                        <div class="custom-confirm-buttons">
+                            <button class="btn-confirm-cancel" id="custom-confirm-cancel">Cancel</button>
+                            <button class="btn-confirm-ok" id="custom-confirm-ok">Confirm</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+            
+            document.getElementById('custom-confirm-message').textContent = message;
+            
+            const btnCancel = document.getElementById('custom-confirm-cancel');
+            const btnOk = document.getElementById('custom-confirm-ok');
+            
+            const newBtnCancel = btnCancel.cloneNode(true);
+            const newBtnOk = btnOk.cloneNode(true);
+            btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
+            btnOk.parentNode.replaceChild(newBtnOk, btnOk);
+            
+            const close = () => overlay.classList.remove('show');
+            
+            newBtnCancel.addEventListener('click', close);
+            newBtnOk.addEventListener('click', () => {
+                close();
+                if (onConfirm) onConfirm();
+            });
+            
+            overlay.classList.add('show');
+        };
+
         // Handle Login Form Submission
         const loginForm = document.getElementById('login-form');
         if (loginForm) {
@@ -446,7 +513,7 @@ async function setupMarquee() {
                         router('home');
                     }
                 } else {
-                    alert(data.message);
+                    showToast(data.message, 'error');
                 }
             })
             .catch(err => console.error('Login Error:', err));
@@ -471,7 +538,7 @@ async function setupMarquee() {
             if (!/[^A-Za-z0-9]/.test(pass)) validationErrors.push("One special character");
             
             if (validationErrors.length > 0) {
-                alert("Please meet all password requirements: " + validationErrors.join(", "));
+                showToast("Please meet all password requirements: " + validationErrors.join(", "), 'error');
                 return;
             }
 
@@ -483,10 +550,10 @@ async function setupMarquee() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message);
+                    showToast(data.message, 'success');
                     router('login');
                 } else {
-                    alert(data.message);
+                    showToast(data.message, 'error');
                 }
             })
             .catch(err => console.error('Registration Error:', err));
@@ -527,7 +594,7 @@ async function setupMarquee() {
         function handleSocialLogin(provider) {
             if (provider === 'Google') {
                 if (typeof google === 'undefined') {
-                    alert('Google Auth SDK is still loading or blocked. Please try again.');
+                    showToast('Google Auth SDK is still loading or blocked. Please try again.', 'error');
                     return;
                 }
                 const client = google.accounts.oauth2.initTokenClient({
@@ -568,7 +635,7 @@ async function setupMarquee() {
                     updateAuthUI();
                     router('home');
                 } else {
-                    alert(data.message);
+                    showToast(data.message, 'error');
                 }
             })
             .catch(err => console.error('Social Login Error:', err));
@@ -636,7 +703,7 @@ async function setupMarquee() {
                 const checkIn = document.getElementById('check-in-date').value;
                 const checkOut = document.getElementById('check-out-date').value;
                 if (!checkIn || !checkOut) {
-                    alert('Please select dates');
+                    showToast('Please select dates', 'warning');
                     return;
                 }
                 // Update room statuses
@@ -721,7 +788,7 @@ async function setupMarquee() {
         // Initialize booking with availability checks
         async function initiateBooking(roomId) {
             if (!appState.currentUser || appState.currentUser.role === 'admin') {
-                alert('Please login as guest user to book.');
+                showToast('Please login as guest user to book.', 'warning');
                 router('login');
                 return;
             }
@@ -761,7 +828,7 @@ async function setupMarquee() {
                 const checkData = await checkRes.json();
 
                 if (!checkData.available) {
-                    alert('Dates not available: ' + checkData.message);
+                    showToast('Dates not available: ' + checkData.message, 'error');
                     return;
                 }
 
@@ -804,7 +871,7 @@ async function setupMarquee() {
                 router('booking-summary');
             } catch (error) {
                 console.error('Booking init error:', error);
-                alert('Unable to verify availability. Please try again.');
+                showToast('Unable to verify availability. Please try again.', 'error');
             }
         }
 
@@ -815,12 +882,12 @@ async function setupMarquee() {
             e.preventDefault();
             
             if (!appState.currentUser) {
-                alert("Please login to continue.");
+                showToast("Please login to continue.", 'warning');
                 return;
             }
 
             if(appState.currentUser.role === 'admin') {
-                alert("Admins are not allowed to book rooms.");
+                showToast("Admins are not allowed to book rooms.", 'error');
                 return;
             }
 
@@ -844,10 +911,10 @@ async function setupMarquee() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert(`Booking Confirmed!\nReference: ${data.ref_id}\nWe have sent a receipt to your email.`);
+                    showToast(`Booking Confirmed! Reference: ${data.ref_id}. Receipt sent to email.`, 'success');
                     router('home');
                 } else {
-                    alert("Booking Failed: " + data.message);
+                    showToast("Booking Failed: " + data.message, 'error');
                 }
             })
             .catch(err => console.error('Booking Error:', err));

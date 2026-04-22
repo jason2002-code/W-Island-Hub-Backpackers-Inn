@@ -4,9 +4,37 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
-                <div class="flex-shrink-0 cursor-pointer flex items-center gap-3 group" onclick="router('home')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center text-white text-xl font-serif font-bold shadow-md group-hover:shadow-lg group-hover:-translate-y-0.5 transition-all duration-300">W</div>
-                    <h1 class="font-serif text-2xl font-bold text-brand-dark tracking-tight group-hover:text-brand-cyan transition-colors duration-300">Island Hub</h1>
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer group" onclick="router('home')">
+                    <!-- SVG Logo Icon -->
+                    <svg class="w-10 h-10 md:w-12 md:h-12 transition-transform duration-500 group-hover:scale-105 drop-shadow-md" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FDE047"/>
+                                <stop offset="50%" stop-color="#D97706"/>
+                                <stop offset="100%" stop-color="#78350F"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Palm Trunk -->
+                        <path d="M25,85 Q35,60 30,40" stroke="url(#goldGradient)" stroke-width="5" stroke-linecap="round"/>
+                        <!-- Palm Leaves -->
+                        <path d="M30,40 C15,40 10,55 10,55 C10,55 15,45 30,40" fill="url(#goldGradient)"/>
+                        <path d="M30,40 C20,25 5,30 5,30 C5,30 15,35 30,40" fill="url(#goldGradient)"/>
+                        <path d="M30,40 C30,20 20,15 20,15 C20,15 30,25 30,40" fill="url(#goldGradient)"/>
+                        <path d="M30,40 C45,25 55,35 55,35 C55,35 40,35 30,40" fill="url(#goldGradient)"/>
+                        <path d="M30,40 C50,45 50,60 50,60 C50,60 40,50 30,40" fill="url(#goldGradient)"/>
+                        <!-- Stylized W -->
+                        <path d="M40,35 L50,85 L65,50 L75,85 L90,35" stroke="url(#goldGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    
+                    <!-- Typographic Text -->
+                    <div class="flex flex-col justify-center">
+                        <h1 class="font-serif text-xl md:text-2xl font-bold leading-none tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-600 drop-shadow-sm pb-1">
+                            W island
+                        </h1>
+                        <span class="text-[0.6rem] md:text-[0.65rem] font-bold tracking-[0.3em] uppercase text-gray-500 leading-none mt-0.5 ml-1">
+                            Hub
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Desktop Menu -->

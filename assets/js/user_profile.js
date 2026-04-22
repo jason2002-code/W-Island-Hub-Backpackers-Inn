@@ -176,19 +176,19 @@ function saveProfile(e) {
                 if (data && data.success === false) {
                     throw new Error(data.message || "Failed to update profile details");
                 }
-                alert("Profile updated successfully!");
+                showToast("Profile updated successfully!", 'success');
                 updateAuthUI();
                 renderUserProfile(false);
             })
             .catch(err => {
                 console.error('Profile update error:', err);
-                alert("Failed to update profile: " + err.message);
+                showToast("Failed to update profile: " + err.message, 'error');
             });
         }
 
         // Cancel booking - saves to database
         function cancelMyBooking(bookingId) {
-            if(confirm("Are you sure you want to cancel this reservation?")) {
+            showConfirm("Are you sure you want to cancel this reservation?", () => {
                 fetch('../actions/bookings_action.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -207,16 +207,16 @@ function saveProfile(e) {
                         }
                         saveState();
                         renderUserProfile();
-                        alert("Booking cancelled successfully!");
+                        showToast("Booking cancelled successfully!", 'success');
                     } else {
-                        alert("Failed to cancel booking: " + data.message);
+                        showToast("Failed to cancel booking: " + data.message, 'error');
                     }
                 })
                 .catch(err => {
                     console.error('Cancel booking error:', err);
-                    alert("Failed to cancel booking: " + err.message);
+                    showToast("Failed to cancel booking: " + err.message, 'error');
                 });
-            }
+            });
         }
 
         // Log out the current user
@@ -270,11 +270,11 @@ function saveProfile(e) {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert('Feedback submitted successfully. Thank you!');
+                    showToast('Feedback submitted successfully. Thank you!', 'success');
                     closeReportModal();
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    alert('Error: ' + data.message);
+                    showToast('Error: ' + data.message, 'error');
                 }
             })
             .catch(err => console.error(err));

@@ -68,25 +68,19 @@ function loadUsers() {
 }
 
 function deleteUser(userId) {
-    if (!confirm('Are you sure you want to delete this user?')) {
-        return;
-    }
-    
-    fetch('../actions/users_action.php?id=' + userId, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            loadUsers();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error deleting user');
+    showConfirm('Are you sure you want to delete this user?', () => {
+        fetch('../actions/users_action.php?id=' + userId, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast(data.message || 'User deleted successfully!', data.success ? 'success' : 'error');
+            if (data.success) loadUsers();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error deleting user', 'error');
+        });
     });
 }
 

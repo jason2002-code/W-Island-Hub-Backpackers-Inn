@@ -174,50 +174,38 @@ function renderBookings(bookings) {
 }
 
 function updateBookingStatus(bookingId, status) {
-    if (!confirm(`Are you sure you want to ${status.toLowerCase()} this booking?`)) {
-        return;
-    }
-    
-    fetch('../actions/bookings_action.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: bookingId, status: status })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            loadBookings();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error updating booking status');
+    showConfirm(`Are you sure you want to ${status.toLowerCase()} this booking?`, () => {
+        fetch('../actions/bookings_action.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: bookingId, status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast(data.message || 'Status updated successfully!', data.success ? 'success' : 'error');
+            if (data.success) loadBookings();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error updating booking status', 'error');
+        });
     });
 }
 
 function deleteBooking(bookingId) {
-    if (!confirm('Are you sure you want to delete this booking?')) {
-        return;
-    }
-    
-    fetch('../actions/bookings_action.php?id=' + bookingId, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            loadBookings();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error deleting booking');
+    showConfirm('Are you sure you want to delete this booking?', () => {
+        fetch('../actions/bookings_action.php?id=' + bookingId, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast(data.message || 'Booking deleted successfully!', data.success ? 'success' : 'error');
+            if (data.success) loadBookings();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error deleting booking', 'error');
+        });
     });
 }
 

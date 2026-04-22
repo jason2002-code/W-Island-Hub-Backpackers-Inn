@@ -109,49 +109,38 @@ function getStatusColor(status) {
 }
 
 function updateReportStatus(reportId, status) {
-    if (!confirm('Mark this report as ' + status + '?')) {
-        return;
-    }
-    
-    fetch('../actions/reports_action.php', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: reportId, status: status })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            loadReports();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error updating report status');
+    showConfirm('Mark this report as ' + status + '?', () => {
+        fetch('../actions/reports_action.php', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: reportId, status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast(data.message || 'Status updated!', data.success ? 'success' : 'error');
+            if (data.success) loadReports();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error updating report status', 'error');
+        });
     });
 }
 
 function deleteReport(reportId) {
-    if (!confirm('Delete this report?')) {
-        return;
-    }
-    
-    fetch('../actions/reports_action.php?id=' + reportId, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            loadReports();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error deleting report');
+    showConfirm('Delete this report?', () => {
+        fetch('../actions/reports_action.php?id=' + reportId, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast(data.message || 'Report deleted!', data.success ? 'success' : 'error');
+            if (data.success) loadReports();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error deleting report', 'error');
+        });
     });
 }
 
@@ -171,7 +160,10 @@ function submitReply() {
     const reportId = document.getElementById('reply-report-id').value;
     const message = document.getElementById('reply-message').value;
     
-    if (!message.trim()) return alert('Please enter a message');
+    if (!message.trim()) {
+        showToast('Please enter a message', 'warning');
+        return;
+    }
     
     fetch('../actions/save_report_reply.php', {
         method: 'POST',
@@ -180,10 +172,11 @@ function submitReply() {
     })
     .then(res => res.json())
     .then(data => {
+        showToast(data.message || 'Reply sent successfully!', data.success ? 'success' : 'error');
         if (data.success) {
             closeReplyModal();
             loadReports();
-        } else alert('Error: ' + data.message);
+        }
     });
 }
 
