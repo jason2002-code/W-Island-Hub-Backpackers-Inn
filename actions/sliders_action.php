@@ -21,7 +21,7 @@ if ($method === 'GET') {
 }
 
 // Security: Require admin role for any POST (write) operation
-if ($method === 'POST' && (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin')) {
+if ($method === 'POST' && (!isset($_SESSION['admin_id']) || $_SESSION['admin_role'] !== 'admin')) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }

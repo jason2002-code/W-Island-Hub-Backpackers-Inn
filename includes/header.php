@@ -140,11 +140,37 @@
                 padding-left: 60px;
             }
 
-            /* SVG Palm Tree Graphic */
+/* SVG Palm Tree Graphic */
             .palm-tree-svg {
                 width: 120px;
                 height: auto;
                 filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8)) drop-shadow(0px 0px 15px rgba(212, 175, 55, 0.3));
+            }
+
+            /* W Logo - Gold styled to blend with loading screen */
+            .w-logo {
+                font-family: 'Playfair Display', serif;
+                font-size: 5rem;
+                font-weight: 700;
+                background: linear-gradient(to bottom, var(--gold-light) 0%, var(--gold-mid) 40%, var(--gold-dark) 60%, var(--gold-mid) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                color: transparent;
+                filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8));
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                margin: 0 5px;
+            }
+            
+            /* Forcefully hide any leftover spinning pseudo-elements from external CSS */
+            .w-logo::before, 
+            .w-logo::after {
+                content: none !important;
+                display: none !important;
+                animation: none !important;
             }
 
             /* Loading Progress Bar */
@@ -207,7 +233,7 @@
             @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;500&display=swap');
         </style>
 
-        <!-- Main Loader Content -->
+<!-- Main Loader Content -->
         <div class="logo-container">
             <!-- Custom Palm Tree SVG -->
             <svg class="palm-tree-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
@@ -220,6 +246,11 @@
                 <path d="M 53,35 C 75,20 90,10 95,20 C 80,30 65,35 53,35 Z" fill="url(#gold-gradient)"/>
                 <path d="M 51,38 C 75,50 90,45 85,35 C 70,35 60,35 51,38 Z" fill="url(#gold-gradient)"/>
             </svg>
+
+            <!-- W Logo - Gold styled to blend with loading screen -->
+            <div class="w-logo" id="w-logo">
+                W
+            </div>
 
             <!-- Brand Typography -->
             <div class="brand-text">

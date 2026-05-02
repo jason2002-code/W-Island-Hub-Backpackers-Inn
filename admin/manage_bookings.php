@@ -152,16 +152,16 @@ function renderBookings(bookings) {
                 <td class="p-4">
                     <div class="flex gap-2">
                         ${booking.status === 'Pending' ? `
-                            <button onclick="updateBookingStatus(${booking.id}, 'Confirmed')" class="text-green-600 hover:bg-green-50 p-1 rounded transition" title="Confirm">
+                            <button onclick="updateBookingStatus('${booking.id}', 'Confirmed')" class="text-green-600 hover:bg-green-50 p-1 rounded transition" title="Confirm">
                                 <i class="fas fa-check"></i>
                             </button>
                         ` : ''}
                         ${booking.status !== 'Cancelled' ? `
-                            <button onclick="updateBookingStatus(${booking.id}, 'Cancelled')" class="text-red-600 hover:bg-red-50 p-1 rounded transition" title="Cancel">
+                            <button onclick="updateBookingStatus('${booking.id}', 'Cancelled')" class="text-red-600 hover:bg-red-50 p-1 rounded transition" title="Cancel">
                                 <i class="fas fa-times"></i>
                             </button>
                         ` : ''}
-                        <button onclick="deleteBooking(${booking.id})" class="text-gray-400 hover:text-red-600 p-1 rounded transition" title="Delete">
+                        <button onclick="deleteBooking('${booking.id}')" class="text-gray-400 hover:text-red-600 p-1 rounded transition" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>

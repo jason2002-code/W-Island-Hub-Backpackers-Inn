@@ -37,7 +37,15 @@ function getProfile() {
     }
     
     try {
-        $stmt = $pdo->prepare("SELECT id, name, email, role, created_at FROM users WHERE id = ?");
+        // Check if avatar column exists
+        $stmt = $pdo->query("DESCRIBE users");
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $selectCols = "id, name, email, role, created_at";
+        if (in_array('avatar', $columns)) {
+            $selectCols .= ", avatar";
+        }
+        
+        $stmt = $pdo->prepare("SELECT $selectCols FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -89,15 +97,36 @@ function updateProfile() {
         exit;
     }
     
+    // Handle both JSON and multipart form data
     $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input) {
+        $input = $_POST;
+    }
     
     $userId = $input['id'] ?? null;
     $name = $input['name'] ?? null;
     $email = $input['email'] ?? null;
+    $avatarUrl = null;
     
     if (!$userId || !$name || !$email) {
         echo json_encode(['success' => false, 'message' => 'User ID, name, and email are required']);
         exit;
+    }
+    
+    // Handle avatar upload if present
+    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+        $upload_base = __DIR__ . '/../assets/image/avatars/';
+        if (!is_dir($upload_base)) mkdir($upload_base, 0755, true);
+        
+        $fileExt = strtolower(pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION));
+        $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        
+        if (in_array($fileExt, $allowedExt)) {
+            $newName = 'user_' . $userId . '_' . uniqid() . '.' . $fileExt;
+            if (move_uploaded_file($_FILES['avatar']['tmp_name'], $upload_base . $newName)) {
+                $avatarUrl = 'assets/image/avatars/' . $newName;
+            }
+        }
     }
     
     // Validate email format
@@ -116,9 +145,31 @@ function updateProfile() {
             exit;
         }
         
+        // Ensure avatar column exists
+        $stmt = $pdo->query("DESCRIBE users");
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $hasAvatar = in_array('avatar', $columns);
+        
+        if ($avatarUrl && !$hasAvatar) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL AFTER email");
+            $hasAvatar = true;
+        }
+        
         // Update user profile
-        $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ? WHERE id = ?");
-        $stmt->execute([$name, $email, $userId]);
+        if ($hasAvatar && $avatarUrl) {
+            $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, avatar = ? WHERE id = ?");
+            $stmt->execute([$name, $email, $avatarUrl, $userId]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ? WHERE id = ?");
+            $stmt->execute([$name, $email, $userId]);
+        }
+        
+        // Fetch current avatar if not updated to return in response
+        if ($hasAvatar && !$avatarUrl) {
+            $stmt = $pdo->prepare("SELECT avatar FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            $avatarUrl = $stmt->fetchColumn();
+        }
         
         echo json_encode([
             'success' => true, 
@@ -126,7 +177,8 @@ function updateProfile() {
             'user' => [
                 'id' => $userId,
                 'name' => $name,
-                'email' => $email
+                'email' => $email,
+                'avatar' => $hasAvatar ? $avatarUrl : null
             ]
         ]);
         

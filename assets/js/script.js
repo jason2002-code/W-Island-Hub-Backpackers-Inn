@@ -179,7 +179,6 @@ async function initHeroCarousel() {
             startSlideTimer();
         }
 
-      
 
         // --- CORE FUNCTIONS ---
 
@@ -191,28 +190,32 @@ async function initHeroCarousel() {
          */
 
 
-        async function init() {
+async function init() {
             // Simple fast loader: 1.5s total
             document.body.style.overflow = 'hidden';
 
+            // W logo is already inserted in the loader HTML (header.php)
+            // Just ensure it exists and animate it if GSAP is available
+
+            const loadContent = Promise.all([
+                initHeroCarousel(),
+                setupMarquee()
+            ]);
+
             if(window.gsap) {
                 const tl = gsap.timeline({
-                    onComplete: async () => {
+                    onComplete: () => {
                         const loader = document.getElementById('loader');
                         if(loader) {
                             loader.style.display = 'none';
                         }
                         document.body.style.overflow = 'auto';
-                        // Init content
-                        await initHeroCarousel();
-                        await setupMarquee();
                     }
                 });
-                tl.to(".w-logo", { rotation: 360, duration: 1.2, ease: "elastic.out(1, 0.3)" })
-                  .to("#loader", { y: "-100%", duration: 0.6, ease: "power4.in", delay: 0.7 });
+            tl.to("#loader", { y: "-100%", duration: 0.6, ease: "power4.in", delay: 1.5 });
             } else {
                 // Fallback: 1.5s CSS fade
-                setTimeout(async () => {
+                setTimeout(() => {
                     const loader = document.getElementById('loader');
                     if(loader) {
                         loader.classList.add('hidden');
@@ -221,11 +224,10 @@ async function initHeroCarousel() {
                             document.body.style.overflow = 'auto';
                         }, 500);
                     }
-                    await initHeroCarousel();
-                    await setupMarquee();
                 }, 2500);
             }
             
+            await loadContent;
             updateAuthUI();
             setupMobileNav();
             fetchRooms();
@@ -350,13 +352,17 @@ async function setupMarquee() {
                 return;
             }
 
-            // Hide all pages
-            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            // Hide all pages (use explicit display:none to override any conflicting styles)
+            document.querySelectorAll('.page-section').forEach(el => {
+                el.classList.remove('active');
+                el.style.display = 'none';
+            });
             
             // Show specific page
             const target = document.getElementById(pageId);
             if(target) {
                 target.classList.add('active');
+                target.style.display = 'block';
                 window.scrollTo(0,0);
             }
         }
@@ -365,34 +371,36 @@ async function setupMarquee() {
         function updateAuthUI() {
             const container = document.getElementById('auth-buttons');
             const mobileContainer = document.getElementById('mobile-auth-buttons');
+            const basePath = (window.location.pathname.includes('/admin/') || window.location.pathname.includes('/user/')) ? '../' : '';
             
             let html = '';
         if (appState.currentUser) {            
                 const dashboardLink = appState.currentUser.role === 'admin'
-                    ? `<a href="admin/dashboard.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">Admin Panel</a>`
-                    : `<a href="user/profile.php" class="text-sm font-semibold cursor-pointer text-brand-dark hover:text-brand-cyan transition-colors block md:inline text-center bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full">My Profile</a>`;
+                    ? `<a href="${basePath}admin/dashboard.php" class="flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer text-white bg-brand-dark hover:bg-gray-800 transition-colors px-5 py-2 rounded-full shadow-md"><i class="fas fa-shield-alt"></i> Admin Panel</a>`
+                    : `<a href="${basePath}user/profile.php" class="flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer text-brand-dark bg-white border border-gray-200 hover:border-brand-blue hover:text-brand-blue hover:shadow-md transition-all px-5 py-2 rounded-full shadow-sm"><i class="fas fa-user-circle"></i> My Profile</a>`;
                 
                 const firstName = appState.currentUser.name ? appState.currentUser.name.split(' ')[0] : 'Guest';
+                const avatarHTML = appState.currentUser.avatar 
+                    ? `<img src="${basePath}${appState.currentUser.avatar}" alt="Avatar" class="w-full h-full object-cover">`
+                    : `${firstName.charAt(0).toUpperCase()}`;
 
                 html = `
-                    <div class="flex flex-col md:flex-row md:items-center gap-4">
-
-                        <div class="flex items-center gap-2 px-3 py-1.5 bg-white md:bg-gray-50 rounded-full md:border border-gray-100 md:shadow-sm justify-center md:justify-start">
-                            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-xs font-bold shadow-inner">
-                                ${firstName.charAt(0).toUpperCase()}
+                    <div class="flex flex-col md:flex-row md:items-center gap-3">
+                        <div class="flex items-center gap-3 px-4 py-1.5 bg-gradient-to-r from-gray-50 to-white rounded-full border border-gray-100 shadow-sm justify-center md:justify-start">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-sm font-bold shadow-md overflow-hidden">
+                                ${avatarHTML}
                             </div>
-                            <span class="text-sm font-semibold text-gray-700 tracking-wide pr-1">Hi, ${firstName}</span>
+                            <span class="text-sm font-semibold text-gray-800 tracking-wide pr-2">Hi, ${firstName}</span>
                         </div>
                         ${dashboardLink}
-                        <button onclick="logout()" class="text-sm font-semibold border border-red-200 text-red-500 px-4 py-2 rounded-full hover:bg-red-50 hover:border-red-300 transition-all w-full md:w-auto shadow-sm">Logout</button>
+                        <button onclick="logout()" class="flex items-center justify-center gap-2 text-sm font-semibold bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white px-5 py-2 rounded-full transition-all w-full md:w-auto shadow-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
                     </div>
                 `;
             } else {  
                 html = `
                     <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-
-                        <a onclick="router('login')" class="text-gray-600 hover:text-brand-dark font-semibold cursor-pointer px-4 py-2.5 rounded-full hover:bg-gray-100 transition-all text-sm tracking-wide text-center">Login</a>
-                        <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg hover:-translate-y-0.5 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-md cursor-pointer text-sm tracking-wide text-center">Sign Up</a>
+                        <a onclick="router('login')" class="text-gray-600 hover:text-brand-dark font-semibold cursor-pointer px-5 py-2.5 rounded-full hover:bg-gray-100 transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg hover:-translate-y-0.5 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-md cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus"></i> Sign Up</a>
                     </div>
                 `;
             }
@@ -643,12 +651,14 @@ async function setupMarquee() {
 
 // Log out the current user
       function logout() {
+              const role = appState.currentUser ? appState.currentUser.role : 'user';
               appState.currentUser = null;
-              saveState(); // Clears sessionStorage
+              saveState(role); // Clears storage for this role
               // Set flag to indicate user just logged out (for redirect handling)
               sessionStorage.setItem('w_justLoggedOut', 'true');
+              const basePath = (window.location.pathname.includes('/admin/') || window.location.pathname.includes('/user/')) ? '../' : '';
               // Redirect to logout.php for server-side session cleanup
-            window.location.href = 'logout.php';
+            window.location.href = basePath + 'logout.php?type=' + role;
       }
 
         // --- BOOKING LOGIC ---
@@ -921,10 +931,26 @@ async function setupMarquee() {
             });
         }
 
+// Initialize page visibility on load to ensure proper display
+        function initPageVisibility() {
+            const homeSection = document.getElementById('home');
+            if (homeSection && homeSection.classList.contains('active')) {
+                homeSection.style.display = 'block';
+            }
+            // Hide all other page sections
+            document.querySelectorAll('.page-section:not(#home)').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
         // Initialize App
         if (document.readyState === 'loading') {
-            window.addEventListener('DOMContentLoaded', init);
+            window.addEventListener('DOMContentLoaded', () => {
+                initPageVisibility();
+                init();
+            });
         } else {
-            init(); // DOM is already loaded
+            initPageVisibility();
+            init();
         }
         

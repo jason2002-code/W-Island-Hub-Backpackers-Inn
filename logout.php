@@ -4,10 +4,18 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Store the user's role before destroying the session
-$userRole = $_SESSION['role'] ?? 'user';
+$logoutType = $_GET['type'] ?? 'user';
+$userRole = $logoutType === 'admin' ? 'admin' : 'user';
 
-// Destroy the session
-session_destroy();
+// Unset specific session based on role, avoiding destroying the concurrent session
+if ($logoutType === 'admin') {
+    unset($_SESSION['admin_id']);
+    unset($_SESSION['admin_role']);
+} else {
+    unset($_SESSION['user_id']);
+    unset($_SESSION['name']);
+    unset($_SESSION['role']);
+}
 
 // Redirect based on user role
 if ($userRole === 'admin') {

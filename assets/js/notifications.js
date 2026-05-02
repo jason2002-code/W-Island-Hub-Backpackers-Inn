@@ -8,6 +8,25 @@ let confirmOverlay = null;
 
 // Modern Toast Notification (same as main app)
 window.showToast = function(message, type = 'info') {
+    if (!document.getElementById('toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.innerHTML = `
+            #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 100001; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+            .modern-toast { background: #fff; color: #333; padding: 16px 24px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; font-family: inherit; font-size: 0.9rem; font-weight: 500; transform: translateX(120%); opacity: 0; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease; pointer-events: auto; border-left: 4px solid #0ea5e9; }
+            .modern-toast.show { transform: translateX(0); opacity: 1; }
+            .modern-toast.success { border-left-color: #22c55e; }
+            .modern-toast.error { border-left-color: #ef4444; }
+            .modern-toast.warning { border-left-color: #f59e0b; }
+            .modern-toast i { font-size: 1.2rem; }
+            .modern-toast.success i { color: #22c55e; }
+            .modern-toast.error i { color: #ef4444; }
+            .modern-toast.warning i { color: #f59e0b; }
+            .modern-toast.info i { color: #0ea5e9; }
+        `;
+        document.head.appendChild(style);
+    }
+
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
@@ -98,11 +117,11 @@ window.showConfirm = function(message, onConfirm, options = {}) {
     });
 };
 
-function closeConfirm() {
+window.closeConfirm = function() {
     if (confirmOverlay) {
         confirmOverlay.classList.remove('show');
     }
-}
+};
 
 // Auto-remove containers on page unload
 window.addEventListener('beforeunload', () => {
@@ -134,4 +153,3 @@ function inferToastType(message) {
 window.showMessage = function(msg, type = null) {
     showToast(msg, type || inferToastType(msg));
 };
-

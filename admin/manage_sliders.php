@@ -135,25 +135,26 @@ let selectedIds = new Set();
 // Bulk toggle helper
 function bulkToggle(status) {
   if (selectedIds.size === 0) {
-    alert('No sliders selected');
+    showToast('No sliders selected', 'warning');
     return;
   }
-  if (!confirm(`Set ${selectedIds.size} slider(s) to ${status ? 'enabled' : 'disabled'}?`)) return;
-  let completed = 0;
-  selectedIds.forEach(id => {
-    const formData = new FormData();
-    formData.append('action', 'toggle');
-    formData.append('id', id);
-    fetch('../actions/sliders_action.php', {method: 'POST', body: formData})
-      .then(res => res.json())
-      .then(result => {
-        if (result.success) completed++;
-        if (completed === selectedIds.size) {
-          selectedIds.clear();
-          loadSliders();
-        }
-      })
-      .catch(() => {});
+  showConfirm(`Set ${selectedIds.size} slider(s) to ${status ? 'enabled' : 'disabled'}?`, () => {
+    let completed = 0;
+    selectedIds.forEach(id => {
+      const formData = new FormData();
+      formData.append('action', 'toggle');
+      formData.append('id', id);
+      fetch('../actions/sliders_action.php', {method: 'POST', body: formData})
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) completed++;
+          if (completed === selectedIds.size) {
+            selectedIds.clear();
+            loadSliders();
+          }
+        })
+        .catch(() => {});
+    });
   });
 }
 
@@ -167,17 +168,18 @@ function bulkDisableSelected() { bulkToggle(false); }
 function enableAllDisabled() {
   const disabled = allSliders.filter(s => s.is_active != 1).map(s => s.id);
   if (disabled.length === 0) {
-    alert('No disabled sliders');
+    showToast('No disabled sliders', 'warning');
     return;
   }
-  if (!confirm(`Enable ${disabled.length} disabled slider(s)?`)) return;
-  disabled.forEach(id => {
-    const formData = new FormData();
-    formData.append('action', 'toggle');
-    formData.append('id', id);
-    fetch('../actions/sliders_action.php', {method: 'POST', body: formData}).catch(() => {});
+  showConfirm(`Enable ${disabled.length} disabled slider(s)?`, () => {
+    disabled.forEach(id => {
+      const formData = new FormData();
+      formData.append('action', 'toggle');
+      formData.append('id', id);
+      fetch('../actions/sliders_action.php', {method: 'POST', body: formData}).catch(() => {});
+    });
+    loadSliders();
   });
-  loadSliders();
 }
 
 // Handle individual checkbox selection
@@ -426,7 +428,7 @@ function saveSlider() {
     console.log('Form data:', data);
     
     if (!data.image_url) {
-        alert('Please enter an image URL');
+        showToast('Please enter an image URL', 'warning');
         resetSaveButton();
         return;
     }
@@ -463,14 +465,14 @@ function saveSlider() {
         if (result.success) {
             closeSliderModal();
             loadSliders();
-            alert('✅ ' + (result.message || 'Saved successfully!'));
+            showToast('✅ ' + (result.message || 'Saved successfully!'), 'success');
         } else {
-            alert('❌ Save failed: ' + (result.message || 'Unknown error'));
+            showToast('❌ Save failed: ' + (result.message || 'Unknown error'), 'error');
         }
     })
     .catch(err => {
         console.error('SAVE ERROR:', err);
-        alert('🌐 Network/DB Error: ' + err.message + '\\nCheck console & Apache error_log');
+        showToast('🌐 Network/DB Error: ' + err.message + '\\nCheck console & Apache error_log', 'error');
     })
     .finally(() => {
         resetSaveButton();
@@ -486,51 +488,51 @@ function resetSaveButton() {
 }
 
 function toggleSliderStatus(id) {
-    if (!confirm('Toggle slider status?')) return;
-    
-    const formData = new FormData();
-    formData.append('action', 'toggle');
-    formData.append('id', id);
-    
-    fetch('../actions/sliders_action.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => {
-        if (!res.ok) throw new Error(res.status);
-        return res.json();
-    })
-    .then(result => {
-        if (result.success) {
-            loadSliders();
-        } else {
-            alert(result.message || 'Toggle failed');
-        }
-    })
-    .catch(err => console.error('Toggle failed:', err));
+    showConfirm('Toggle slider status?', () => {
+        const formData = new FormData();
+        formData.append('action', 'toggle');
+        formData.append('id', id);
+        
+        fetch('../actions/sliders_action.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => {
+            if (!res.ok) throw new Error(res.status);
+            return res.json();
+        })
+        .then(result => {
+            if (result.success) {
+                loadSliders();
+            } else {
+                showToast(result.message || 'Toggle failed', 'error');
+            }
+        })
+        .catch(err => console.error('Toggle failed:', err));
+    });
 }
 
 function deleteSlider(id) {
-    if (!confirm('Are you sure you want to delete this slider? This action cannot be undone.')) return;
-    
-    const formData = new FormData();
-    formData.append('action', 'delete');
-    formData.append('id', id);
-    
-    fetch('../actions/sliders_action.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(result => {
-        if (result.success) {
-            loadSliders();
-            alert(result.message);
-        } else {
-            alert(result.message);
-        }
-    })
-    .catch(err => console.error('Failed to delete slider:', err));
+    showConfirm('Are you sure you want to delete this slider? This action cannot be undone.', () => {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('id', id);
+        
+        fetch('../actions/sliders_action.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.success) {
+                loadSliders();
+                showToast(result.message, 'success');
+            } else {
+                showToast(result.message, 'error');
+            }
+        })
+        .catch(err => console.error('Failed to delete slider:', err));
+    });
 }
 
 

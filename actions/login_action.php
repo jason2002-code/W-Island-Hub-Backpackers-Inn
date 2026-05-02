@@ -45,9 +45,16 @@ try {
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['name'] = $user['name'];
-        $_SESSION['role'] = $user['role'];
+        
+        // Separate admin and user session keys to prevent cross-tab contamination
+        if ($user['role'] === 'admin') {
+            $_SESSION['admin_id'] = $user['id'];
+            $_SESSION['admin_role'] = $user['role'];
+        } else {
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['name'] = $user['name'];
+            $_SESSION['role'] = $user['role'];
+        }
 
         $redirect = ($user['role'] === 'admin') ? 'admin/dashboard.php' : 'index.php';
 

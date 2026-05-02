@@ -8,7 +8,7 @@
 session_start();
 
 // Check if user is logged in and is admin
-if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
+if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
     // PHP session is valid - allow access
     $isValidSession = true;
 } else {
@@ -123,7 +123,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
             </nav>
 
             <div class="p-4 border-t border-gray-100">
-                <a href="../logout.php" class="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 w-full rounded-xl transition font-medium">
+                <a onclick="logout()" class="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 w-full rounded-xl transition font-medium cursor-pointer">
                     <i class="fas fa-sign-out-alt"></i> Back to Main Site
                 </a>
             </div>
@@ -181,6 +181,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
 
     <!-- JAVASCRIPT LOGIC -->
     <script src="../assets/js/admin_chart.js"></script>
+    <script src="../assets/js/notifications.js"></script>
    
     <script>
         // Explicitly initialize admin dashboard after script loads
@@ -202,7 +203,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
                 'manage-rooms': 'Room Inventory',
                 'manage-users': 'User Management',
                 'manage-reports': 'Guest Feedback',
-                'manage-sliders': 'Carousel & Sliders'
+                'manage-sliders': 'Carousel & Sliders',
             };
             document.getElementById('admin-page-title').innerText = titles[sectionId] || 'Admin Panel';
         }

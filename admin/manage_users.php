@@ -52,7 +52,7 @@ function loadUsers() {
                         </td>
                         <td class="p-4">${user.created_at}</td>
                         <td class="p-4">
-                            ${user.role !== 'admin' ? `<button onclick="deleteUser(${user.id})" class="text-red-600 hover:underline">Delete</button>` : '<span class="text-gray-400">-</span>'}
+                            ${user.role !== 'admin' ? `<button onclick="deleteUser('${user.id}')" class="text-red-600 hover:underline">Delete</button>` : '<span class="text-gray-400">-</span>'}
                         </td>
                     </tr>
                 `).join('');

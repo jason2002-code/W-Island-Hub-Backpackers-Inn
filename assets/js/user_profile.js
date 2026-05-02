@@ -18,44 +18,85 @@
             let profileHTML = '';
             if(isEditing) {
                 profileHTML = `
-                    <form onsubmit="saveProfile(event)" class="text-left space-y-3">
-                        <h3 class="text-lg font-bold text-brand-dark mb-4 text-center">Edit Profile</h3>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">Full Name</label>
-                            <input type="text" id="edit-name" value="${user.name}" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none" required>
+                    <form onsubmit="saveProfile(event)" class="text-left space-y-4 bg-white p-2">
+                        <div class="text-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-800">Edit Profile</h3>
+                            <p class="text-xs text-gray-500 mt-1">Update your personal information</p>
                         </div>
+                        
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">Email Address</label>
-                            <input type="email" id="edit-email" value="${user.email}" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">New Password <span class="text-gray-400 text-[10px]">(leave blank to keep)</span></label>
-                            <div class="password-wrapper">
-                                <input type="password" id="edit-pass" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-brand-blue outline-none pr-10" placeholder="••••••••">
-                                <i class="fas fa-eye password-toggle-icon" id="toggle-edit-pass" onclick="togglePassword('edit-pass', 'toggle-edit-pass')"></i>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Full Name</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><i class="fas fa-user"></i></div>
+                                <input type="text" id="edit-name" value="${user.name}" class="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all" required>
                             </div>
                         </div>
-                        <div class="flex gap-2 mt-6">
-                            <button type="submit" class="flex-1 bg-brand-blue text-white py-2 rounded-lg text-sm font-bold hover:bg-sky-600 transition">Save</button>
-                            <button type="button" onclick="renderUserProfile(false)" class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition">Cancel</button>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email Address</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><i class="fas fa-envelope"></i></div>
+                                <input type="email" id="edit-email" value="${user.email}" class="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide flex justify-between">
+                                Profile Logo
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><i class="fas fa-camera"></i></div>
+                                <input type="file" id="edit-avatar" accept="image/*" class="w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide flex justify-between">
+                                New Password <span class="text-gray-400 font-normal normal-case">(leave blank to keep)</span>
+                            </label>
+                            <div class="relative password-wrapper">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400"><i class="fas fa-lock"></i></div>
+                                <input type="password" id="edit-pass" class="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none transition-all" placeholder="••••••••">
+                                <i class="fas fa-eye absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" id="toggle-edit-pass" onclick="togglePassword('edit-pass', 'toggle-edit-pass')"></i>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-8 pt-4 border-t border-gray-100">
+                            <button type="button" onclick="renderUserProfile(false)" class="flex-1 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center gap-2"><i class="fas fa-times"></i> Cancel</button>
+                            <button type="submit" class="flex-1 bg-gradient-to-r from-brand-blue to-brand-cyan text-white py-2.5 rounded-xl text-sm font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all shadow-md flex items-center justify-center gap-2"><i class="fas fa-save"></i> Save</button>
                         </div>
                     </form>
                 `;
             } else {
 profileHTML = `
-                    <div class="w-24 h-24 rounded-full bg-brand-blue text-white flex items-center justify-center text-3xl font-bold mx-auto mb-4">${user.name.charAt(0).toUpperCase()}</div>
-                    <h3 class="text-xl font-bold text-brand-dark">${user.name}</h3>
-                    <p class="text-gray-500 text-sm mb-4">${user.email}</p>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-brand-blue">Guest Member</span>
+                    <div class="relative w-28 h-28 mx-auto mb-5 group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-full shadow-lg transform group-hover:scale-105 transition-transform duration-300"></div>
+                        <div class="absolute inset-1 bg-white rounded-full flex items-center justify-center overflow-hidden">
+                            ${user.avatar ? 
+                                `<img src="../${user.avatar}" class="w-full h-full object-cover" alt="Profile Image">` : 
+                                `<span class="text-4xl font-bold bg-gradient-to-br from-brand-blue to-brand-cyan bg-clip-text text-transparent">
+                                    ${user.name.charAt(0).toUpperCase()}
+                                </span>`
+                            }
+                        </div>
+                    </div>
                     
-                    <button onclick="renderUserProfile(true)" class="mt-6 w-full border border-brand-blue text-brand-blue hover:bg-blue-50 py-2 rounded-lg transition font-medium text-sm">
-                        <i class="fas fa-user-edit mr-2"></i> Edit Profile
-                    </button>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-1">${user.name}</h3>
+                    <p class="text-gray-500 text-sm mb-4 font-medium flex items-center justify-center gap-2">
+                        <i class="fas fa-envelope text-gray-400"></i> ${user.email}
+                    </p>
                     
-                    <hr class="my-6 border-gray-100">
-                    <button onclick="window.location.href = '../index.php'" class="w-full border border-gray-300 text-gray-600 hover:bg-gray-50 py-2 rounded-lg transition font-medium text-sm">
-                        <i class="fas fa-home mr-2"></i> Back to Home
-                    </button>
+                    <div class="mb-6">
+                        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-brand-blue border border-blue-100 shadow-sm">
+                            <i class="fas fa-check-circle"></i> Guest Member
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-3 mt-6">
+                        <button onclick="renderUserProfile(true)" class="w-full bg-gradient-to-r from-brand-blue to-brand-cyan text-white hover:shadow-lg hover:-translate-y-0.5 py-3 rounded-xl transition-all duration-300 font-semibold text-sm shadow-md flex items-center justify-center gap-2">
+                            <i class="fas fa-user-edit"></i> Edit Profile
+                        </button>
+                        
+                        <button onclick="window.location.href = '../index.php'" class="w-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 py-3 rounded-xl transition-all duration-300 font-semibold text-sm shadow-sm flex items-center justify-center gap-2">
+                            <i class="fas fa-home"></i> Back to Home
+                        </button>
+                    </div>
                 `;
             }
             document.getElementById('profile-card-container').innerHTML = profileHTML;
@@ -130,29 +171,55 @@ profileHTML = `
             }
         }
 
+        // Toggle Password Visibility
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            if (input && icon) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        }
+
         // Save profile changes to database
 function saveProfile(e) {
             e.preventDefault();
             const newName = document.getElementById('edit-name').value.trim();
             const newEmail = document.getElementById('edit-email').value.trim();
             const newPass = document.getElementById('edit-pass').value.trim();
+            const avatarInput = document.getElementById('edit-avatar');
+
+            const formData = new FormData();
+            formData.append('id', appState.currentUser.id);
+            formData.append('name', newName);
+            formData.append('email', newEmail);
+            
+            if (avatarInput && avatarInput.files[0]) {
+                formData.append('avatar', avatarInput.files[0]);
+            }
 
             // First, update basic profile info to database
             fetch('../actions/profile_action.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: appState.currentUser.id,
-                    name: newName,
-                    email: newEmail
-                })
+                body: formData
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     // Update local state
-                    appState.currentUser.name = newName;
-                    appState.currentUser.email = newEmail;
+                    appState.currentUser.name = data.user.name || newName;
+                    appState.currentUser.email = data.user.email || newEmail;
+                    if (data.user.avatar !== undefined) {
+                        appState.currentUser.avatar = data.user.avatar;
+                    }
                     saveState();
                     
                     // If password changed, update it too
@@ -193,6 +260,8 @@ function saveProfile(e) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        action: 'update_status',
+                        booking_id: bookingId,
                         id: bookingId,
                         status: 'Cancelled'
                     })
@@ -201,7 +270,7 @@ function saveProfile(e) {
                 .then(data => {
                     if (data.success) {
                         // Update local state
-                        const idx = appState.bookings.findIndex(b => b.id === bookingId);
+                        const idx = appState.bookings.findIndex(b => String(b.id) === String(bookingId));
                         if(idx > -1) {
                             appState.bookings[idx].status = 'Cancelled';
                         }
@@ -221,10 +290,11 @@ function saveProfile(e) {
 
         // Log out the current user
         function logout() {
+            const role = appState.currentUser ? appState.currentUser.role : 'user';
             appState.currentUser = null;
-            saveState(); // Clears sessionStorage
+            saveState(role); // Clears storage for this role
         
-            window.location.href = '../logout.php';
+            window.location.href = '../logout.php?type=' + role;
         }
         
         // Open report/feedback modal

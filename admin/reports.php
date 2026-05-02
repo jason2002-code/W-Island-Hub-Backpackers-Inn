@@ -63,10 +63,10 @@ function loadReports() {
                             ` : ''}
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="openReplyModal(${report.id})" class="text-blue-500 hover:text-blue-700 transition px-2" title="Reply to Guest"><i class="fas fa-reply"></i></button>
-                            ${report.status !== 'Resolved' ? `<button onclick="updateReportStatus(${report.id}, 'Resolved')" class="text-green-500 hover:text-green-700 transition px-2" title="Mark as Resolved"><i class="fas fa-check"></i></button>` : ''}
-                            ${report.status === 'Resolved' ? `<button onclick="updateReportStatus(${report.id}, 'Pending')" class="text-yellow-500 hover:text-yellow-700 transition px-2" title="Mark as Pending"><i class="fas fa-undo"></i></button>` : ''}
-                            <button onclick="deleteReport(${report.id})" class="text-gray-300 hover:text-red-500 transition px-2" title="Delete">
+                            <button onclick="openReplyModal('${report.id}')" class="text-blue-500 hover:text-blue-700 transition px-2" title="Reply to Guest"><i class="fas fa-reply"></i></button>
+                            ${report.status !== 'Resolved' ? `<button onclick="updateReportStatus('${report.id}', 'Resolved')" class="text-green-500 hover:text-green-700 transition px-2" title="Mark as Resolved"><i class="fas fa-check"></i></button>` : ''}
+                            ${report.status === 'Resolved' ? `<button onclick="updateReportStatus('${report.id}', 'Pending')" class="text-yellow-500 hover:text-yellow-700 transition px-2" title="Mark as Pending"><i class="fas fa-undo"></i></button>` : ''}
+                            <button onclick="deleteReport('${report.id}')" class="text-gray-300 hover:text-red-500 transition px-2" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>

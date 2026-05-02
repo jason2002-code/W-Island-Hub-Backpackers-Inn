@@ -8,6 +8,5 @@
 - [x] 5. Replace legacy confirm/alert in admin/reports.php (multiple instances → modern)
 
 ## Remaining Steps
-- [ ] 6. Test all admin pages
-- [ ] 7. Final cleanup and attempt_completion
-
+- [x] 6. Test all admin pages
+- [x] 7. Final cleanup and attempt_completion

@@ -262,43 +262,41 @@ function saveRoom(event) {
         try {
             const data = JSON.parse(text);
             if (data.success) {
-                alert(data.message);
+                showToast(data.message, 'success');
                 closeRoomModal();
                 loadRooms();
             } else {
-                alert('Error: ' + data.message);
+                showToast('Error: ' + data.message, 'error');
             }
         } catch(e) {
-            alert('Parse error: ' + text);
+            showToast('Parse error: ' + text, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error saving room: ' + error.message);
+        showToast('Error saving room: ' + error.message, 'error');
     });
 }
 
 // Prompts confirmation then sends DELETE request to API to remove room, refreshes grid on success
 function deleteRoom(roomId) {
-    if (!confirm('Are you sure you want to delete this room?')) {
-        return;
-    }
-    
-    fetch('../actions/rooms_action.php?id=' + roomId, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            loadRooms();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error deleting room');
+    showConfirm('Are you sure you want to delete this room?', () => {
+        fetch('../actions/rooms_action.php?id=' + roomId, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                loadRooms();
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error deleting room', 'error');
+        });
     });
 }
 

@@ -181,5 +181,7 @@ $userReports = $reportStmt->fetchAll(PDO::FETCH_ASSOC);
     });
 </script>
 
+<!-- Modern Notifications -->
+<script src="../assets/js/notifications.js"></script>
 <!-- Profile Management Script -->
 <script src="../assets/js/user_profile.js?v=<?php echo time(); ?>"></script>
