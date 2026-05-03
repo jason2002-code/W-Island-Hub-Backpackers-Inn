@@ -130,39 +130,36 @@
                 filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8)) drop-shadow(0px 0px 15px rgba(212, 175, 55, 0.3));
             }
 
+            .top-row {
+                display: flex;
+                align-items: baseline;
+                gap: 5px;
+            }
+
             .text-island {
                 font-size: 5rem;
-                padding-left: 10px;
             }
 
             .text-hub {
                 font-size: 6.5rem;
-                padding-left: 60px;
+                padding-left: 80px;
+                margin-top: -10px;
             }
 
 /* SVG Palm Tree Graphic */
-            .palm-tree-svg {
+           /* .palm-tree-svg {
                 width: 120px;
                 height: auto;
                 filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8)) drop-shadow(0px 0px 15px rgba(212, 175, 55, 0.3));
             }
-
+*/
             /* W Logo - Gold styled to blend with loading screen */
             .w-logo {
                 font-family: 'Playfair Display', serif;
-                font-size: 5rem;
+                font-size: 6rem;
                 font-weight: 700;
-                background: linear-gradient(to bottom, var(--gold-light) 0%, var(--gold-mid) 40%, var(--gold-dark) 60%, var(--gold-mid) 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                color: transparent;
-                filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8));
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                display: inline-block;
                 position: relative;
-                margin: 0 5px;
             }
             
             /* Forcefully hide any leftover spinning pseudo-elements from external CSS */
@@ -247,14 +244,13 @@
                 <path d="M 51,38 C 75,50 90,45 85,35 C 70,35 60,35 51,38 Z" fill="url(#gold-gradient)"/>
             </svg>
 
-            <!-- W Logo - Gold styled to blend with loading screen -->
-            <div class="w-logo" id="w-logo">
-                W
-            </div>
-
             <!-- Brand Typography -->
             <div class="brand-text">
-                <div class="text-island">island</div>
+                <div class="top-row">
+                    <!-- W Logo - Gold styled to blend with loading screen -->
+                    <span class="w-logo" id="w-logo">W</span>
+                    <span class="text-island">island</span>
+                </div>
                 <div class="text-hub">Hub</div>
             </div>
         </div>
