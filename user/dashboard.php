@@ -32,6 +32,9 @@
                     <!-- Dots injected via JS -->
                 </div>
             </div>
+            
+            <!-- Guest Reviews Section -->
+            <?php include 'user/reviews.php'; ?>
 
             <!-- Auto-Scroll Marquee (Left to Right) -->
             <div class="py-12 bg-white overflow-hidden">

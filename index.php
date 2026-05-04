@@ -11,6 +11,13 @@ if (session_status() == PHP_SESSION_NONE) {
     <main class="pt-20 min-h-screen">
 
        <?php include "user/dashboard.php"; ?>
+
+   
+       
+  
+
+        <!-- ================= GUEST REVIEWS AND RATINGS ================= -->
+       
       
 
         <!-- ================= BOOKING SUMMARY AND ROOMS PAGE================= -->
@@ -36,6 +43,7 @@ if (session_status() == PHP_SESSION_NONE) {
         <!-- JAVASCRIPT LOGIC -->
       
        <script src="assets/js/script.js"></script>
+       <script src="assets/js/homepage_reviews.js"></script>
        <script src="https://accounts.google.com/gsi/client" async defer></script>
        
      

@@ -22,7 +22,8 @@
                     </li>
                     <li class="flex items-start gap-4 group-hover:translate-x-2 transition-transform">
                         <i class="fas fa-check-circle text-2xl text-brand-cyan mt-1 flex-shrink-0"></i>
-                        <span class="text-lg text-gray-800 leading-relaxed">Pay full balance on arrival (cash/card accepted)</span>
+                        <span class="text-lg text-gray-800 leading-relaxed">Pay full balance on arrival (cash accepted)</span>
+
                     </li>
                     <li class="flex items-start gap-4 group-hover:translate-x-2 transition-transform">
                         <i class="fas fa-check-circle text-2xl text-brand-cyan mt-1 flex-shrink-0"></i>

@@ -117,8 +117,11 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 <a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-comment-dots w-5"></i> Reports/Feedback
                 </a>
-                <a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+<a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-images w-5"></i> Carousel/Sliders
+                </a>
+                <a onclick="showAdminSection('manage-reviews'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+                    <i class="fas fa-star w-5 text-yellow-400"></i> Reviews & Ratings
                 </a>
             </nav>
 
@@ -175,6 +178,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 <?php include 'manage_users.php'; ?>
                 <?php include 'reports.php'; ?>
                 <?php include 'manage_sliders.php'; ?>
+                <?php include 'manage_reviews.php'; ?>
             </div>
         </div>
     </div>
@@ -204,6 +208,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 'manage-users': 'User Management',
                 'manage-reports': 'Guest Feedback',
                 'manage-sliders': 'Carousel & Sliders',
+                'manage-reviews': 'Reviews & Ratings',
             };
             document.getElementById('admin-page-title').innerText = titles[sectionId] || 'Admin Panel';
         }

@@ -1,12 +1,10 @@
-# Modern Notifications Implementation Plan
+# Task: Display reviews only on first page (homepage)
 
-## Completed Steps ✅
-- [x] 1. Created assets/js/notifications.js with modern showToast() and showConfirm()
-- [x] 2. Edit admin/admin_header.php to include notifications.js
-- [x] 3. Replace legacy confirm/alert in admin/manage_bookings.php (2 instances → modern)
-- [x] 4. Replace legacy confirm/alert in admin/manage_users.php (already handled)
-- [x] 5. Replace legacy confirm/alert in admin/reports.php (multiple instances → modern)
+## Steps to complete:
 
-## Remaining Steps
-- [x] 6. Test all admin pages
-- [x] 7. Final cleanup and attempt_completion
+- [x] 1. Analyze project files and confirm understanding (reviews in rooms.php to remove)
+- [x] 2. Edit user/rooms.php: Remove reviews sections and related JS
+- [x] 3. Verify no other review displays (user/reviews.php already commented out, dashboard/admin no guest reviews)
+- [x] 4. Complete task
+
+Current status: Task completed successfully.

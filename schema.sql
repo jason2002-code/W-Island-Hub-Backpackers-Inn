@@ -135,3 +135,25 @@ INSERT INTO `carousel_sliders` (`id`, `title`, `image_url`, `type`, `sort_order`
 (4, 'Gallery 1', 'assets/image/background.jpg', 'marquee', 1, 1),
 (5, 'Gallery 2', 'assets/image/69b3bfd75e102.jpg', 'marquee', 2, 1),
 (6, 'Gallery 3', 'assets/image/69b3c84d5988d.jpg', 'marquee', 3, 1);
+
+-- --------------------------------------------------------
+--
+-- Table structure for table `reviews`
+--
+
+CREATE TABLE IF NOT EXISTS `reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `room_id` int(11) DEFAULT NULL,
+  `rating` decimal(3,1) NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  `comment` text,
+`status` enum('approved','rejected') DEFAULT 'approved',
+  `visible` tinyint(1) DEFAULT 1,
+  `admin_reply` text NULL,
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `room_id` (`room_id`),
+  CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

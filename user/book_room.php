@@ -71,18 +71,14 @@
                                 <div>
                                     <label class="block text-sm font-bold mb-2">Payment Method</label>
                                     <div class="flex flex-col space-y-2">
-                                        <label class="flex items-center space-x-2 border p-3 rounded cursor-pointer hover:bg-gray-50">
-                                            <input type="radio" name="payment" value="Credit Card" checked>
-                                            <i class="fas fa-credit-card text-brand-blue"></i>
-                                            <span>Credit / Debit Card</span>
-                                        </label>
+
                                         <label class="flex items-center space-x-2 border p-3 rounded cursor-pointer hover:bg-gray-50">
                                             <input type="radio" name="payment" value="GCash">
                                             <i class="fas fa-wallet text-brand-blue"></i>
                                             <span>GCash / E-Wallet</span>
                                         </label>
                                         <label class="flex items-center space-x-2 border p-3 rounded cursor-pointer hover:bg-gray-50">
-                                            <input type="radio" name="payment" value="Pay at Hotel">
+                                            <input type="radio" name="payment" value="Pay at Hotel" checked>
                                             <i class="fas fa-store text-brand-blue"></i>
                                             <span>Pay at Hotel</span>
                                         </label>

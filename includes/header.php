@@ -160,6 +160,11 @@
                 font-weight: 700;
                 display: inline-block;
                 position: relative;
+                background: linear-gradient(to bottom, var(--gold-light) 0%, var(--gold-mid) 40%, var(--gold-dark) 60%, var(--gold-mid) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                color: transparent;
             }
             
             /* Forcefully hide any leftover spinning pseudo-elements from external CSS */
