@@ -26,7 +26,8 @@ function getUsers() {
     }
     
     try {
-        $stmt = $pdo->prepare("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC");
+        // Hardcode the 'Customer' role for the frontend JSON formatting since the column no longer exists
+        $stmt = $pdo->prepare("SELECT id, name, email, 'Customer' as role, created_at FROM users ORDER BY created_at DESC");
         $stmt->execute();
         
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -58,18 +59,12 @@ function deleteUser() {
     }
     
     try {
-        // Don't allow deleting admin users
-        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$user) {
             echo json_encode(['success' => false, 'message' => 'User not found']);
-            exit;
-        }
-        
-        if ($user['role'] === 'admin') {
-            echo json_encode(['success' => false, 'message' => 'Cannot delete admin user']);
             exit;
         }
         

@@ -98,6 +98,38 @@
     </div>
 </div>
 
+<!-- Room Features Modal -->
+<div id="room-features-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" onclick="closeFeaturesModal()">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto overflow-hidden" onclick="event.stopPropagation()">
+        <img id="features-image" src="" alt="Room Image" class="w-full h-56 object-cover bg-gray-200 hidden">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="features-modal-title" class="text-xl font-bold text-brand-dark">Room Features</h3>
+                <button onclick="closeFeaturesModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-bold text-gray-700 text-sm mb-1">Capacity</h4>
+                    <p id="features-capacity" class="text-gray-600"></p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-700 text-sm mb-1">Amenities</h4>
+                    <p id="features-amenities" class="text-gray-600"></p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-700 text-sm mb-1">Description</h4>
+                    <p id="features-description" class="text-gray-600"></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeFeaturesModal()" class="px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-sky-600">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Loads all rooms from the backend API (actions/rooms_action.php) and dynamically renders them as cards in the grid
 function loadRooms() {
@@ -108,15 +140,15 @@ function loadRooms() {
             
             if (data.success && data.rooms.length > 0) {
                 container.innerHTML = data.rooms.map(room => `
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 flex gap-4 transition hover:shadow-md">
-                        <img src="${room.image.startsWith('http') ? room.image : '../' + room.image}" class="w-24 h-24 object-cover rounded-xl bg-gray-200" alt="${room.name}">
-                        <div class="flex-1 flex flex-col justify-center">
-                            <h4 class="font-bold text-gray-800">${room.name}</h4>
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden flex flex-col transition hover:shadow-md cursor-pointer" onclick="viewRoomFeatures('${room.id}')">
+                        <img src="${room.image.startsWith('http') ? room.image : '../' + room.image}" class="w-full h-48 object-cover bg-gray-200" alt="${room.name}">
+                        <div class="p-4 flex-1 flex flex-col justify-center">
+                            <h4 class="font-bold text-gray-800">${room.name} ${room.status === 'Maintenance' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded ml-2">Maintenance</span>' : ''}</h4>
                             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${room.type}</p>
                             <p class="text-brand-purple font-bold text-lg">₱${room.price} <span class="text-xs text-gray-400 font-normal">/night</span></p>
                             <div class="mt-3 flex gap-3 text-xs">
-                                <button onclick="editRoom('${room.id}')" class="text-blue-500 hover:underline">Edit</button>
-                                <button onclick="deleteRoom('${room.id}')" class="text-red-400 hover:underline">Remove</button>
+                                <button onclick="event.stopPropagation(); editRoom('${room.id}')" class="text-blue-500 hover:underline">Edit</button>
+                                <button onclick="event.stopPropagation(); toggleMaintenance('${room.id}', '${room.status}')" class="text-orange-500 hover:underline">${room.status === 'Maintenance' ? 'Enable' : 'Maintenance'}</button>
                             </div>
                         </div>
                     </div>
@@ -278,11 +310,19 @@ function saveRoom(event) {
     });
 }
 
-// Prompts confirmation then sends DELETE request to API to remove room, refreshes grid on success
-function deleteRoom(roomId) {
-    showConfirm('Are you sure you want to delete this room?', () => {
-        fetch('../actions/rooms_action.php?id=' + roomId, {
-            method: 'DELETE'
+// Toggles the maintenance status of a room
+function toggleMaintenance(roomId, currentStatus) {
+    const newStatus = currentStatus === 'Maintenance' ? 'Available' : 'Maintenance';
+    const actionText = currentStatus === 'Maintenance' ? 'enable this room' : 'put this room under maintenance';
+    showConfirm(`Are you sure you want to ${actionText}?`, () => {
+        const formData = new FormData();
+        formData.append('id', roomId);
+        formData.append('status', newStatus);
+        formData.append('_method', 'PUT');
+
+        fetch(`../actions/rooms_action.php?id=${roomId}`, {
+            method: 'POST',
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
@@ -295,9 +335,52 @@ function deleteRoom(roomId) {
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Error deleting room', 'error');
+            showToast('Error updating room status', 'error');
         });
     });
+}
+
+// View Room Features
+function viewRoomFeatures(roomId) {
+    fetch('../actions/rooms_action.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const room = data.rooms.find(r => r.id == roomId);
+                if (room) {
+                    let amenitiesVal = '';
+                    try {
+                        if (room.amenities && typeof room.amenities === 'string' && room.amenities.trim().startsWith('[')) {
+                            const parsed = JSON.parse(room.amenities);
+                            if (Array.isArray(parsed)) amenitiesVal = parsed.join(', ');
+                        } else if (room.amenities) {
+                            amenitiesVal = room.amenities;
+                        }
+                    } catch (e) {
+                        amenitiesVal = room.amenities || '';
+                    }
+                    
+                    const imgElement = document.getElementById('features-image');
+                    if (room.image) {
+                        imgElement.src = room.image.startsWith('http') ? room.image : '../' + room.image;
+                        imgElement.classList.remove('hidden');
+                    } else {
+                        imgElement.classList.add('hidden');
+                    }
+                    
+                    document.getElementById('features-modal-title').innerText = room.name + ' Features';
+                    document.getElementById('features-description').innerText = room.description || 'No description available.';
+                    document.getElementById('features-amenities').innerText = amenitiesVal || 'No amenities available.';
+                    document.getElementById('features-capacity').innerText = room.capacity + ' Guest(s)';
+                    
+                    document.getElementById('room-features-modal').classList.remove('hidden');
+                }
+            }
+        });
+}
+
+function closeFeaturesModal() {
+    document.getElementById('room-features-modal').classList.add('hidden');
 }
 
 // Load rooms when page loads

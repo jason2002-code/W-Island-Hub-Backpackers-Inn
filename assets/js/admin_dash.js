@@ -9,9 +9,9 @@
             document.getElementById('admin-content').innerHTML = `
                 <!-- Top Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="dash-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between">
+                    <div class="dash-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="showRevenueDetailsModal()">
                         <div>
-                            <p class="text-sm text-gray-400 font-medium">Total Revenue</p>
+                            <p class="text-sm text-gray-400 font-medium">Total Revenue <i class="fas fa-info-circle text-brand-purple ml-1" title="Click to view details"></i></p>
                             <h3 class="text-2xl font-bold text-brand-dark mt-1">₱${revenue.toLocaleString()}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xl"><i class="fas fa-peso-sign"></i></div>

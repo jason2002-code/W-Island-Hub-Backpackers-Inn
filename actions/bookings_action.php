@@ -126,7 +126,7 @@ function createBooking($data) {
     }
     try {
         $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
-        $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())");
+        $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmed', NOW())");
         $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $total, $paymentMethod]);
         echo json_encode(['success' => true, 'message' => 'Booking created', 'ref_id' => $refId]);
     } catch (PDOException $e) {

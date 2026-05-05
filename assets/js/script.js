@@ -693,8 +693,8 @@ async function setupMarquee() {
                                 <span class="text-2xl font-bold text-brand-blue">₱${room.price}</span>
                                 <span class="text-gray-400 text-sm">/ night</span>
                             </div>
-                            <button onclick="initiateBooking(${room.id})" class="bg-brand-dark hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition text-sm">
-                                Book Now
+                            <button onclick="initiateBooking(${room.id})" class="bg-brand-dark hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition text-sm ${room.status === 'Maintenance' ? 'opacity-50 cursor-not-allowed' : ''}" ${room.status === 'Maintenance' ? 'disabled' : ''}>
+                                ${room.status === 'Maintenance' ? 'Maintenance' : 'Book Now'}
                             </button>
                         </div>
                     </div>
@@ -815,6 +815,11 @@ async function setupMarquee() {
                 });
                 const availData = await availRes.json();
 
+                if (availData.room && availData.room.status === 'Maintenance') {
+                    showToast('This room is currently under maintenance.', 'error');
+                    return;
+                }
+
                 if (!availData.is_currently_available && availData.occupied_ranges?.length > 0) {
                     showOccupiedModal(room, availData.occupied_ranges, availData.next_vacant);
                     return;
@@ -910,7 +915,7 @@ async function setupMarquee() {
                 nights: pendingBooking.nights,
                 total: pendingBooking.total,
                 guest_name: document.getElementById('book-name').value,
-                payment_method: document.querySelector('input[name="payment"]:checked').value
+                payment_method: 'Full Payment'
             };
 
             fetch('actions/bookings_action.php', {

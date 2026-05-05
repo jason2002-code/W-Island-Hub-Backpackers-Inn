@@ -143,12 +143,19 @@ function checkAvailability($data) {
         
         $isAvailable = $overlapCount == 0 && $room;
         
+        if ($room && $room['status'] === 'Maintenance') {
+            $isAvailable = false;
+            $message = 'Room is under maintenance';
+        } else {
+            $message = $isAvailable ? 'Room is available for selected dates' : 'Room not available - already booked on overlapping dates';
+        }
+
         echo json_encode([
             'success' => true,
             'available' => $isAvailable,
             'room' => $room,
             'overlaps' => $overlapCount,
-            'message' => $isAvailable ? 'Room is available for selected dates' : 'Room not available - already booked on overlapping dates'
+            'message' => $message
         ]);
         
     } catch (PDOException $e) {
@@ -218,6 +225,18 @@ function getRoomAvailability($data) {
         $stmt->execute([$roomId]);
         $room = $stmt->fetch(PDO::FETCH_ASSOC);
         
+        if ($room && $room['status'] === 'Maintenance') {
+            echo json_encode([
+                'success' => true,
+                'room' => $room,
+                'occupied_ranges' => [],
+                'next_vacant' => null,
+                'is_currently_available' => false,
+                'message' => 'Room is currently under maintenance'
+            ]);
+            return;
+        }
+
         echo json_encode([
             'success' => true,
             'room' => $room ?? ['name' => 'Room ' . $roomId],
@@ -231,4 +250,3 @@ function getRoomAvailability($data) {
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
 }
-

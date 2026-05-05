@@ -28,19 +28,26 @@ if (!$pdo) {
 }
 
 try {
-    // Check if user exists
-    $stmt = $pdo->prepare("SELECT id, name, email, password, role FROM users WHERE email = ?");
-    $stmt->execute([$email]);
+    // Check if user exists in either table using UNION
+    $stmt = $pdo->prepare("
+        SELECT id, name, email, password, 'admin' as role FROM admins WHERE email = ?
+        UNION
+        SELECT id, name, email, password, 'user' as role FROM users WHERE email = ?
+    ");
+    $stmt->execute([$email, $email]);
+    $foundUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    if ($stmt->rowCount() === 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
-        exit;
+    $authenticatedUser = null;
+    // Verify password against found records (handles identical emails across tables)
+    foreach ($foundUsers as $u) {
+        if ($password === $u['password'] || password_verify($password, $u['password'])) {
+            $authenticatedUser = $u;
+            break;
+        }
     }
     
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Verify password - check plaintext first, then hash (for compatibility with both plaintext and hashed passwords)
-    if ($password === $user['password'] || password_verify($password, $user['password'])) {
+    if ($authenticatedUser) {
+        $user = $authenticatedUser;
         // Login successful - return user data (excluding password)
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
@@ -50,6 +57,7 @@ try {
         if ($user['role'] === 'admin') {
             $_SESSION['admin_id'] = $user['id'];
             $_SESSION['admin_role'] = $user['role'];
+            $_SESSION['admin_name'] = $user['name'];
         } else {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['name'] = $user['name'];

@@ -251,9 +251,9 @@
             container.innerHTML = `
                 <!-- Top Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between">
+                    <div class="dash-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 flex items-center justify-between cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="showRevenueDetailsModal()">
                         <div>
-                            <p class="text-sm text-gray-400 font-medium">Total Revenue</p>
+                            <p class="text-sm text-gray-400 font-medium">Total Revenue <i class="fas fa-info-circle text-brand-purple ml-1" title="Click to view details"></i></p>
                             <h3 class="text-2xl font-bold text-brand-dark mt-1">₱${totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h3>
                         </div>
                         <div class="w-12 h-12 rounded-full bg-blue-50 text-brand-blue flex items-center justify-center text-xl"><i class="fas fa-peso-sign"></i></div>
@@ -338,3 +338,249 @@
 
         // Start App
         window.addEventListener('DOMContentLoaded', initAdmin);
+
+        // --- REVENUE DETAILS MODAL ---
+        function showRevenueDetailsModal() {
+            let modal = document.getElementById('revenue-details-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'revenue-details-modal';
+                modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300 hidden';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300">
+                        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-800">Revenue & Booking Trends</h3>
+                                <p class="text-sm text-gray-500 mt-1">Analyze your booking performance over time</p>
+                            </div>
+                            <button onclick="closeRevenueDetailsModal()" class="w-10 h-10 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200 flex items-center justify-center transition-all shadow-sm">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="p-6 overflow-y-auto flex-1 bg-white">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="font-bold text-gray-700">Performance Chart</h4>
+                                <select id="trend-timeframe" class="bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple focus:border-transparent shadow-sm text-sm font-medium" onchange="renderTrendChart()">
+                                    <option value="monthly">Monthly View (Last 12 Months)</option>
+                                    <option value="daily">Daily View (Last 30 Days)</option>
+                                </select>
+                            </div>
+                            <div class="h-80 w-full relative mb-8 p-4 border border-gray-100 rounded-xl bg-gray-50/50">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-bold text-gray-700 mb-4">Detailed Breakdown</h4>
+                                <div class="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+                                            <tr>
+                                                <th class="p-4 font-medium">Period</th>
+                                                <th class="p-4 font-medium">Total Bookings</th>
+                                                <th class="p-4 font-medium">Confirmed Revenue</th>
+                                                <th class="p-4 font-medium">Trend vs Previous</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="trend-table-body" class="text-sm divide-y divide-gray-100 bg-white">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            // Trigger reflow
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+            
+            renderTrendChart();
+        }
+
+        function closeRevenueDetailsModal() {
+            const modal = document.getElementById('revenue-details-modal');
+            if (modal) {
+                modal.classList.add('opacity-0');
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    if (window.trendChartInstance) {
+                        window.trendChartInstance.destroy();
+                        window.trendChartInstance = null;
+                    }
+                }, 300);
+            }
+        }
+        
+        function renderTrendChart() {
+            const timeframe = document.getElementById('trend-timeframe').value;
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (window.trendChartInstance) {
+                window.trendChartInstance.destroy();
+            }
+
+            let labels = [];
+            let revenueData = [];
+            let bookingsData = [];
+            let tableData = [];
+
+            const confirmedBookings = appState.bookings.filter(b => b.status === 'Confirmed');
+
+            if (timeframe === 'monthly') {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const today = new Date();
+                
+                for (let i = 11; i >= 0; i--) {
+                    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    const label = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+                    labels.push(label);
+                    
+                    const monthBookings = confirmedBookings.filter(b => {
+                        const bDate = new Date(b.created_at || b.checkIn || b.dateBooked);
+                        return bDate.getMonth() === d.getMonth() && bDate.getFullYear() === d.getFullYear();
+                    });
+                    
+                    const rev = monthBookings.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0);
+                    const count = monthBookings.length;
+                    
+                    revenueData.push(rev);
+                    bookingsData.push(count);
+                    tableData.push({ period: label, revenue: rev, bookings: count });
+                }
+            } else {
+                const today = new Date();
+                
+                for (let i = 29; i >= 0; i--) {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - i);
+                    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    labels.push(label);
+                    
+                    const dayBookings = confirmedBookings.filter(b => {
+                        const bDate = new Date(b.created_at || b.checkIn || b.dateBooked);
+                        return bDate.getDate() === d.getDate() && bDate.getMonth() === d.getMonth() && bDate.getFullYear() === d.getFullYear();
+                    });
+                    
+                    const rev = dayBookings.reduce((sum, b) => sum + (parseFloat(b.total) || 0), 0);
+                    const count = dayBookings.length;
+                    
+                    revenueData.push(rev);
+                    bookingsData.push(count);
+                    tableData.push({ period: label, revenue: rev, bookings: count });
+                }
+            }
+
+            window.trendChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Revenue (₱)',
+                            data: revenueData,
+                            backgroundColor: 'rgba(108, 93, 211, 0.8)',
+                            borderColor: '#6C5DD3',
+                            borderWidth: 0,
+                            borderRadius: 4,
+                            yAxisID: 'y',
+                            order: 2
+                        },
+                        {
+                            label: 'Bookings Count',
+                            data: bookingsData,
+                            type: 'line',
+                            borderColor: '#22c55e',
+                            backgroundColor: '#22c55e',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#22c55e',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.4,
+                            yAxisID: 'y1',
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', align: 'end' },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1f2937',
+                            bodyColor: '#4b5563',
+                            borderColor: '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.datasetIndex === 0) {
+                                        label += '₱' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2});
+                                    } else {
+                                        label += context.parsed.y;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'left',
+                            grid: { borderDash: [5, 5], color: '#f3f4f6' },
+                            ticks: { callback: value => '₱' + value.toLocaleString() }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { stepSize: 1, precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            const tbody = document.getElementById('trend-table-body');
+            const displayData = [...tableData].reverse();
+            
+            tbody.innerHTML = displayData.map((row, index) => {
+                let trendHtml = '-';
+                if (index < displayData.length - 1) {
+                    const prevRow = displayData[index + 1];
+                    if (row.revenue > prevRow.revenue) {
+                        trendHtml = '<span class="text-green-600 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><i class="fas fa-arrow-up mr-1"></i> Higher</span>';
+                    } else if (row.revenue < prevRow.revenue) {
+                        trendHtml = '<span class="text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-bold"><i class="fas fa-arrow-down mr-1"></i> Lower</span>';
+                    } else {
+                        trendHtml = '<span class="text-gray-500 bg-gray-50 px-2 py-1 rounded-md text-xs font-bold"><i class="fas fa-minus mr-1"></i> Same</span>';
+                    }
+                }
+                
+                return `
+                    <tr class="hover:bg-gray-50 transition border-l-4 ${row.revenue > 0 ? 'border-l-brand-purple' : 'border-l-transparent'}">
+                        <td class="p-4 font-medium text-gray-800">${row.period}</td>
+                        <td class="p-4"><span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold">${row.bookings}</span></td>
+                        <td class="p-4 font-bold text-brand-dark text-base">₱${row.revenue.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="p-4">${trendHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }

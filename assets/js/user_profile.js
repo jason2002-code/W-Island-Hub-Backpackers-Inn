@@ -116,9 +116,8 @@ profileHTML = `
                     <div class="space-y-4">
                         ${userBookings.map(b => {
                             let statusColor = b.status === 'Confirmed' ? 'bg-green-100 text-green-700' : (b.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
-                            let cancelBtn = b.status === 'Pending' ? `<button onclick="cancelMyBooking('${b.id}')" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded mt-2 inline-block transition">Cancel Booking</button>` : '';
                             let safeRoomName = b.roomName ? b.roomName.replace(/'/g, "\\'") : '';
-                            let reportBtn = `<button onclick="openReportModal('${b.id}', '${safeRoomName}')" class="text-xs bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 px-3 py-1.5 rounded mt-2 inline-block ml-2 transition"><i class="fas fa-exclamation-circle"></i> Report Issue</button>`;
+                            let reportBtn = `<button onclick="openReportModal('${b.id}', '${safeRoomName}')" class="text-xs bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 px-3 py-1.5 rounded mt-2 inline-block transition"><i class="fas fa-exclamation-circle"></i> Report Issue / Request Cancellation</button>`;
                             return `
                                 <div class="border border-gray-100 p-4 rounded-xl flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-gray-50 transition">
                                     <div>
@@ -128,7 +127,7 @@ profileHTML = `
                                         </div>
                                         <p class="text-sm text-gray-500"><i class="far fa-calendar-alt mr-1"></i> ${b.checkIn} to ${b.checkOut} (${b.nights} nights)</p>
                                         <p class="text-xs text-gray-400 mt-1">Ref: ${b.id} • Booked on ${b.dateBooked}</p>
-                                        ${cancelBtn}
+                                        <p class="text-xs text-red-500 mt-1 mb-1 font-semibold">Strictly Full Payment. No direct cancellations.</p>
                                         ${reportBtn}
                                     </div>
                                     <div class="text-left md:text-right">
@@ -250,41 +249,6 @@ function saveProfile(e) {
             .catch(err => {
                 console.error('Profile update error:', err);
                 showToast("Failed to update profile: " + err.message, 'error');
-            });
-        }
-
-        // Cancel booking - saves to database
-        function cancelMyBooking(bookingId) {
-            showConfirm("Are you sure you want to cancel this reservation?", () => {
-                fetch('../actions/bookings_action.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'update_status',
-                        booking_id: bookingId,
-                        id: bookingId,
-                        status: 'Cancelled'
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update local state
-                        const idx = appState.bookings.findIndex(b => String(b.id) === String(bookingId));
-                        if(idx > -1) {
-                            appState.bookings[idx].status = 'Cancelled';
-                        }
-                        saveState();
-                        renderUserProfile();
-                        showToast("Booking cancelled successfully!", 'success');
-                    } else {
-                        showToast("Failed to cancel booking: " + data.message, 'error');
-                    }
-                })
-                .catch(err => {
-                    console.error('Cancel booking error:', err);
-                    showToast("Failed to cancel booking: " + err.message, 'error');
-                });
             });
         }
 

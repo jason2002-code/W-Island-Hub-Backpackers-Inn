@@ -60,7 +60,7 @@ $where = "WHERE status = 'approved' AND visible = 1";
         $totalReviews = intval($stats['total'] ?? 0);
 
         // Get latest approved reviews
-        $limitSql = "SELECT r.*, u.name as user_name, DATE_FORMAT(r.created_at, '%b %d, %Y') as formatted_date 
+        $limitSql = "SELECT r.*, COALESCE(u.name, 'Anonymous') as user_name, DATE_FORMAT(r.created_at, '%b %d, %Y') as formatted_date 
                      FROM reviews r 
                      LEFT JOIN users u ON r.user_id = u.id 
                      " . $where . " 
@@ -152,4 +152,3 @@ function submitReview() {
     }
 }
 ?>
-

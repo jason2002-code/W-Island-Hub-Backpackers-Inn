@@ -107,8 +107,8 @@ if ($pdo) {
                             <span class="text-2xl font-bold text-brand-blue">₱<?php echo number_format($room['price'], 2); ?></span>
                             <span class="text-gray-400 text-sm">/ night</span>
                         </div>
-                        <button onclick="initiateBooking(<?php echo $room_id; ?>)" class="bg-brand-dark hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition text-sm">
-                            Book Now
+                        <button onclick="initiateBooking(<?php echo $room_id; ?>)" class="bg-brand-dark hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition text-sm <?php echo $room['status'] === 'Maintenance' ? 'opacity-50 cursor-not-allowed' : ''; ?>" <?php echo $room['status'] === 'Maintenance' ? 'disabled' : ''; ?>>
+                            <?php echo $room['status'] === 'Maintenance' ? 'Maintenance' : 'Book Now'; ?>
                         </button>
                     </div>
                 </div>
@@ -138,7 +138,10 @@ async function updateRoomStatus(roomId) {
         const data = await res.json();
         const badge = document.querySelector(`[data-room-id="${roomId}"] .room-status-badge`);
         if (badge && data.success) {
-            if (data.is_currently_available) {
+            if (data.room && data.room.status === 'Maintenance') {
+                badge.textContent = 'Maintenance';
+                badge.className = 'room-status-badge bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
+            } else if (data.is_currently_available) {
                 badge.textContent = 'Available';
                 badge.className = 'room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
             } else {

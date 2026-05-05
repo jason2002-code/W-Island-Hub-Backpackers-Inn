@@ -11,9 +11,12 @@ session_start();
 if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
     // PHP session is valid - allow access
     $isValidSession = true;
+    $adminName = $_SESSION['admin_name'] ?? 'Admin User';
+    $adminInitial = strtoupper(substr($adminName, 0, 1));
 } else {
-    // PHP session is not valid. Redirect will be handled by JavaScript.
-    $isValidSession = false;
+    // PHP session is not valid. Redirect server-side.
+    header('Location: ../index.php');
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -63,21 +66,6 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
        .page-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
-
-    <script>
-        // Simple session check. If PHP session is invalid, redirect to the main site.
-        const checkAdminSession = function() {
-            if (!<?php echo $isValidSession ? 'true' : 'false'; ?>) {
-                // PHP session is invalid, redirect to the main site to force login.
-                window.location.href = '../index.php';
-            }
-        };
-        
-        // Run session check immediately
-        checkAdminSession();
-
-
-    </script>
 </head>
 <body class="bg-gray-50 text-slate-800 font-sans">
 
@@ -126,8 +114,8 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
             </nav>
 
             <div class="p-4 border-t border-gray-100">
-                <a onclick="logout()" class="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 w-full rounded-xl transition font-medium cursor-pointer">
-                    <i class="fas fa-sign-out-alt"></i> Back to Main Site
+                <a href="../index.php" class="flex items-center gap-3 px-4 py-3 text-blue-500 hover:bg-blue-50 w-full rounded-xl transition font-medium cursor-pointer">
+                    <i class="fas fa-home"></i> Back to Main Site
                 </a>
             </div>
           
@@ -150,9 +138,9 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                         <input type="text" placeholder="Search..." class="pl-10 pr-4 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple/20 w-48 transition">
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center font-bold" id="admin-avatar">A</div>
+                        <div class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center font-bold" id="admin-avatar"><?php echo htmlspecialchars($adminInitial); ?></div>
                         <div class="hidden md:block">
-                            <p class="text-sm font-bold text-gray-800" id="admin-name">Admin User</p>
+                            <p class="text-sm font-bold text-gray-800" id="admin-name"><?php echo htmlspecialchars($adminName); ?></p>
                             <p class="text-xs text-gray-500">Super Admin</p>
                         </div>
                     </div>
@@ -184,8 +172,8 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
-    <script src="../assets/js/admin_chart.js"></script>
-    <script src="../assets/js/notifications.js"></script>
+    <script src="../assets/js/admin_chart.js?v=<?php echo time(); ?>"></script>
+    <script src="../assets/js/notifications.js?v=<?php echo time(); ?>"></script>
    
     <script>
         // Explicitly initialize admin dashboard after script loads

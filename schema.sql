@@ -13,7 +13,20 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('admin','user') DEFAULT 'user',
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `admins`
+--
+
+CREATE TABLE IF NOT EXISTS `admins` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
@@ -23,9 +36,11 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`) VALUES
-(1, 'Admin', 'admin@wisland.com', 'admin123', 'admin'),
-(2, 'Guest User', 'guest@wisland.com', 'guest123', 'user');
+INSERT INTO `users` (`id`, `name`, `email`, `password`) VALUES
+(1, 'Guest User', 'guest@wisland.com', 'guest123');
+
+INSERT INTO `admins` (`id`, `name`, `email`, `password`) VALUES
+(1, 'Admin', 'admin@wisland.com', 'admin123');
 
 -- --------------------------------------------------------
 
