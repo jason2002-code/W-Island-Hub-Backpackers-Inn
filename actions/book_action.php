@@ -169,62 +169,27 @@ function checkAvailability($data) {
  */
 function getRoomAvailability($data) {
     $pdo = getDB();
-    
+
     if (!$pdo) {
         echo json_encode(['success' => false, 'message' => 'Database connection failed']);
         exit;
     }
-    
+
     $roomId = $data['room_id'] ?? null;
-    
     if (!$roomId) {
         echo json_encode(['success' => false, 'message' => 'Room ID required']);
         exit;
     }
-    
+
+    // Optional date-range filtering
+    $checkIn = $data['check_in'] ?? null;
+    $checkOut = $data['check_out'] ?? null;
+
     try {
-        $today = date('Y-m-d');
-        
-        // Get upcoming bookings
-        $stmt = $pdo->prepare("
-            SELECT ref_id, guest_name, check_in, check_out, status, created_at 
-            FROM bookings 
-            WHERE room_id = ? AND status IN ('Pending', 'Confirmed') 
-            AND check_out > ?
-            ORDER BY check_in ASC
-        ");
-        $stmt->execute([$roomId, $today]);
-        $upcoming = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $occupiedRanges = [];
-        $nextVacant = null;
-        $isOpenNow = true;
-        
-        foreach ($upcoming as $booking) {
-            $occupiedRanges[] = [
-                'ref' => $booking['ref_id'],
-                'guest' => $booking['guest_name'],
-                'from' => $booking['check_in'],
-                'to' => $booking['check_out']
-            ];
-            
-            if ($booking['check_in'] <= $today) {
-                $isOpenNow = false;
-            }
-        }
-        
-        if (!empty($occupiedRanges)) {
-            // Next vacant is after last checkout +1 day
-            $lastCheckout = end($upcoming)['check_out'];
-            $nextVacantDate = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
-            $nextVacant = $nextVacantDate;
-        }
-        
-        // Get room details
-        $stmt = $pdo->prepare("SELECT name, status FROM rooms WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
         $stmt->execute([$roomId]);
         $room = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+
         if ($room && $room['status'] === 'Maintenance') {
             echo json_encode([
                 'success' => true,
@@ -237,6 +202,87 @@ function getRoomAvailability($data) {
             return;
         }
 
+        $occupiedRanges = [];
+        $nextVacant = null;
+
+        // If dates provided, check overlap with those exact dates.
+        if (!empty($checkIn) && !empty($checkOut)) {
+            // Overlap condition: existing.check_in < desired.check_out AND existing.check_out > desired.check_in
+            $stmt = $pdo->prepare("
+                SELECT ref_id, guest_name, check_in, check_out, status, created_at
+                FROM bookings
+                WHERE room_id = ?
+                  AND status IN ('Pending', 'Confirmed')
+                  AND check_in < ?
+                  AND check_out > ?
+                ORDER BY check_in ASC
+            ");
+            $stmt->execute([$roomId, $checkOut, $checkIn]);
+            $overlaps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($overlaps as $booking) {
+                $occupiedRanges[] = [
+                    'ref' => $booking['ref_id'],
+                    'guest' => $booking['guest_name'],
+                    'from' => $booking['check_in'],
+                    'to' => $booking['check_out']
+                ];
+            }
+
+            if (!empty($overlaps)) {
+                $lastCheckout = end($overlaps)['check_out'];
+                $nextVacantDate = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
+                $nextVacant = $nextVacantDate;
+            }
+
+            $isAvailable = empty($occupiedRanges);
+
+            echo json_encode([
+                'success' => true,
+                'room' => $room ?? ['name' => 'Room ' . $roomId],
+                'occupied_ranges' => $occupiedRanges,
+                'next_vacant' => $nextVacant,
+                'is_currently_available' => $isAvailable,
+                'message' => $isAvailable ? 'Room available for selected dates' : 'Room not available - already booked on overlapping dates',
+                'available' => $isAvailable
+            ]);
+            return;
+        }
+
+        // Default behavior: show current/next availability from today.
+        $today = date('Y-m-d');
+
+        $stmt = $pdo->prepare("
+            SELECT ref_id, guest_name, check_in, check_out, status, created_at 
+            FROM bookings 
+            WHERE room_id = ? AND status IN ('Pending', 'Confirmed') 
+            AND check_out > ?
+            ORDER BY check_in ASC
+        ");
+        $stmt->execute([$roomId, $today]);
+        $upcoming = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $isOpenNow = true;
+
+        foreach ($upcoming as $booking) {
+            $occupiedRanges[] = [
+                'ref' => $booking['ref_id'],
+                'guest' => $booking['guest_name'],
+                'from' => $booking['check_in'],
+                'to' => $booking['check_out']
+            ];
+
+            if ($booking['check_in'] <= $today) {
+                $isOpenNow = false;
+            }
+        }
+
+        if (!empty($occupiedRanges)) {
+            $lastCheckout = end($upcoming)['check_out'];
+            $nextVacantDate = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
+            $nextVacant = $nextVacantDate;
+        }
+
         echo json_encode([
             'success' => true,
             'room' => $room ?? ['name' => 'Room ' . $roomId],
@@ -245,7 +291,7 @@ function getRoomAvailability($data) {
             'is_currently_available' => $isOpenNow && empty($occupiedRanges),
             'message' => $isOpenNow && empty($occupiedRanges) ? 'Room available now' : 'Check occupied periods'
         ]);
-        
+
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }

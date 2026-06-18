@@ -670,7 +670,7 @@ async function setupMarquee() {
                 const stars = Array(Math.round(room.rating)).fill('<i class="fas fa-star text-yellow-400 text-xs"></i>').join('');
                 
                 return `
-                <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col">
+                <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col" data-room-id="${room.id}">
                     <div class="h-48 overflow-hidden relative">
                          <img src="${room.image}" alt="${room.name}" class="w-full h-full object-cover transition duration-500 hover:scale-110">
                          <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-800">
@@ -716,36 +716,86 @@ async function setupMarquee() {
                     showToast('Please select dates', 'warning');
                     return;
                 }
-                // Update room statuses
-                document.querySelectorAll('[data-room-id]').forEach(roomEl => {
-                    const roomId = roomEl.dataset.roomId;
-                    checkRoomAvailability(roomId, checkIn, checkOut);
+                
+                if (new Date(checkOut) <= new Date(checkIn)) {
+                    showToast('Check-out must be after check-in', 'warning');
+                    return;
+                }
+
+                // Filter: only show available rooms for selected dates
+                const roomsContainer = document.getElementById('rooms-container');
+                let allRoomEls = Array.from(document.querySelectorAll('.room-card[data-room-id]'));
+
+                // Fallback if data-room-id or .room-card class is missing in PHP-rendered rooms
+                if (allRoomEls.length === 0 && roomsContainer) {
+                    const buttons = roomsContainer.querySelectorAll('button[onclick^="initiateBooking"]');
+                    buttons.forEach(btn => {
+                        const match = btn.getAttribute('onclick').match(/initiateBooking\((\d+)\)/);
+                        if (match && match[1]) {
+                            const card = btn.closest('.room-card') || btn.closest('[class*="col-"]') || btn.parentElement.parentElement;
+                            if (card) {
+                                card.dataset.roomId = match[1];
+                                if (!allRoomEls.includes(card)) {
+                                    allRoomEls.push(card);
+                                }
+                            }
+                        }
+                    });
+                }
+
+                allRoomEls.forEach(el => {
+                    el.style.display = '';
                 });
+
+                const results = await Promise.all(allRoomEls.map(async (roomEl) => {
+                    const roomId = roomEl.dataset.roomId;
+                    try {
+                        const response = await fetch('actions/book_action.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                action: 'check_availability',
+                                room_id: roomId,
+                                check_in: checkIn,
+                                check_out: checkOut
+                            })
+                        });
+                        const data = await response.json();
+                        const available = data.available;
+
+                        if (!available) {
+                            roomEl.style.display = 'none';
+                        } else {
+                            // Optional: update badge text for selected filter
+                            const statusBadge = roomEl.querySelector('.room-status-badge') || roomEl.querySelector('.bg-blue-50');
+                            if (statusBadge) {
+                                statusBadge.textContent = 'Available';
+                                statusBadge.className = 'room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
+                            }
+                        }
+
+                        return { roomId, available };
+                    } catch (err) {
+                        console.error(err);
+                        return { roomId, available: false };
+                    }
+                }));
+
+                const anyAvailable = results.some(r => r.available);
+                let noAvailEl = document.getElementById('no-available-rooms');
+                if (!noAvailEl && roomsContainer) {
+                    noAvailEl = document.createElement('div');
+                    noAvailEl.id = 'no-available-rooms';
+                    noAvailEl.className = 'col-span-full text-center text-gray-500 py-8';
+                    noAvailEl.innerHTML = '<p>No rooms available for selected dates.</p>';
+                    roomsContainer.appendChild(noAvailEl);
+                }
+                if (noAvailEl) {
+                    noAvailEl.style.display = anyAvailable ? 'none' : '';
+                }
             });
         }
 
-        async function checkRoomAvailability(roomId, checkIn, checkOut) {
-            try {
-                const response = await fetch('actions/book_action.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        action: 'check_availability',
-                        room_id: roomId,
-                        check_in: checkIn,
-                        check_out: checkOut
-                    })
-                });
-                const data = await response.json();
-                const statusBadge = document.querySelector(`[data-room-id="${roomId}"] .room-status-badge`);
-                if (statusBadge) {
-                    statusBadge.textContent = data.available ? 'Available ✓' : 'Occupied ✗';
-                    statusBadge.className = `room-status-badge px-2 py-1 rounded text-xs font-bold ${data.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
 
         function showOccupiedModal(room, ranges, nextVacant) {
             const modal = document.createElement('div');
@@ -803,15 +853,28 @@ async function setupMarquee() {
                 return;
             }
 
-            const room = appState.rooms.find(r => r.id === roomId);
-            if (!room) return;
+            const room = appState.rooms.find(r => r.id == roomId) || { id: roomId, name: 'Room ' + roomId, price: 0, image: 'assets/image/background.jpg', type: '' };
 
             try {
-                // Get room availability
+                // Get selected dates
+                const checkIn = document.getElementById('check-in-date').value || new Date().toISOString().split('T')[0];
+                const checkOut = document.getElementById('check-out-date').value || new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0];
+
+                if (new Date(checkOut) <= new Date(checkIn)) {
+                    showToast('Check-out must be after check-in', 'error');
+                    return;
+                }
+
+                // Get room availability for selected dates
                 const availRes = await fetch('actions/book_action.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({action: 'get_room_availability', room_id: roomId})
+                    body: JSON.stringify({
+                        action: 'get_room_availability', 
+                        room_id: roomId,
+                        check_in: checkIn,
+                        check_out: checkOut
+                    })
                 });
                 const availData = await availRes.json();
 
@@ -820,30 +883,15 @@ async function setupMarquee() {
                     return;
                 }
 
-                if (!availData.is_currently_available && availData.occupied_ranges?.length > 0) {
-                    showOccupiedModal(room, availData.occupied_ranges, availData.next_vacant);
-                    return;
+                if (availData.room && availData.room.price) {
+                    room.name = availData.room.name;
+                    room.price = parseFloat(availData.room.price);
+                    room.type = availData.room.type || room.type;
+                    if (availData.room.image) room.image = availData.room.image;
                 }
 
-                // Get selected dates
-                const checkIn = document.getElementById('check-in-date').value || new Date().toISOString().split('T')[0];
-                const checkOut = document.getElementById('check-out-date').value || new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0];
-
-                // Specific date check
-                const checkRes = await fetch('actions/book_action.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        action: 'check_availability',
-                        room_id: roomId,
-                        check_in: checkIn,
-                        check_out: checkOut
-                    })
-                });
-                const checkData = await checkRes.json();
-
-                if (!checkData.available) {
-                    showToast('Dates not available: ' + checkData.message, 'error');
+                if (!availData.is_currently_available) {
+                    showOccupiedModal(room, availData.occupied_ranges || [], availData.next_vacant);
                     return;
                 }
 
@@ -927,7 +975,7 @@ async function setupMarquee() {
             .then(data => {
                 if (data.success) {
                     showToast(`Booking Confirmed! Reference: ${data.ref_id}. Receipt sent to email.`, 'success');
-                    router('home');
+                    showInvoiceModal(data.ref_id, pendingBooking);
                 } else {
                     showToast("Booking Failed: " + data.message, 'error');
                 }
@@ -935,6 +983,170 @@ async function setupMarquee() {
             .catch(err => console.error('Booking Error:', err));
             });
         }
+
+        // --- INVOICE / RECEIPT MODAL ---
+        function showInvoiceModal(refId, bookingDetails) {
+            const modal = document.createElement('div');
+            modal.id = 'invoice-modal';
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4';
+            
+            const guestName = document.getElementById('book-name').value;
+            const guestEmail = document.getElementById('book-email').value;
+            const paymentMethodEl = document.querySelector('input[name="payment"]:checked');
+            const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'Full Payment';
+            const dateNow = new Date().toLocaleDateString();
+        
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-brand-blue text-white">
+                        <h3 class="text-2xl font-bold">Booking Receipt</h3>
+                        <button onclick="closeInvoiceModal()" class="text-white/80 hover:text-white transition-colors">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="invoice-content" class="p-8 overflow-y-auto flex-1 bg-white text-gray-800">
+                        <div class="flex justify-between items-start mb-8 border-b pb-6">
+                            <div>
+                                <h2 class="text-3xl font-serif font-bold text-brand-dark mb-2">W Island Hub</h2>
+                                <p class="text-sm text-gray-500">Backpackers Inn</p>
+                                <p class="text-sm text-gray-500">Paradise Island, PH</p>
+                            </div>
+                            <div class="text-right flex items-center gap-4">
+                                <div class="text-right">
+                                    <div class="text-xl font-bold text-brand-blue mb-1">INVOICE</div>
+                                    <div class="text-sm font-semibold text-gray-600">Ref: ${refId}</div>
+                                    <div class="text-sm text-gray-500">Date: ${dateNow}</div>
+                                </div>
+                                <div class="bg-white p-1 border border-gray-100 rounded-lg shadow-sm">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(refId)}" alt="QR Code" class="w-20 h-20">
+                                </div>
+                            </div>
+                        </div>
+        
+                        <div class="grid grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To:</h4>
+                                <div class="font-bold text-gray-800">${guestName}</div>
+                                <div class="text-sm text-gray-600">${guestEmail}</div>
+                            </div>
+                            <div class="text-right">
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Payment Method:</h4>
+                                <div class="font-bold text-gray-800">${paymentMethod}</div>
+                                <div class="text-sm text-gray-600">Status: Pending</div>
+                            </div>
+                        </div>
+        
+                        <div class="mb-8">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Reservation Details:</h4>
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500 block mb-1">Room</span>
+                                    <strong class="text-gray-800 text-base">${bookingDetails.roomName}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">Nights</span>
+                                    <strong class="text-gray-800">${bookingDetails.nights}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">Check-in</span>
+                                    <strong class="text-gray-800">${bookingDetails.checkIn}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1">Check-out</span>
+                                    <strong class="text-gray-800">${bookingDetails.checkOut}</strong>
+                                </div>
+                            </div>
+                        </div>
+        
+                        <table class="w-full text-left border-collapse mb-8">
+                            <thead>
+                                <tr class="border-b-2 border-gray-200">
+                                    <th class="py-3 font-bold text-gray-800">Description</th>
+                                    <th class="py-3 font-bold text-gray-800 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-4">
+                                        <div class="font-bold text-gray-800">Room Rate</div>
+                                        <div class="text-xs text-gray-500">₱${bookingDetails.pricePerNight} x ${bookingDetails.nights} nights</div>
+                                    </td>
+                                    <td class="py-4 text-right font-medium">₱${(bookingDetails.pricePerNight * bookingDetails.nights).toFixed(2)}</td>
+                                </tr>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-4">
+                                        <div class="font-bold text-gray-800">Taxes & Fees</div>
+                                    </td>
+                                    <td class="py-4 text-right font-medium">₱15.00</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td class="py-4 font-bold text-xl text-gray-800 text-right pr-4">Total:</td>
+                                    <td class="py-4 font-bold text-2xl text-brand-blue text-right">₱${bookingDetails.total.toFixed(2)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        
+                        <div class="text-center text-sm text-gray-500 mt-8 pt-8 border-t border-gray-100">
+                            <p>Thank you for choosing W Island Hub Backpackers Inn!</p>
+                            <p>We look forward to welcoming you.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 bg-gray-50 border-t border-gray-100 flex gap-4 justify-end">
+                        <button onclick="printInvoice()" class="px-6 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button onclick="closeInvoiceModal()" class="px-6 py-2.5 bg-brand-blue hover:bg-sky-600 text-white rounded-xl font-medium transition-colors shadow-sm">
+                            Done
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        window.closeInvoiceModal = function() {
+            const modal = document.getElementById('invoice-modal');
+            if (modal) {
+                modal.remove();
+            }
+            router('home');
+        };
+        
+        window.printInvoice = function() {
+            const content = document.getElementById('invoice-content').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Invoice</title>
+                        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+                        <style>
+                            body { font-family: sans-serif; padding: 20px; }
+                            @media print {
+                                .no-print { display: none; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${content}
+                        <script>
+                            window.onload = function() { 
+                                setTimeout(function() {
+                                    window.print(); 
+                                    window.close(); 
+                                }, 500);
+                            }
+                        </script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+        };
 
 // Initialize page visibility on load to ensure proper display
         function initPageVisibility() {
