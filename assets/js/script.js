@@ -271,7 +271,7 @@ async function init() {
                             status: room.status || 'Available'
                         }));
                         
-                        // Rooms are now rendered via PHP, no need to re-render with JS
+                        renderRooms(); // Let's re-render to enforce JS login visibility logic
                     }
                 })
                 .catch(err => console.error('Failed to load rooms:', err));
@@ -407,6 +407,10 @@ async function setupMarquee() {
             
         if (container) container.innerHTML = html;
         if (mobileContainer) mobileContainer.innerHTML = html; 
+        
+        if (appState.rooms && appState.rooms.length > 0) {
+            renderRooms();
+        }
         }
 
         // --- AUTHENTICATION ---
@@ -497,10 +501,17 @@ async function setupMarquee() {
         };
 
         // Handle Login Form Submission
+        let loginAttempts = 0;
         const loginForm = document.getElementById('login-form');
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            
+            if (loginAttempts >= 5) {
+                showToast("Too many failed attempts. Please try again later.", "error");
+                return;
+            }
+
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-password').value;
             
@@ -512,6 +523,7 @@ async function setupMarquee() {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    loginAttempts = 0; // Reset attempts on success
                     appState.currentUser = data.user;
                     saveState();
                     updateAuthUI();
@@ -521,7 +533,23 @@ async function setupMarquee() {
                         router('home');
                     }
                 } else {
-                    showToast(data.message, 'error');
+                    loginAttempts++;
+                    const attemptsLeft = 5 - loginAttempts;
+                    
+                    if (attemptsLeft > 0) {
+                        showToast(`${data.message} ${attemptsLeft} attempts left.`, 'error');
+                    } else {
+                        showToast("Login locked temporarily due to too many failed attempts.", 'error');
+                    }
+                    
+                    // Visual feedback UX: clear password, bring back focus and shake input
+                    const passInput = document.getElementById('login-password');
+                    if (passInput) {
+                        passInput.value = '';
+                        passInput.focus();
+                        passInput.classList.add('border-red-500', 'animate-shake');
+                        setTimeout(() => passInput.classList.remove('border-red-500', 'animate-shake'), 500);
+                    }
                 }
             })
             .catch(err => console.error('Login Error:', err));
@@ -565,6 +593,31 @@ async function setupMarquee() {
                 }
             })
             .catch(err => console.error('Registration Error:', err));
+            });
+        }
+        
+        // Handle Forgot Password Form Submission
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        if (forgotPasswordForm) {
+            forgotPasswordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value;
+
+            fetch('actions/forgot_password_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    router('login');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(err => console.error('Forgot Password Error:', err));
             });
         }
 
@@ -666,8 +719,18 @@ async function setupMarquee() {
         // Render the list of rooms to the UI
         function renderRooms(filterDate = null) {
             const container = document.getElementById('rooms-container');
+            if (!container) return;
+            
+            const isLoggedIn = appState.currentUser !== null;
+            
             container.innerHTML = appState.rooms.map(room => {
                 const stars = Array(Math.round(room.rating)).fill('<i class="fas fa-star text-yellow-400 text-xs"></i>').join('');
+                
+                let statusBadge = '';
+                if (isLoggedIn) {
+                    let statusClass = room.status === 'Maintenance' ? 'bg-red-100 text-red-800' : (room.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
+                    statusBadge = `<span class="room-status-badge ${statusClass} text-xs font-bold px-2 py-1 rounded uppercase ml-2">${room.status || 'Available'}</span>`;
+                }
                 
                 return `
                 <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col" data-room-id="${room.id}">
@@ -680,7 +743,10 @@ async function setupMarquee() {
                     <div class="p-6 flex-1 flex flex-col">
                         <div class="flex justify-between items-start mb-2">
                             <h3 class="text-xl font-bold text-brand-dark">${room.name}</h3>
-                            <span class="bg-blue-50 text-brand-blue text-xs font-bold px-2 py-1 rounded uppercase">${room.type}</span>
+                            <div class="flex items-center text-right justify-end flex-wrap gap-1">
+                                <span class="bg-blue-50 text-brand-blue text-xs font-bold px-2 py-1 rounded uppercase">${room.type}</span>
+                                ${statusBadge}
+                            </div>
                         </div>
                         <p class="text-gray-500 text-sm mb-4 line-clamp-2">${room.desc}</p>
                         
@@ -767,10 +833,20 @@ async function setupMarquee() {
                             roomEl.style.display = 'none';
                         } else {
                             // Optional: update badge text for selected filter
-                            const statusBadge = roomEl.querySelector('.room-status-badge') || roomEl.querySelector('.bg-blue-50');
-                            if (statusBadge) {
-                                statusBadge.textContent = 'Available';
-                                statusBadge.className = 'room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
+                            const isLoggedIn = appState.currentUser !== null;
+                            if (isLoggedIn) {
+                                let statusBadge = roomEl.querySelector('.room-status-badge');
+                                if (!statusBadge) {
+                                    const typeContainer = roomEl.querySelector('.flex.items-center.text-right.justify-end');
+                                    if (typeContainer) {
+                                        statusBadge = document.createElement('span');
+                                        typeContainer.appendChild(statusBadge);
+                                    }
+                                }
+                                if (statusBadge) {
+                                    statusBadge.textContent = 'Available';
+                                    statusBadge.className = 'room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase ml-2';
+                                }
                             }
                         }
 

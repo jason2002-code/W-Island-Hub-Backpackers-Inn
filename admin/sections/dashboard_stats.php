@@ -101,6 +101,17 @@ try {
     </div>
 </div>
 
+<!-- Rooms Overview Grid -->
+<div class="mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <h4 class="font-bold text-gray-700 text-lg">Room Overview</h4>
+        <button onclick="loadRoomsOverview()" class="text-sm text-brand-purple hover:text-brand-blue transition hover:underline">Refresh</button>
+    </div>
+    <div id="rooms-overview-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="col-span-full text-center text-gray-400 py-8">Loading rooms...</div>
+    </div>
+</div>
+
 <!-- Recent Bookings Table -->
 <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden">
     <div class="p-6 border-b border-gray-50 flex justify-between items-center">
@@ -126,16 +137,270 @@ try {
     </div>
 </div>
 
+<!-- Room Details Modal -->
+<div id="room-details-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-start">
+            <div>
+                <h3 id="room-details-title" class="text-2xl font-bold text-brand-dark mb-1"></h3>
+                <p id="room-details-type" class="text-sm text-gray-500"></p>
+            </div>
+            <button onclick="closeRoomDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Room Info -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Price/Night</p>
+                    <p id="room-details-price" class="text-lg font-bold text-brand-purple">₱0</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Capacity</p>
+                    <p id="room-details-capacity" class="text-lg font-bold text-gray-700">0</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Status</p>
+                    <p id="room-details-status" class="text-lg font-bold"><span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Available</span></p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Total Revenue</p>
+                    <p id="room-details-revenue" class="text-lg font-bold text-green-600">₱0</p>
+                </div>
+            </div>
+
+            <!-- Amenities -->
+            <div>
+                <h4 class="font-bold text-gray-700 mb-2">Amenities</h4>
+                <p id="room-details-amenities" class="text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <h4 class="font-bold text-gray-700 mb-2">Description</h4>
+                <p id="room-details-description" class="text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Booking Stats -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-bold text-gray-700 mb-4">Booking Statistics</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-3 rounded-lg border border-gray-100">
+                        <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Confirmed</p>
+                        <p id="room-stats-confirmed" class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg border border-gray-100">
+                        <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Pending</p>
+                        <p id="room-stats-pending" class="text-2xl font-bold text-yellow-600">0</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg border border-gray-100">
+                        <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Cancelled</p>
+                        <p id="room-stats-cancelled" class="text-2xl font-bold text-red-600">0</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg border border-gray-100">
+                        <p class="text-xs text-gray-500 font-semibold uppercase mb-1">Total Bookings</p>
+                        <p id="room-stats-total" class="text-2xl font-bold text-brand-purple">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Bookings for this Room -->
+            <div>
+                <h4 class="font-bold text-gray-700 mb-3">Recent Bookings</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs text-gray-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="p-3 font-medium">Guest</th>
+                                <th class="p-3 font-medium">Check-in</th>
+                                <th class="p-3 font-medium">Check-out</th>
+                                <th class="p-3 font-medium">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50" id="room-bookings-body">
+                            <tr>
+                                <td colspan="4" class="p-4 text-center text-gray-400">No bookings yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Load rooms overview for dashboard
+function loadRoomsOverview() {
+    const container = document.getElementById('rooms-overview-grid');
+
+    fetch('../actions/rooms_action.php')
+        .then(response => {
+            console.log('Rooms API Response Status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Rooms Data:', data);
+
+            if (data.success && data.rooms && data.rooms.length > 0) {
+                console.log('Found ' + data.rooms.length + ' rooms');
+                container.innerHTML = data.rooms.map(room => {
+                    const statusBadge = room.status === 'Maintenance' ? '<span class="px-2 py-1 bg-red-100 text-red-600 text-xs font-bold rounded">Maintenance</span>' : '<span class="px-2 py-1 bg-green-100 text-green-600 text-xs font-bold rounded">Available</span>';
+                    const imgSrc = room.image && room.image.startsWith('http') ? room.image : (room.image ? '../' + room.image : '../assets/image/rooms/default.jpg');
+
+                    return `
+                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-50 hover:shadow-md transition cursor-pointer" onclick="viewRoomDetails('${room.id}')">
+                            <img src="${imgSrc}" class="w-full h-24 object-cover rounded mb-3 bg-gray-200" alt="${room.name}">
+                            <div class="mb-2">
+                                <h5 class="font-bold text-gray-800 text-sm">${room.name}</h5>
+                                <p class="text-xs text-gray-500">${room.type || 'N/A'}</p>
+                            </div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-brand-purple font-bold">₱${room.price || '0'}</span>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                console.log('No rooms found or API error:', data);
+                container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">No rooms found. Create rooms in the Rooms section.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading rooms:', error);
+            container.innerHTML = '<div class="col-span-full text-center text-red-400 py-8">Error loading rooms: ' + error.message + '</div>';
+        });
+}
+
+// View detailed room report
+function viewRoomDetails(roomId) {
+    // First fetch all rooms data
+    fetch('../actions/rooms_action.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const room = data.rooms.find(r => r.id == roomId);
+                if (room) {
+                    // Display room info
+                    document.getElementById('room-details-title').innerText = room.name;
+                    document.getElementById('room-details-type').innerText = room.type + ' • Capacity: ' + room.capacity + ' guests';
+                    document.getElementById('room-details-price').innerText = '₱' + room.price;
+                    document.getElementById('room-details-capacity').innerText = room.capacity + ' Guest(s)';
+                    document.getElementById('room-details-status').innerHTML = room.status === 'Maintenance' ? '<span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600">Maintenance</span>' : '<span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Available</span>';
+
+                    // Parse amenities
+                    let amenitiesText = 'No amenities';
+                    try {
+                        if (room.amenities && typeof room.amenities === 'string' && room.amenities.trim().startsWith('[')) {
+                            const amenities = JSON.parse(room.amenities);
+                            if (Array.isArray(amenities)) {
+                                amenitiesText = amenities.join(', ');
+                            }
+                        } else if (room.amenities) {
+                            amenitiesText = room.amenities;
+                        }
+                    } catch (e) {
+                        amenitiesText = room.amenities || 'No amenities';
+                    }
+                    document.getElementById('room-details-amenities').innerText = amenitiesText;
+                    document.getElementById('room-details-description').innerText = room.description || 'No description available.';
+
+                    // Load bookings for this room
+                    loadRoomBookings(roomId);
+
+                    // Show modal
+                    document.getElementById('room-details-modal').classList.remove('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching room details:', error));
+}
+
+// Load bookings for a specific room
+function loadRoomBookings(roomId) {
+    // First get room info to know the room name
+    fetch('../actions/rooms_action.php')
+        .then(r => r.json())
+        .then(roomData => {
+            if (roomData.success) {
+                const room = roomData.rooms.find(rm => rm.id == roomId);
+                if (!room) {
+                    console.error('Room not found with ID:', roomId);
+                    return;
+                }
+
+                const roomName = room.name;
+                console.log('Looking for bookings for room:', roomName, 'ID:', roomId);
+
+                // Now fetch bookings and filter by room name
+                fetch('../actions/bookings_action.php')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('All bookings:', data);
+
+                        if (data.success && data.bookings) {
+                            const filteredBookings = data.bookings.filter(b => b.roomName === roomName);
+                            console.log('Filtered bookings for ' + roomName + ':', filteredBookings);
+
+                            // Calculate stats
+                            const confirmed = filteredBookings.filter(b => b.status === 'Confirmed').length;
+                            const pending = filteredBookings.filter(b => b.status === 'Pending').length;
+                            const cancelled = filteredBookings.filter(b => b.status === 'Cancelled').length;
+                            const total = filteredBookings.length;
+
+                            // Calculate total revenue
+                            const revenue = filteredBookings
+                                .filter(b => b.status === 'Confirmed')
+                                .reduce((sum, b) => sum + parseFloat(b.total || 0), 0);
+
+                            document.getElementById('room-stats-confirmed').innerText = confirmed;
+                            document.getElementById('room-stats-pending').innerText = pending;
+                            document.getElementById('room-stats-cancelled').innerText = cancelled;
+                            document.getElementById('room-stats-total').innerText = total;
+                            document.getElementById('room-details-revenue').innerText = '₱' + revenue.toFixed(2);
+
+                            // Display recent bookings (last 5)
+                            const tbody = document.getElementById('room-bookings-body');
+                            if (filteredBookings.length > 0) {
+                                const recent = filteredBookings.slice(0, 5);
+                                tbody.innerHTML = recent.map(b => `
+                                    <tr class="hover:bg-gray-50/50 transition">
+                                        <td class="p-3 font-medium text-gray-700">${b.guestName}</td>
+                                        <td class="p-3 text-sm text-gray-600">${b.checkIn}</td>
+                                        <td class="p-3 text-sm text-gray-600">${b.checkOut}</td>
+                                        <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${b.status === 'Confirmed' ? 'bg-green-100 text-green-600' : (b.status === 'Cancelled' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600')}">${b.status}</span></td>
+                                    </tr>
+                                `).join('');
+                            } else {
+                                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">No bookings for this room yet.</td></tr>';
+                            }
+                        } else {
+                            console.error('Error getting bookings:', data);
+                        }
+                    })
+                    .catch(error => console.error('Error loading room bookings:', error));
+            }
+        })
+        .catch(error => console.error('Error loading room data:', error));
+}
+
+// Close room details modal
+function closeRoomDetailsModal() {
+    document.getElementById('room-details-modal').classList.add('hidden');
+}
+
 // Load recent bookings for dashboard
 function loadRecentBookings() {
     const tbody = document.getElementById('recent-bookings-body');
-    
+
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(function() {
         tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-yellow-500">Database not configured. Please import schema.sql to phpMyAdmin.</td></tr>';
     }, 5000);
-    
+
     fetch('../actions/bookings_action.php')
         .then(response => {
             clearTimeout(timeoutId);
@@ -174,5 +439,6 @@ function initDashboardCharts() {
 // Load data on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadRecentBookings();
+    loadRoomsOverview();
 });
 </script>

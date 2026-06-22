@@ -15,7 +15,7 @@
                         </div>
                         
                         <div class="text-left pl-2 pt-1 pb-4">
-                            <a href="#" class="text-brand-cyan text-xs font-semibold hover:underline">Forgot Password ?</a>
+                            <a onclick="router('forgot-password')" class="text-brand-cyan text-xs font-semibold hover:underline cursor-pointer">Forgot Password ?</a>
                         </div>
                         
                         <button type="submit" class="w-full bg-brand-cyan text-white text-lg font-bold py-4 rounded-full shadow-[0_10px_25px_rgba(29,179,232,0.4)] hover:bg-[#189bc9] hover:shadow-[0_12px_25px_rgba(29,179,232,0.5)] transition transform hover:-translate-y-0.5">Sign In</button>
@@ -40,6 +40,31 @@
                     <div class="mt-6 pt-6 border-t border-gray-100 text-center">
                         <p class="text-xs text-gray-500 font-medium">
                             Don't have an account? <a onclick="router('register')" class="text-brand-cyan cursor-pointer font-bold hover:underline">Register</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= FORGOT PASSWORD PAGE ================= -->
+        <div id="forgot-password" class="page-section bg-[#e8e8e8]">
+            <div class="min-h-screen flex items-center justify-center px-4 relative pb-20 pt-10">
+                <div class="bg-white p-10 md:p-12 rounded-[40px] shadow-[0_30px_60px_rgba(0,0,0,0.08)] w-full max-w-md relative mt-10">
+                    <h2 class="text-[2.2rem] font-black mb-4 text-center text-brand-cyan tracking-tight">Reset Password</h2>
+                    <p class="text-center text-sm text-gray-500 mb-8">Enter your email address and we'll send you instructions to reset your password.</p>
+                    
+                    <form id="forgot-password-form" class="space-y-5">
+                        <div>
+                            <input type="email" id="forgot-email" placeholder="E-mail address" class="w-full bg-white border border-gray-100 rounded-full px-6 py-4 text-sm text-gray-700 outline-none shadow-[0_4px_15px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-brand-cyan/20 transition" required>
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-brand-cyan text-white text-lg font-bold py-4 rounded-full shadow-[0_10px_25px_rgba(29,179,232,0.4)] hover:bg-[#189bc9] hover:shadow-[0_12px_25px_rgba(29,179,232,0.5)] transition transform hover:-translate-y-0.5">Send Reset Link</button>
+                    </form>
+
+                    <!-- Toggle to Login -->
+                    <div class="mt-8 pt-6 border-t border-gray-100 text-center">
+                        <p class="text-xs text-gray-500 font-medium">
+                            Remember your password? <a onclick="router('login')" class="text-brand-cyan cursor-pointer font-bold hover:underline">Sign In</a>
                         </p>
                     </div>
                 </div>

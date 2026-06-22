@@ -57,7 +57,10 @@ function getBookings() {
                 'checkOut' => $b['check_out'],
                 'total' => $b['total_price'],
                 'status' => $b['status'],
-                'created_at' => $b['created_at']
+                'created_at' => $b['created_at'],
+                'nights' => $b['nights'],
+                'room_price' => $b['room_price'],
+                'payment_method' => $b['payment_method']
             ];
         }, $bookings);
         echo json_encode(['success' => true, 'bookings' => $formatted]);

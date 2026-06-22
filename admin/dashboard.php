@@ -152,12 +152,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
             <div class="p-4 sm:p-8 max-w-7xl mx-auto" id="admin-content">
                 <!-- Dashboard Overview Section -->
                 <div id="admin-overview" class="page-section active">
-                    <div class="flex items-center justify-center h-64">
-                        <div class="text-center">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-purple mx-auto mb-4"></div>
-                            <p class="text-gray-500">Loading analytics...</p>
-                        </div>
-                    </div>
+                    <?php include 'sections/dashboard_stats.php'; ?>
                 </div>
 
                 <!-- Include Management Sections -->
