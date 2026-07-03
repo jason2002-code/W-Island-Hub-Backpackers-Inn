@@ -232,6 +232,22 @@ try {
 </div>
 
 <script>
+// Function for the "View All" button in recent bookings
+function renderAdminBookings() {
+    // This function is called from the "View All" button in the recent bookings section.
+    // It switches the view to the main booking management page.
+    
+    // The showAdminSection function is defined in dashboard.php
+    if (typeof showAdminSection === 'function') {
+        showAdminSection('manage-bookings');
+    }
+
+    // The setActiveAdminLink function is defined in admin_chart.js
+    // We find the corresponding link in the sidebar and activate it.
+    const bookingsLink = document.getElementById('nav-bookings');
+    if (typeof setActiveAdminLink === 'function' && bookingsLink) setActiveAdminLink(bookingsLink);
+}
+
 // Load rooms overview for dashboard
 function loadRoomsOverview() {
     const container = document.getElementById('rooms-overview-grid');

@@ -93,7 +93,7 @@ profileHTML = `
                             <i class="fas fa-user-edit"></i> Edit Profile
                         </button>
                         
-                        <button onclick="window.location.href = '../index.php'" class="w-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 py-3 rounded-xl transition-all duration-300 font-semibold text-sm shadow-sm flex items-center justify-center gap-2">
+                        <button onclick="sessionStorage.setItem('skipLoader', 'true'); window.location.href = '../index.php';" class="w-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 py-3 rounded-xl transition-all duration-300 font-semibold text-sm shadow-sm flex items-center justify-center gap-2">
                             <i class="fas fa-home"></i> Back to Home
                         </button>
                     </div>

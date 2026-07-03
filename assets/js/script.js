@@ -191,42 +191,49 @@ async function initHeroCarousel() {
 
 
 async function init() {
+            const skipLoader = sessionStorage.getItem('skipLoader') === 'true';
+            if (skipLoader) {
+                sessionStorage.removeItem('skipLoader');
+            }
+
             // Simple fast loader: 1.5s total
             document.body.style.overflow = 'hidden';
 
             // W logo is already inserted in the loader HTML (header.php)
             // Just ensure it exists and animate it if GSAP is available
-
             const loadContent = Promise.all([
                 initHeroCarousel(),
                 setupMarquee()
             ]);
 
-            if(window.gsap) {
+            if (skipLoader) {
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.display = 'none';
+                }
+                document.body.style.overflow = 'auto';
+            } else if (window.gsap) {
                 const tl = gsap.timeline({
                     onComplete: () => {
                         const loader = document.getElementById('loader');
-                        if(loader) {
+                        if (loader) {
                             loader.style.display = 'none';
                         }
                         document.body.style.overflow = 'auto';
                     }
                 });
-            tl.to("#loader", { y: "-100%", duration: 0.6, ease: "power4.in", delay: 1.5 });
+                tl.to("#loader", { y: "-100%", duration: 0.6, ease: "power4.in", delay: 1.5 });
             } else {
                 // Fallback: 1.5s CSS fade
                 setTimeout(() => {
                     const loader = document.getElementById('loader');
-                    if(loader) {
+                    if (loader) {
                         loader.classList.add('hidden');
-                        setTimeout(() => {
-                            loader.style.display = 'none';
-                            document.body.style.overflow = 'auto';
-                        }, 500);
+                        setTimeout(() => { loader.style.display = 'none'; document.body.style.overflow = 'auto'; }, 500);
                     }
                 }, 2500);
             }
-            
+
             await loadContent;
             updateAuthUI();
             setupMobileNav();

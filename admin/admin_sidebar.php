@@ -4,7 +4,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 <div id="admin-sidebar" class="w-64 bg-white text-gray-600 border-r border-gray-100 flex flex-col h-full shadow-lg md:shadow-none hidden md:flex">
     <div class="p-6 h-20 flex items-center border-b border-gray-50">
         <span class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-             <div class="w-8 h-8 rounded-lg bg-[#6C5DD3] flex items-center justify-center text-white text-lg font-serif">W</div>
+             <div class="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white text-lg font-serif">W</div>
              Admin
         </span>
     </div>

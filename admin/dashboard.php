@@ -77,7 +77,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
         <div id="admin-sidebar" class="absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-white text-gray-600 border-r border-gray-100 transition duration-200 ease-in-out z-30 flex flex-col h-full shadow-lg md:shadow-none">
             <div class="p-6 h-20 flex items-center border-b border-gray-50">
                 <span class="text-2xl font-bold text-brand-dark flex items-center gap-2">
-                     <div class="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white text-lg font-serif">W</div>
+                     <div class="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white text-lg font-serif">W</div>
                      Admin
                 </span>
                 <button onclick="toggleAdminSidebar()" class="md:hidden ml-auto text-gray-400 hover:text-brand-dark"><i class="fas fa-times"></i></button>
