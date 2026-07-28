@@ -54,8 +54,8 @@ if ($pdo) {
                     <div class="flex justify-between items-start mb-2">
                         <h3 class="text-xl font-bold text-brand-dark"><?php echo htmlspecialchars($room['name']); ?></h3>
                         <div>
-                            <span class="room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1" data-room-id="<?php echo $room_id; ?>">Loading...</span>
                             <span class="bg-blue-50 text-brand-blue text-xs font-bold px-2 py-1 rounded uppercase"><?php echo htmlspecialchars($room['type']); ?></span>
+                            <span class="room-status-badge text-xs font-bold px-2 py-1 rounded uppercase mr-1 hidden" data-room-id="<?php echo $room_id; ?>"></span>
                         </div>
                     </div>
                     <p class="text-gray-500 text-sm mb-4 line-clamp-2"><?php echo htmlspecialchars($room['description']); ?></p>
@@ -122,37 +122,9 @@ if ($pdo) {
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.room-card').forEach(card => {
         const roomId = card.dataset.roomId;
-        updateRoomStatus(roomId);
         initReviewsSection(roomId);
     });
 });
-
-// Update room status (existing)
-async function updateRoomStatus(roomId) {
-    try {
-        const res = await fetch('actions/book_action.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({action: 'get_room_availability', room_id: roomId})
-        });
-        const data = await res.json();
-        const badge = document.querySelector(`[data-room-id="${roomId}"] .room-status-badge`);
-        if (badge && data.success) {
-            if (data.room && data.room.status === 'Maintenance') {
-                badge.textContent = 'Maintenance';
-                badge.className = 'room-status-badge bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
-            } else if (data.is_currently_available) {
-                badge.textContent = 'Available';
-                badge.className = 'room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
-            } else {
-                badge.textContent = data.next_vacant ? `Occupied until ${data.next_vacant}` : 'Occupied';
-                badge.className = 'room-status-badge bg-orange-100 text-orange-800 text-xs font-bold px-2 py-1 rounded uppercase mr-1';
-            }
-        }
-    } catch (e) {
-        console.error('Status update failed:', e);
-    }
-}
 
 // New: Initialize reviews for room
 async function initReviewsSection(roomId) {

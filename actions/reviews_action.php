@@ -116,6 +116,17 @@ function submitReview() {
         echo json_encode(['success' => false, 'message' => 'Database connection failed']);
         return;
     }
+    
+    // Check if the user has a past confirmed booking for this room
+    $bookingCheckSql = "SELECT COUNT(*) FROM bookings WHERE user_id = ? AND room_id = ? AND status = 'Confirmed' AND check_out <= CURDATE()";
+    $bookingCheckStmt = $pdo->prepare($bookingCheckSql);
+    $bookingCheckStmt->execute([$userId, $roomId]);
+    $hasPastBooking = $bookingCheckStmt->fetchColumn();
+
+    if ($hasPastBooking == 0) {
+        echo json_encode(['success' => false, 'message' => 'You can only review rooms after your stay has ended.']);
+        return;
+    }
 
     try {
         // Check spam

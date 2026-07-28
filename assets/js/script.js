@@ -372,6 +372,10 @@ async function setupMarquee() {
                 target.style.display = 'block';
                 window.scrollTo(0,0);
             }
+
+            if (pageId.startsWith('room-')) {
+                loadRoomReviews(pageId.split('-')[1]);
+            }
         }
 
 // Toggle between "Login/Signup" and "User Profile/Logout" buttons in navbar
@@ -667,7 +671,7 @@ async function setupMarquee() {
                 }
                 const client = google.accounts.oauth2.initTokenClient({
                     // ⚠️ IMPORTANT: Replace this with your actual Client ID from Google Cloud Console
-                    client_id: 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com',
+                    client_id: '830544901615-sv51g2sg31v1dluucrrr9tfmpop8k2j8.apps.googleusercontent.com', // 👈 PASTE YOUR COPIED CLIENT ID HERE
                     scope: 'email profile',
                     callback: (response) => {
                         if (response.access_token) {
@@ -683,7 +687,7 @@ async function setupMarquee() {
                 });
                 client.requestAccessToken(); // Triggers the real Google popup!
             } else {
-                // Fallback simulation for Apple/X until their SDKs are configured
+                // Fallback simulation for other providers
                 const email = prompt(`[${provider} Login]\n\nPlease enter your email address:`);
                 if (email) processSocialLogin(provider, email, email.split('@')[0]);
             }
@@ -757,10 +761,45 @@ async function setupMarquee() {
                         </div>
                         <p class="text-gray-500 text-sm mb-4 line-clamp-2">${room.desc}</p>
                         
-                        <div class="flex flex-wrap gap-2 mb-6">
+                        <div class="flex flex-wrap gap-2 mb-4">
                             ${room.amenities.slice(0,3).map(a => `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${a}</span>`).join('')}
                         </div>
                         
+                        <!-- Reviews Section -->
+                        <details class="reviews-section group mt-4 border-t pt-4">
+                            <summary class="cursor-pointer font-semibold text-brand-dark mb-3 flex items-center gap-2 hover:text-brand-blue transition">
+                                <i class="fas fa-star text-yellow-400"></i>
+                                <span>Reviews <span class="reviews-count text-gray-500 ml-1">(0)</span></span>
+                                <i class="fas fa-chevron-down text-sm transition-transform duration-200"></i>
+                            </summary>
+                            
+                            <div class="reviews-content space-y-4 mt-3" id="reviews-${room.id}">
+                                <!-- Dynamic content loaded by JS -->
+                            </div>
+
+                            ${isLoggedIn ? `
+                            <div class="submit-review-section mt-6 p-4 bg-blue-50/50 rounded-lg border" data-room-id="${room.id}">
+                                <h4 class="font-bold text-brand-dark mb-4 flex items-center gap-2">
+                                    <i class="fas fa-edit text-blue-500"></i>
+                                    Write Your Review
+                                </h4>
+                                <div class="star-picker mb-4 flex gap-1" data-room-id="${room.id}">
+                                    ${[1,2,3,4,5].map(i => `
+                                        <i class="review-star far fa-star text-2xl text-gray-400 cursor-pointer hover:text-yellow-400 transition-all duration-200" data-rating="${i}" title="Rate ${i} star${i > 1 ? 's' : ''}"></i>
+                                    `).join('')}
+                                    <span class="ml-3 font-medium text-gray-700 selected-rating">Select rating</span>
+                                </div>
+                                <textarea id="review-comment-${room.id}" placeholder="Share your experience with this room... What did you like? Any suggestions?" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-vertical min-h-[100px]" maxlength="500"></textarea>
+                                <div class="text-right mt-2 text-xs text-gray-500">Max 500 characters</div>
+                                <button class="submit-review-btn mt-4 bg-brand-blue hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto" disabled>
+                                    <span class="btn-text">Submit Review</span>
+                                    <i class="fas fa-spinner fa-spin hidden ml-2"></i>
+                                </button>
+                                <div class="submit-message mt-2 hidden"></div>
+                            </div>
+                            ` : ''}
+                        </details>
+
                         <div class="mt-auto pt-4 border-t flex justify-between items-center">
                             <div>
                                 <span class="text-2xl font-bold text-brand-blue">₱${room.price}</span>
@@ -774,6 +813,61 @@ async function setupMarquee() {
                 </div>
                 `;
             }).join('');
+
+            // Initialize reviews for each room card
+            appState.rooms.forEach(room => {
+                initReviewsSection(room.id);
+            });
+        }
+
+        // Reviews initialization for JS-rendered room cards
+        async function initReviewsSection(roomId) {
+            const content = document.getElementById(`reviews-${roomId}`);
+            if (!content) return;
+
+            try {
+                const res = await fetch(`actions/reviews_action.php?action=get_reviews&room_id=${roomId}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    const countEl = document.querySelector(`.room-card[data-room-id="${roomId}"] .reviews-count`);
+                    if (countEl) countEl.textContent = `(${data.total_reviews})`;
+
+                    content.innerHTML = `
+                        <div class="avg-rating flex items-center gap-2 mb-4 p-3 bg-white rounded-lg shadow-sm">
+                            <div class="flex gap-0.5">
+                                ${[...Array(5)].map((_, i) => 
+                                    `<i class="fas fa-star text-yellow-400 ${i < Math.round(data.avg_rating) ? '' : 'opacity-40'}"></i>`
+                                ).join('')}
+                            </div>
+                            <span class="font-bold text-xl ml-2">${data.avg_rating}</span>
+                            <span class="text-gray-500 text-sm ml-1">from ${data.total_reviews} reviews</span>
+                        </div>
+                        ${data.reviews.length ? data.reviews.map(review => `
+                            <div class="review-item bg-white p-4 rounded-lg shadow-sm border">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="flex gap-0.5 text-sm">
+                                        ${[...Array(5)].map((_, i) => 
+                                            `<i class="fas fa-star text-yellow-400 ${i < Math.round(review.rating) ? '' : 'opacity-40'}"></i>`
+                                        ).join('')}
+                                    </div>
+                                    <span class="font-semibold text-gray-800">${review.user_name || 'Anonymous'}</span>
+                                    <span class="text-xs text-gray-400">${review.formatted_date}</span>
+                                </div>
+                                <p class="text-gray-700">${review.comment}</p>
+                                ${review.admin_reply ? `
+                                    <div class="mt-3 p-3 bg-blue-50 border-l-4 border-brand-blue rounded-r text-sm">
+                                        <strong class="text-brand-blue block mb-1"><i class="fas fa-reply mr-1"></i> Response from Host:</strong>
+                                        <span class="text-gray-700">${review.admin_reply}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('') : '<p class="text-gray-500 italic text-center py-8">No reviews yet. Be the first!</p>'}
+                    `;
+                }
+            } catch (e) {
+                content.innerHTML = '<p class="text-red-500 text-center py-8">Failed to load reviews.</p>';
+            }
         }
 
         let pendingBooking = null;
@@ -852,6 +946,7 @@ async function setupMarquee() {
                                 }
                                 if (statusBadge) {
                                     statusBadge.textContent = 'Available';
+                                    statusBadge.classList.remove('hidden');
                                     statusBadge.className = 'room-status-badge bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded uppercase ml-2';
                                 }
                             }
@@ -931,7 +1026,7 @@ async function setupMarquee() {
         // Initialize booking with availability checks
         async function initiateBooking(roomId) {
             if (!appState.currentUser || appState.currentUser.role === 'admin') {
-                showToast('Please login as guest user to book.', 'warning');
+                showToast('Please log in as a guest to book a room.', 'warning');
                 router('login');
                 return;
             }
@@ -1065,6 +1160,113 @@ async function setupMarquee() {
             })
             .catch(err => console.error('Booking Error:', err));
             });
+        }
+
+        // --- ROOM-SPECIFIC REVIEWS LOGIC ---
+
+        async function loadRoomReviews(roomId) {
+            const reviewsContainer = document.getElementById('room-reviews-container');
+            const reviewFormContainer = document.getElementById('room-review-form-container');
+            const reviewStatsContainer = document.getElementById('room-review-stats');
+            const roomNameEl = document.getElementById('room-page-name');
+
+            if (!reviewsContainer || !reviewFormContainer || !reviewStatsContainer || !roomNameEl) return;
+
+            const room = appState.rooms.find(r => r.id == roomId);
+            if (room) {
+                roomNameEl.textContent = room.name;
+            }
+
+            try {
+                const response = await fetch(`actions/reviews_action.php?action=get_reviews&room_id=${roomId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Render stats
+                    const stars = Array(Math.round(data.avg_rating)).fill('<i class="fas fa-star text-yellow-400"></i>').join('') + Array(5 - Math.round(data.avg_rating)).fill('<i class="fas fa-star text-gray-300"></i>').join('');
+                    reviewStatsContainer.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="text-3xl font-bold text-brand-dark">${data.avg_rating.toFixed(1)}</span>
+                            <div class="flex flex-col">
+                                <div class="text-lg">${stars}</div>
+                                <span class="text-sm text-gray-500">Based on ${data.total_reviews} reviews</span>
+                            </div>
+                        </div>
+                    `;
+
+                    // Render reviews
+                    if (data.reviews.length > 0) {
+                        reviewsContainer.innerHTML = data.reviews.map(review => `
+                            <div class="border-b border-gray-100 py-4">
+                                <div class="flex items-center mb-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold mr-3">${review.user_name.charAt(0)}</div>
+                                    <div>
+                                        <div class="font-bold text-gray-800">${review.user_name}</div>
+                                        <div class="text-xs text-gray-500">${review.formatted_date}</div>
+                                    </div>
+                                    <div class="ml-auto text-yellow-400">${'★'.repeat(review.rating)}<span class="text-gray-300">${'★'.repeat(5-review.rating)}</span></div>
+                                </div>
+                                <p class="text-gray-600 pl-13">${review.comment}</p>
+                            </div>
+                        `).join('');
+                    } else {
+                        reviewsContainer.innerHTML = '<p class="text-center text-gray-500 py-8">No reviews yet. Be the first to write one!</p>';
+                    }
+                }
+
+                // Render review form
+                if (appState.currentUser) {
+                    reviewFormContainer.innerHTML = `
+                        <h3 class="text-xl font-bold text-brand-dark mb-4">Leave a Review</h3>
+                        <form id="room-review-form" onsubmit="submitRoomReview(event, ${roomId})">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Your Rating</label>
+                                <div class="flex items-center gap-1 text-2xl text-gray-300" id="star-rating">
+                                    ${[1,2,3,4,5].map(i => `<i class="fas fa-star cursor-pointer" data-value="${i}"></i>`).join('')}
+                                </div>
+                                <input type="hidden" id="review-rating" name="rating" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="review-comment" class="block text-sm font-medium text-gray-700 mb-2">Your Comment</label>
+                                <textarea id="review-comment" name="comment" rows="4" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-brand-blue outline-none" placeholder="Share your experience..." required></textarea>
+                            </div>
+                            <button type="submit" class="bg-brand-blue hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg transition">Submit Review</button>
+                        </form>
+                    `;
+                    // Add star rating interaction
+                    const stars = reviewFormContainer.querySelectorAll('#star-rating .fa-star');
+                    stars.forEach(star => {
+                        star.addEventListener('mouseover', () => {
+                            const rating = star.dataset.value;
+                            stars.forEach(s => {
+                                s.classList.toggle('text-yellow-400', s.dataset.value <= rating);
+                                s.classList.toggle('text-gray-300', s.dataset.value > rating);
+                            });
+                        });
+                        star.addEventListener('click', () => {
+                            const rating = star.dataset.value;
+                            document.getElementById('review-rating').value = rating;
+                        });
+                    });
+                } else {
+                    reviewFormContainer.innerHTML = '<div class="text-center p-6 bg-gray-50 rounded-lg"><p>Please <a onclick="router(\'login\')" class="text-brand-blue font-bold hover:underline cursor-pointer">log in</a> to leave a review.</p></div>';
+                }
+
+            } catch (error) {
+                console.error("Failed to load reviews:", error);
+                reviewsContainer.innerHTML = '<p class="text-red-500">Could not load reviews at this time.</p>';
+            }
+        }
+
+        async function submitRoomReview(event, roomId) {
+            event.preventDefault();
+            const rating = document.getElementById('review-rating').value;
+            const comment = document.getElementById('review-comment').value;
+
+            // The rest of the submission logic will be handled by the existing `submitReview` function in `user_profile.js`
+            // We can call it directly if we move it to a global scope, or replicate the fetch call here.
+            // For simplicity, let's just use the existing `reviews_action.php` endpoint.
+            submitReview({ rating, comment, room_id: roomId }, () => loadRoomReviews(roomId));
         }
 
         // --- INVOICE / RECEIPT MODAL ---
