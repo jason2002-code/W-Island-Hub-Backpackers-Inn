@@ -18,13 +18,40 @@
                             <input type="date" id="check-out-date" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-brand-blue outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">Guests</label>
-                            <select id="guest-count" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-brand-blue outline-none">
-                                <option value="1">1 Guest</option>
-                                <option value="2">2 Guests</option>
-                                <option value="4">3-4 Guests</option>
-                                <option value="6">5+ Guests</option>
-                            </select>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-bold text-gray-700">Guests</label>
+                                <span id="guest-count-label" class="text-xs font-bold text-brand-blue bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">1 Guest (Max 5)</span>
+                            </div>
+                            <div class="border rounded-lg p-2 bg-white shadow-sm hover:border-brand-blue transition focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/20">
+                                <!-- Number Input with +/- Stepper buttons -->
+                                <div class="flex items-center justify-between gap-1 mb-1.5 bg-gray-50 rounded-md p-1 border border-gray-200">
+                                    <button type="button" id="guest-decrease-btn" class="w-7 h-7 rounded bg-white hover:bg-brand-blue hover:text-white text-gray-700 font-bold transition flex items-center justify-center cursor-pointer shadow-sm border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700" title="Decrease guests">
+                                        <i class="fas fa-minus text-[10px]"></i>
+                                    </button>
+                                    <div class="flex items-center justify-center gap-1.5 flex-1">
+                                        <i class="fas fa-user-friends text-brand-blue text-xs"></i>
+                                        <input type="number" id="guest-count" name="guest_count" min="1" max="5" value="1" 
+                                               class="w-10 text-center font-bold text-gray-800 text-sm outline-none bg-transparent p-0" 
+                                               title="Enter number of guests (1 to 5)">
+                                    </div>
+                                    <button type="button" id="guest-increase-btn" class="w-7 h-7 rounded bg-white hover:bg-brand-blue hover:text-white text-gray-700 font-bold transition flex items-center justify-center cursor-pointer shadow-sm border border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700" title="Increase guests">
+                                        <i class="fas fa-plus text-[10px]"></i>
+                                    </button>
+                                </div>
+                                <!-- Draggable Range Slider (1 to 5) -->
+                                <div class="px-1 pt-0.5">
+                                    <input type="range" id="guest-range" min="1" max="5" value="1" step="1" 
+                                           class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-sky-600 hover:accent-sky-700 transition" 
+                                           title="Drag to select number of guests (1-5)">
+                                    <div class="flex justify-between text-[10px] font-bold text-gray-400 px-0.5 mt-0.5 select-none">
+                                        <span>1</span>
+                                        <span>2</span>
+                                        <span>3</span>
+                                        <span>4</span>
+                                        <span>5</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="bg-brand-blue hover:bg-sky-600 text-white font-bold py-3 rounded-lg transition shadow-md">
                             Check Availability

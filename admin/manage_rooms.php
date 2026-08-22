@@ -50,7 +50,7 @@
                         </select>
                     </div>
                     
-                    <div>
+                    <div id="room-price-container">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Price per Night (₱)</label>
                         <input type="number" id="room-price" required min="0" step="0.01" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
                     </div>
@@ -145,10 +145,14 @@ function loadRooms() {
                         <div class="p-4 flex-1 flex flex-col justify-center">
                             <h4 class="font-bold text-gray-800">${room.name} ${room.status === 'Maintenance' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded ml-2">Maintenance</span>' : ''}</h4>
                             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${room.type}</p>
-                            <p class="text-brand-purple font-bold text-lg">₱${room.price} <span class="text-xs text-gray-400 font-normal">/night</span></p>
-                            <div class="mt-3 flex gap-3 text-xs">
-                                <button onclick="event.stopPropagation(); editRoom('${room.id}')" class="text-blue-500 hover:underline">Edit</button>
-                                <button onclick="event.stopPropagation(); toggleMaintenance('${room.id}', '${room.status}')" class="text-orange-500 hover:underline">${room.status === 'Maintenance' ? 'Enable' : 'Maintenance'}</button>
+                            <p class="text-brand-purple font-bold text-lg">₱${parseFloat(room.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="text-xs text-gray-400 font-normal">/night</span></p>
+                            <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                                <button onclick="event.stopPropagation(); editRoom('${room.id}')" class="text-blue-600 hover:text-blue-800 hover:underline font-medium flex items-center gap-1">
+                                    <i class="fas fa-edit"></i> Edit Details
+                                </button>
+                                <button onclick="event.stopPropagation(); toggleMaintenance('${room.id}', '${room.status}')" class="text-orange-500 hover:text-orange-700 hover:underline flex items-center gap-1">
+                                    <i class="fas fa-wrench"></i> ${room.status === 'Maintenance' ? 'Enable' : 'Maintenance'}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -187,6 +191,13 @@ function showAddRoomModal() {
     document.getElementById('room-preview-img').classList.add('hidden');
     document.getElementById('room-preview-placeholder').classList.remove('hidden');
     document.getElementById('room-image-file').value = '';
+
+    // Show price input for new room creation
+    const priceContainer = document.getElementById('room-price-container');
+    if (priceContainer) priceContainer.classList.remove('hidden');
+    const priceInput = document.getElementById('room-price');
+    if (priceInput) priceInput.required = true;
+
     document.getElementById('room-modal').classList.remove('hidden');
 }
 
@@ -198,15 +209,20 @@ function editRoom(roomId) {
             if (data.success) {
                 const room = data.rooms.find(r => r.id == roomId);
                 if (room) {
-                    document.getElementById('room-modal-title').innerText = 'Edit Room';
+                    document.getElementById('room-modal-title').innerText = 'Edit Room Details';
                     document.getElementById('room-id').value = room.id;
                     document.getElementById('room-name').value = room.name;
                     document.getElementById('room-type').value = room.type;
-                    document.getElementById('room-price').value = room.price;
                     document.getElementById('room-capacity').value = room.capacity;
                     document.getElementById('room-image').value = room.image;
                     document.getElementById('room-description').value = room.description || '';
                     
+                    // Hide price field in general edit modal (prices are managed via dedicated "Change Price" button)
+                    const priceContainer = document.getElementById('room-price-container');
+                    if (priceContainer) priceContainer.classList.add('hidden');
+                    const priceInput = document.getElementById('room-price');
+                    if (priceInput) priceInput.required = false;
+
                     document.getElementById('room-image-file').value = '';
                     if (room.image) {
                         const imgUrl = room.image.startsWith('http') ? room.image : '../' + room.image;
@@ -221,12 +237,10 @@ function editRoom(roomId) {
                     // Handle amenities parsing (JSON string to comma-separated)
                     let amenitiesVal = '';
                     try {
-                        // If it's a string looking like JSON array
                         if (room.amenities && typeof room.amenities === 'string' && room.amenities.trim().startsWith('[')) {
                             const parsed = JSON.parse(room.amenities);
                             if (Array.isArray(parsed)) amenitiesVal = parsed.join(', ');
                         } else if (room.amenities) {
-                            // Fallback for plain text
                             amenitiesVal = room.amenities;
                         }
                     } catch (e) {
@@ -259,11 +273,20 @@ function saveRoom(event) {
     const formData = new FormData();
     formData.append('name', document.getElementById('room-name').value);
     formData.append('type', document.getElementById('room-type').value);
-    formData.append('price', parseFloat(document.getElementById('room-price').value));
     formData.append('capacity', parseInt(document.getElementById('room-capacity').value));
     formData.append('image', document.getElementById('room-image').value || 'assets/image/background.jpg');
     formData.append('description', document.getElementById('room-description').value);
     formData.append('amenities', amenitiesJson);
+
+    // Only include price if creating a new room
+    if (!roomId) {
+        const priceVal = parseFloat(document.getElementById('room-price').value);
+        if (isNaN(priceVal) || priceVal < 0) {
+            showToast('Please enter a valid price for the room', 'error');
+            return;
+        }
+        formData.append('price', priceVal);
+    }
 
     const fileInput = document.getElementById('room-image-file');
     if (fileInput.files.length > 0) {
@@ -276,21 +299,15 @@ function saveRoom(event) {
     if (roomId) {
         formData.append('id', parseInt(roomId));
         formData.append('_method', 'PUT'); // Tell the backend it's an update
-        url = `../actions/rooms_action.php?id=${roomId}`; // Keep query param just in case
+        url = `../actions/rooms_action.php?id=${roomId}`;
     }
-    
-    console.log("Sending data");
     
     fetch(url, {
         method: method,
         body: formData
     })
-    .then(response => {
-        console.log("Response status:", response.status);
-        return response.text();
-    })
+    .then(response => response.text())
     .then(text => {
-        console.log("Raw response:", text);
         try {
             const data = JSON.parse(text);
             if (data.success) {

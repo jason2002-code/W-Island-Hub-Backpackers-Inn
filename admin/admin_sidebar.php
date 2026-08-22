@@ -21,6 +21,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <a href="manage_rooms.php" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl <?php echo $current_page == 'manage_rooms.php' ? 'active' : ''; ?>">
             <i class="fas fa-door-open w-5"></i> Rooms
         </a>
+        <a href="manage_prices.php" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl <?php echo $current_page == 'manage_prices.php' ? 'active' : ''; ?>">
+            <i class="fas fa-tags w-5"></i> Room Prices
+        </a>
         
         <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Management</p>
         
@@ -28,7 +31,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <i class="fas fa-users w-5"></i> Users
         </a>
         <a href="reports.php" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl <?php echo $current_page == 'reports.php' ? 'active' : ''; ?>">
-            <i class="fas fa-comment-dots w-5"></i> Feedback
+            <i class="fas fa-file-invoice-dollar w-5"></i> Reports & Analytics
         </a>
     </nav>
 

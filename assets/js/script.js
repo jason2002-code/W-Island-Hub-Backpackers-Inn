@@ -237,6 +237,7 @@ async function init() {
             await loadContent;
             updateAuthUI();
             setupMobileNav();
+            initGuestSelector();
             fetchRooms();
 
             const hash = window.location.hash.replace('#', '');
@@ -744,7 +745,7 @@ async function setupMarquee() {
                 }
                 
                 return `
-                <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col" data-room-id="${room.id}">
+                <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col" data-room-id="${room.id}" data-capacity="${room.capacity || 2}">
                     <div class="h-48 overflow-hidden relative">
                          <img src="${room.image}" alt="${room.name}" class="w-full h-full object-cover transition duration-500 hover:scale-110">
                          <div class="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-800">
@@ -762,6 +763,7 @@ async function setupMarquee() {
                         <p class="text-gray-500 text-sm mb-4 line-clamp-2">${room.desc}</p>
                         
                         <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? 's' : ''}</span>
                             ${room.amenities.slice(0,3).map(a => `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${a}</span>`).join('')}
                         </div>
                         
@@ -872,6 +874,84 @@ async function setupMarquee() {
 
         let pendingBooking = null;
 
+        // Initialize Guest Selector (synchronize customer input, stepper buttons, and drag slider)
+        function initGuestSelector() {
+            const input = document.getElementById('guest-count');
+            const range = document.getElementById('guest-range');
+            const decBtn = document.getElementById('guest-decrease-btn');
+            const incBtn = document.getElementById('guest-increase-btn');
+            const label = document.getElementById('guest-count-label');
+
+            if (!input && !range) return;
+
+            function updateGuests(val) {
+                let num = parseInt(val, 10);
+                if (isNaN(num) || num < 1) num = 1;
+                if (num > 5) num = 5;
+
+                if (input) input.value = num;
+                if (range) range.value = num;
+
+                if (label) {
+                    label.textContent = `${num} ${num === 1 ? 'Guest' : 'Guests'} (Max 5)`;
+                }
+                if (decBtn) {
+                    decBtn.disabled = (num <= 1);
+                }
+                if (incBtn) {
+                    incBtn.disabled = (num >= 5);
+                }
+            }
+
+            // Drag slider event
+            if (range) {
+                range.addEventListener('input', (e) => {
+                    updateGuests(e.target.value);
+                });
+            }
+
+            // Customer direct numeric input
+            if (input) {
+                input.addEventListener('input', (e) => {
+                    if (e.target.value !== '') {
+                        let val = parseInt(e.target.value, 10);
+                        if (val > 5) val = 5;
+                        if (val < 1) val = 1;
+                        if (range) range.value = val;
+                        if (label) label.textContent = `${val} ${val === 1 ? 'Guest' : 'Guests'} (Max 5)`;
+                        if (decBtn) decBtn.disabled = (val <= 1);
+                        if (incBtn) incBtn.disabled = (val >= 5);
+                    }
+                });
+
+                input.addEventListener('blur', (e) => {
+                    updateGuests(e.target.value);
+                });
+
+                input.addEventListener('change', (e) => {
+                    updateGuests(e.target.value);
+                });
+            }
+
+            // Stepper - / + buttons
+            if (decBtn) {
+                decBtn.addEventListener('click', () => {
+                    const current = parseInt(input ? input.value : range?.value, 10) || 1;
+                    updateGuests(current - 1);
+                });
+            }
+
+            if (incBtn) {
+                incBtn.addEventListener('click', () => {
+                    const current = parseInt(input ? input.value : range?.value, 10) || 1;
+                    updateGuests(current + 1);
+                });
+            }
+
+            // Initial sync
+            updateGuests(input ? input.value : (range ? range.value : 1));
+        }
+
         // Availability check form handler
         const availabilityForm = document.getElementById('check-availability-form');
         if (availabilityForm) {
@@ -879,6 +959,9 @@ async function setupMarquee() {
                 e.preventDefault();
                 const checkIn = document.getElementById('check-in-date').value;
                 const checkOut = document.getElementById('check-out-date').value;
+                const guestCountEl = document.getElementById('guest-count');
+                const guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
+
                 if (!checkIn || !checkOut) {
                     showToast('Please select dates', 'warning');
                     return;
@@ -889,7 +972,7 @@ async function setupMarquee() {
                     return;
                 }
 
-                // Filter: only show available rooms for selected dates
+                // Filter: only show available rooms for selected dates & guest capacity
                 const roomsContainer = document.getElementById('rooms-container');
                 let allRoomEls = Array.from(document.querySelectorAll('.room-card[data-room-id]'));
 
@@ -916,6 +999,15 @@ async function setupMarquee() {
 
                 const results = await Promise.all(allRoomEls.map(async (roomEl) => {
                     const roomId = roomEl.dataset.roomId;
+                    const roomCapacity = parseInt(roomEl.dataset.capacity, 10) || 
+                                         (appState.rooms.find(r => r.id == roomId)?.capacity) || 2;
+
+                    // If room capacity is less than requested guests, it cannot accommodate them
+                    if (roomCapacity < guests) {
+                        roomEl.style.display = 'none';
+                        return { roomId, available: false, capacityMatch: false };
+                    }
+
                     try {
                         const response = await fetch('actions/book_action.php', {
                             method: 'POST',
@@ -952,23 +1044,23 @@ async function setupMarquee() {
                             }
                         }
 
-                        return { roomId, available };
+                        return { roomId, available, capacityMatch: true };
                     } catch (err) {
                         console.error(err);
-                        return { roomId, available: false };
+                        return { roomId, available: false, capacityMatch: true };
                     }
                 }));
 
-                const anyAvailable = results.some(r => r.available);
+                const anyAvailable = results.some(r => r.available && r.capacityMatch);
                 let noAvailEl = document.getElementById('no-available-rooms');
                 if (!noAvailEl && roomsContainer) {
                     noAvailEl = document.createElement('div');
                     noAvailEl.id = 'no-available-rooms';
                     noAvailEl.className = 'col-span-full text-center text-gray-500 py-8';
-                    noAvailEl.innerHTML = '<p>No rooms available for selected dates.</p>';
                     roomsContainer.appendChild(noAvailEl);
                 }
                 if (noAvailEl) {
+                    noAvailEl.innerHTML = `<p class="text-gray-500"><i class="fas fa-info-circle mr-1"></i> No rooms available for ${guests} ${guests === 1 ? 'guest' : 'guests'} on selected dates.</p>`;
                     noAvailEl.style.display = anyAvailable ? 'none' : '';
                 }
             });
@@ -1076,10 +1168,13 @@ async function setupMarquee() {
                 // All good - create pending booking
                 const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000));
                 const total = (room.price * nights) + 15; // tax
+                const guestCountEl = document.getElementById('guest-count');
+                const guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
 
                 pendingBooking = {
                     roomId: parseInt(roomId),
                     roomName: room.name,
+                    guests,
                     checkIn,
                     checkOut,
                     nights: Math.max(1, nights),
@@ -1096,11 +1191,12 @@ async function setupMarquee() {
                 document.getElementById('summary-total').textContent = '₱' + total.toFixed(2);
 
                 document.getElementById('booking-details-content').innerHTML = `
-                    <div class="p-4 bg-green-50 border rounded-lg mb-4">
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg mb-4 space-y-1.5 text-sm">
                         <div class="flex justify-between"><span>Check In:</span> <strong>${checkIn}</strong></div>
                         <div class="flex justify-between"><span>Check Out:</span> <strong>${checkOut}</strong></div>
+                        <div class="flex justify-between"><span>Guests:</span> <strong>${guests} ${guests === 1 ? 'Guest' : 'Guests'}</strong></div>
                         <div class="flex justify-between"><span>Room:</span> <strong>${room.name}</strong></div>
-                        <div class="flex justify-between text-green-700 font-bold mt-2">
+                        <div class="flex justify-between text-green-700 font-bold mt-2 pt-2 border-t border-green-200">
                             <span>Availability OK</span><i class="fas fa-check-circle ml-1"></i>
                         </div>
                     </div>

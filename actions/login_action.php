@@ -30,9 +30,9 @@ if (!$pdo) {
 try {
     // Check if user exists in either table using UNION
     $stmt = $pdo->prepare("
-        SELECT id, name, email, password, 'admin' as role FROM admins WHERE email = ?
+        SELECT id, name, email, NULL as avatar, password, 'admin' as role FROM admins WHERE email = ?
         UNION
-        SELECT id, name, email, password, 'user' as role FROM users WHERE email = ?
+        SELECT id, name, email, avatar, password, 'user' as role FROM users WHERE email = ?
     ");
     $stmt->execute([$email, $email]);
     $foundUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -62,6 +62,7 @@ try {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['name'] = $user['name'];
             $_SESSION['role'] = $user['role'];
+            $_SESSION['avatar'] = $user['avatar'] ?? null;
         }
 
         $redirect = ($user['role'] === 'admin') ? 'admin/dashboard.php' : 'index.php';
@@ -74,6 +75,7 @@ try {
                 'id' => $user['id'],
                 'name' => $user['name'],
                 'email' => $user['email'],
+                'avatar' => $user['avatar'] ?? null,
                 'role' => $user['role']
             ]
         ]);

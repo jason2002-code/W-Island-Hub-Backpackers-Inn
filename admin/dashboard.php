@@ -96,14 +96,17 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 <a onclick="showAdminSection('manage-rooms'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-door-open w-5"></i> Rooms
                 </a>
+                <a onclick="showAdminSection('manage-prices'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+                    <i class="fas fa-tags w-5"></i> Room Prices
+                </a>
                 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Management</p>
                 
                 <a onclick="showAdminSection('manage-users'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-users w-5"></i> Users
                 </a>
-                <a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
-                    <i class="fas fa-comment-dots w-5"></i> Reports/Feedback
+                <a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this); if (typeof generateHotelReportData === 'function') generateHotelReportData();" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
+                    <i class="fas fa-file-invoice-dollar w-5"></i> Reports & Analytics
                 </a>
 <a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-images w-5"></i> Carousel/Sliders
@@ -158,6 +161,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 <!-- Include Management Sections -->
                 <?php include 'manage_bookings.php'; ?>
                 <?php include 'manage_rooms.php'; ?>
+                <?php include 'manage_prices.php'; ?>
                 <?php include 'manage_users.php'; ?>
                 <?php include 'reports.php'; ?>
                 <?php include 'manage_sliders.php'; ?>
@@ -188,8 +192,9 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 'admin-overview': 'Analytics Overview',
                 'manage-bookings': 'Booking Management',
                 'manage-rooms': 'Room Inventory',
+                'manage-prices': 'Room Price Management',
                 'manage-users': 'User Management',
-                'manage-reports': 'Guest Feedback',
+                'manage-reports': 'Hotel Reports & Analytics',
                 'manage-sliders': 'Carousel & Sliders',
                 'manage-reviews': 'Reviews & Ratings',
             };
