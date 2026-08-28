@@ -874,82 +874,36 @@ async function setupMarquee() {
 
         let pendingBooking = null;
 
-        // Initialize Guest Selector (synchronize customer input, stepper buttons, and drag slider)
+        // Initialize Guest Selector (handles manual input with max 5 validation)
         function initGuestSelector() {
             const input = document.getElementById('guest-count');
-            const range = document.getElementById('guest-range');
-            const decBtn = document.getElementById('guest-decrease-btn');
-            const incBtn = document.getElementById('guest-increase-btn');
-            const label = document.getElementById('guest-count-label');
+            if (!input) return;
 
-            if (!input && !range) return;
-
-            function updateGuests(val) {
-                let num = parseInt(val, 10);
-                if (isNaN(num) || num < 1) num = 1;
-                if (num > 5) num = 5;
-
-                if (input) input.value = num;
-                if (range) range.value = num;
-
-                if (label) {
-                    label.textContent = `${num} ${num === 1 ? 'Guest' : 'Guests'} (Max 5)`;
+            input.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (val > 5) {
+                    e.target.value = 5;
+                    showToast('Maximum 5 guests allowed', 'info');
                 }
-                if (decBtn) {
-                    decBtn.disabled = (num <= 1);
+            });
+
+            input.addEventListener('blur', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 1) {
+                    e.target.value = 1;
+                } else if (val > 5) {
+                    e.target.value = 5;
                 }
-                if (incBtn) {
-                    incBtn.disabled = (num >= 5);
+            });
+
+            input.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 1) {
+                    e.target.value = 1;
+                } else if (val > 5) {
+                    e.target.value = 5;
                 }
-            }
-
-            // Drag slider event
-            if (range) {
-                range.addEventListener('input', (e) => {
-                    updateGuests(e.target.value);
-                });
-            }
-
-            // Customer direct numeric input
-            if (input) {
-                input.addEventListener('input', (e) => {
-                    if (e.target.value !== '') {
-                        let val = parseInt(e.target.value, 10);
-                        if (val > 5) val = 5;
-                        if (val < 1) val = 1;
-                        if (range) range.value = val;
-                        if (label) label.textContent = `${val} ${val === 1 ? 'Guest' : 'Guests'} (Max 5)`;
-                        if (decBtn) decBtn.disabled = (val <= 1);
-                        if (incBtn) incBtn.disabled = (val >= 5);
-                    }
-                });
-
-                input.addEventListener('blur', (e) => {
-                    updateGuests(e.target.value);
-                });
-
-                input.addEventListener('change', (e) => {
-                    updateGuests(e.target.value);
-                });
-            }
-
-            // Stepper - / + buttons
-            if (decBtn) {
-                decBtn.addEventListener('click', () => {
-                    const current = parseInt(input ? input.value : range?.value, 10) || 1;
-                    updateGuests(current - 1);
-                });
-            }
-
-            if (incBtn) {
-                incBtn.addEventListener('click', () => {
-                    const current = parseInt(input ? input.value : range?.value, 10) || 1;
-                    updateGuests(current + 1);
-                });
-            }
-
-            // Initial sync
-            updateGuests(input ? input.value : (range ? range.value : 1));
+            });
         }
 
         // Availability check form handler
@@ -960,7 +914,15 @@ async function setupMarquee() {
                 const checkIn = document.getElementById('check-in-date').value;
                 const checkOut = document.getElementById('check-out-date').value;
                 const guestCountEl = document.getElementById('guest-count');
-                const guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
+                let guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
+                if (guests > 5) {
+                    guests = 5;
+                    if (guestCountEl) guestCountEl.value = 5;
+                    showToast('Maximum 5 guests allowed', 'warning');
+                } else if (guests < 1) {
+                    guests = 1;
+                    if (guestCountEl) guestCountEl.value = 1;
+                }
 
                 if (!checkIn || !checkOut) {
                     showToast('Please select dates', 'warning');
@@ -1169,7 +1131,9 @@ async function setupMarquee() {
                 const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000));
                 const total = (room.price * nights) + 15; // tax
                 const guestCountEl = document.getElementById('guest-count');
-                const guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
+                let guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
+                if (guests > 5) guests = 5;
+                if (guests < 1) guests = 1;
 
                 pendingBooking = {
                     roomId: parseInt(roomId),
