@@ -4,35 +4,8 @@
  * This is a supplementary file - main booking logic is in bookings_action.php
  */
 
-require_once '../config/db.php';
-
-header('Content-Type: application/json');
-
-// Only allow POST requests
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-    exit;
-}
-
-$input = json_decode(file_get_contents('php://input'), true);
-$action = $input['action'] ?? 'create';
-
-// Route to appropriate function in bookings_action.php
-// This file provides a cleaner API endpoint for direct bookings
-switch ($action) {
-    case 'create':
-        createDirectBooking($input);
-        break;
-    case 'check_availability':
-        checkAvailability($input);
-        break;
-    case 'get_room_availability':
-        getRoomAvailability($input);
-        break;
-    default:
-        echo json_encode(['success' => false, 'message' => 'Invalid action']);
-        exit;
-}
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/cron_expiry_action.php';
 
 /**
  * Create a direct booking (alternative endpoint)
@@ -57,6 +30,16 @@ function createDirectBooking($data) {
         exit;
     }
 
+    $today = date('Y-m-d');
+    if ($checkIn < $today) {
+        echo json_encode(['success' => false, 'message' => 'Check-in date cannot be in the past or outdated.']);
+        exit;
+    }
+    if ($checkOut <= $checkIn) {
+        echo json_encode(['success' => false, 'message' => 'Check-out date must be strictly after check-in date.']);
+        exit;
+    }
+
     try {
         // Get room price
         $stmt = $pdo->prepare("SELECT price FROM rooms WHERE id = ?");
@@ -75,7 +58,7 @@ function createDirectBooking($data) {
         $totalPrice = $room['price'] * $nights;
         
         // Generate reference ID
-$refId = 'BK-' . strtoupper(substr(uniqid(), -6));
+        $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
         
         // Insert booking
         $stmt = $pdo->prepare("
@@ -120,17 +103,37 @@ function checkAvailability($data) {
         echo json_encode(['success' => false, 'message' => 'Room ID and dates are required']);
         exit;
     }
+
+    $today = date('Y-m-d');
+    if ($checkIn < $today) {
+        echo json_encode([
+            'success' => false,
+            'available' => false,
+            'message' => 'Check-in date cannot be in the past or outdated.'
+        ]);
+        exit;
+    }
+
+    if ($checkOut <= $checkIn) {
+        echo json_encode([
+            'success' => false,
+            'available' => false,
+            'message' => 'Check-out date must be strictly after check-in date.'
+        ]);
+        exit;
+    }
     
     try {
-        // Check for overlapping confirmed bookings
+        // Check for overlapping active bookings (excluding cancelled_expired and no_show)
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as count FROM bookings 
             WHERE room_id = ? 
             AND status IN ('Pending', 'Confirmed')
+            AND booking_status NOT IN ('cancelled_expired', 'no_show')
             AND (
-                (check_in <= ? AND check_out > ?) 
-                OR (check_in < ? AND check_out >= ?)
-                OR (check_in >= ? AND check_out <= ?)
+                (COALESCE(check_in_date, check_in) <= ? AND COALESCE(check_out_date, check_out) > ?) 
+                OR (COALESCE(check_in_date, check_in) < ? AND COALESCE(check_out_date, check_out) >= ?)
+                OR (COALESCE(check_in_date, check_in) >= ? AND COALESCE(check_out_date, check_out) <= ?)
             )
         ");
         $stmt->execute([$roomId, $checkIn, $checkIn, $checkOut, $checkOut, $checkIn, $checkOut]);
@@ -164,8 +167,7 @@ function checkAvailability($data) {
 }
 
 /**
- * Get upcoming availability info for a specific room
- * Returns occupied periods and next vacant date
+ * Get detailed room availability with occupied date ranges
  */
 function getRoomAvailability($data) {
     $pdo = getDB();
@@ -207,14 +209,41 @@ function getRoomAvailability($data) {
 
         // If dates provided, check overlap with those exact dates.
         if (!empty($checkIn) && !empty($checkOut)) {
+            $today = date('Y-m-d');
+            if ($checkIn < $today) {
+                echo json_encode([
+                    'success' => false,
+                    'room' => $room ?? ['name' => 'Room ' . $roomId],
+                    'occupied_ranges' => [],
+                    'next_vacant' => null,
+                    'is_currently_available' => false,
+                    'available' => false,
+                    'message' => 'Check-in date cannot be in the past or outdated.'
+                ]);
+                return;
+            }
+            if ($checkOut <= $checkIn) {
+                echo json_encode([
+                    'success' => false,
+                    'room' => $room ?? ['name' => 'Room ' . $roomId],
+                    'occupied_ranges' => [],
+                    'next_vacant' => null,
+                    'is_currently_available' => false,
+                    'available' => false,
+                    'message' => 'Check-out date must be strictly after check-in date.'
+                ]);
+                return;
+            }
+
             // Overlap condition: existing.check_in < desired.check_out AND existing.check_out > desired.check_in
             $stmt = $pdo->prepare("
-                SELECT ref_id, guest_name, check_in, check_out, status, created_at
+                SELECT ref_id, guest_name, COALESCE(check_in_date, check_in) as check_in, COALESCE(check_out_date, check_out) as check_out, status, created_at
                 FROM bookings
                 WHERE room_id = ?
                   AND status IN ('Pending', 'Confirmed')
-                  AND check_in < ?
-                  AND check_out > ?
+                  AND booking_status NOT IN ('cancelled_expired', 'no_show')
+                  AND COALESCE(check_in_date, check_in) < ?
+                  AND COALESCE(check_out_date, check_out) > ?
                 ORDER BY check_in ASC
             ");
             $stmt->execute([$roomId, $checkOut, $checkIn]);
@@ -229,13 +258,13 @@ function getRoomAvailability($data) {
                 ];
             }
 
-            if (!empty($overlaps)) {
-                $lastCheckout = end($overlaps)['check_out'];
-                $nextVacantDate = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
-                $nextVacant = $nextVacantDate;
-            }
+            $isAvailable = empty($overlaps);
 
-            $isAvailable = empty($occupiedRanges);
+            if (!$isAvailable) {
+                // Find next vacant date after latest overlapping booking
+                $lastCheckout = end($overlaps)['check_out'];
+                $nextVacant = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
+            }
 
             echo json_encode([
                 'success' => true,
@@ -253,10 +282,12 @@ function getRoomAvailability($data) {
         $today = date('Y-m-d');
 
         $stmt = $pdo->prepare("
-            SELECT ref_id, guest_name, check_in, check_out, status, created_at 
+            SELECT ref_id, guest_name, COALESCE(check_in_date, check_in) as check_in, COALESCE(check_out_date, check_out) as check_out, status, created_at 
             FROM bookings 
-            WHERE room_id = ? AND status IN ('Pending', 'Confirmed') 
-            AND check_out > ?
+            WHERE room_id = ? 
+              AND status IN ('Pending', 'Confirmed') 
+              AND booking_status NOT IN ('cancelled_expired', 'no_show')
+              AND COALESCE(check_out_date, check_out) > ?
             ORDER BY check_in ASC
         ");
         $stmt->execute([$roomId, $today]);
@@ -294,5 +325,40 @@ function getRoomAvailability($data) {
 
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
+}
+
+// ----------------------------------------------------
+// MAIN REQUEST DISPATCHER (Invoked on direct API call)
+// ----------------------------------------------------
+if (isset($_SERVER['REQUEST_METHOD'])) {
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
+
+    // Automatically clean up expired booking holds
+    runExpiryEngine();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+    $action = $input['action'] ?? 'create';
+
+    switch ($action) {
+        case 'create':
+            createDirectBooking($input);
+            break;
+        case 'check_availability':
+            checkAvailability($input);
+            break;
+        case 'get_room_availability':
+            getRoomAvailability($input);
+            break;
+        default:
+            echo json_encode(['success' => false, 'message' => 'Invalid action']);
+            exit;
     }
 }

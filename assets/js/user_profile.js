@@ -268,22 +268,42 @@ function renderBookingsList() {
     }
 
     container.innerHTML = filtered.map(b => {
+        const bStatus = b.bookingStatus || (b.status === 'Confirmed' ? 'confirmed' : (b.status === 'Cancelled' ? 'cancelled_expired' : 'pending_verification'));
         let statusBadge = '';
-        if (b.status === 'Confirmed') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-check-circle text-[10px]"></i> Confirmed</span>`;
-        } else if (b.status === 'Cancelled') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="fas fa-times-circle text-[10px]"></i> Cancelled</span>`;
+        let timerNotice = '';
+
+        if (bStatus === 'pending_verification') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-stopwatch text-[10px]"></i> Pending GCash Verification</span>`;
+            if (b.expiresAt) {
+                timerNotice = `<span class="text-[10px] text-amber-700 font-semibold block mt-0.5">2-Hour hold expires at ${b.expiresAt.substring(11, 16)}</span>`;
+            }
+        } else if (bStatus === 'deposit_paid') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-coins text-[10px]"></i> Deposit Paid (Balance Due at Desk)</span>`;
+        } else if (bStatus === 'pending_arrival') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fas fa-store text-[10px]"></i> Pending Arrival (Pay at Hotel)</span>`;
+            if (b.expectedArrivalTime) {
+                timerNotice = `<span class="text-[10px] text-purple-700 font-semibold block mt-0.5">Expected arrival: ${b.expectedArrivalTime}</span>`;
+            }
+        } else if (bStatus === 'confirmed') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-check-circle text-[10px]"></i> Confirmed (Paid Full)</span>`;
+        } else if (bStatus === 'completed') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200"><i class="fas fa-user-check text-[10px]"></i> Checked-In</span>`;
+        } else if (bStatus === 'no_show') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="fas fa-user-slash text-[10px]"></i> No-Show / Released</span>`;
         } else {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-clock text-[10px]"></i> Pending</span>`;
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="fas fa-times-circle text-[10px]"></i> Expired / Cancelled</span>`;
         }
 
         const checkInFmt = b.checkIn ? new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
         const checkOutFmt = b.checkOut ? new Date(b.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
         const safeRoomName = (b.roomName || 'Room').replace(/'/g, "\\'");
+        const total = parseFloat(b.total || 0);
+        const paid = parseFloat(b.paidAmount !== undefined ? b.paidAmount : (b.status === 'Confirmed' ? total : 0));
+        const balance = parseFloat(b.balanceDue !== undefined ? b.balanceDue : (total - paid));
 
         // Review Button for Completed/Confirmed Stays
         let reviewBtn = '';
-        if (b.status === 'Confirmed' && b.roomId) {
+        if ((b.status === 'Confirmed' || bStatus === 'confirmed' || bStatus === 'completed') && b.roomId) {
             reviewBtn = `
                 <button onclick="openReviewModal(${b.roomId}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center gap-1.5">
                     <i class="fas fa-star text-amber-500"></i> Write Review
@@ -298,26 +318,27 @@ function renderBookingsList() {
                         <img src="../${b.roomImage || 'assets/image/background.jpg'}" class="w-full h-full object-cover" alt="${b.roomName}" onerror="this.src='../assets/image/background.jpg'">
                     </div>
                     <div>
-                        <div class="flex flex-wrap items-center gap-2.5 mb-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
                             <h4 class="font-bold text-gray-800 text-base">${b.roomName}</h4>
                             ${statusBadge}
                         </div>
-                        <p class="text-xs text-gray-500 flex items-center gap-2">
+                        ${timerNotice}
+                        <p class="text-xs text-gray-500 flex items-center gap-2 mt-1">
                             <i class="far fa-calendar-alt text-brand-blue"></i> ${checkInFmt} &rarr; ${checkOutFmt} (${b.nights} night${b.nights > 1 ? 's' : ''})
                         </p>
                         <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 mt-1">
-                            <span>Ref: <strong class="font-mono text-gray-600">${b.refId || ('WIH-' + b.id)}</strong></span>
-                            <span>•</span>
-                            <span>Booked on ${b.dateBooked ? new Date(b.dateBooked).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>
+                            <span>Ref: <strong class="font-mono text-gray-600">${b.ref_id || b.refId || ('WIH-' + b.id)}</strong></span>
+                            ${b.gcashRefNo ? `<span>• GCash Ref: <strong class="font-mono text-gray-600">${b.gcashRefNo}</strong></span>` : ''}
                         </div>
                     </div>
                 </div>
 
                 <div class="flex flex-col md:items-end justify-between gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100">
                     <div class="text-left md:text-right">
-                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Total Price</span>
-                        <span class="text-lg font-bold text-brand-blue">₱${parseFloat(b.total).toFixed(2)}</span>
-                        <span class="text-[10px] text-gray-500 block">Via ${b.paymentMethod}</span>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Total Bill: ₱${total.toFixed(2)}</span>
+                        <div class="text-sm font-bold text-emerald-600">Paid: ₱${paid.toFixed(2)}</div>
+                        ${balance > 0 ? `<div class="text-xs font-bold text-brand-blue">Due at Desk: ₱${balance.toFixed(2)}</div>` : ''}
+                        <span class="text-[10px] text-gray-400 block mt-0.5">Via ${b.paymentMethod || 'GCash'}</span>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
@@ -353,24 +374,36 @@ function openVoucherModal(bookingId) {
     const checkOutFmt = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '-';
 
     const guestName = (window.appState && window.appState.currentUser && window.appState.currentUser.name) ? window.appState.currentUser.name : (booking.guestName || 'Valued Guest');
+    const total = parseFloat(booking.total || 0);
+    const paid = parseFloat(booking.paidAmount !== undefined ? booking.paidAmount : (booking.status === 'Confirmed' ? total : 0));
+    const balance = parseFloat(booking.balanceDue !== undefined ? booking.balanceDue : (total - paid));
 
     document.getElementById('voucher-guest-name').innerText = guestName;
     document.getElementById('voucher-room-name').innerText = booking.roomName || 'Standard Room';
     document.getElementById('voucher-check-in').innerText = checkInFmt;
     document.getElementById('voucher-check-out').innerText = checkOutFmt;
     document.getElementById('voucher-nights').innerText = `${booking.nights} Night${booking.nights > 1 ? 's' : ''}`;
-    document.getElementById('voucher-ref-code').innerText = `Ref: ${booking.refId || ('WIH-' + booking.id)}`;
-    document.getElementById('voucher-payment-method').innerText = booking.paymentMethod || 'Online';
-    document.getElementById('voucher-total-price').innerText = `₱${parseFloat(booking.total).toFixed(2)}`;
+    document.getElementById('voucher-ref-code').innerText = `Ref: ${booking.ref_id || booking.refId || ('WIH-' + booking.id)}`;
+    document.getElementById('voucher-payment-method').innerText = booking.paymentMethod || 'GCash';
+    document.getElementById('voucher-total-price').innerText = `₱${total.toFixed(2)}`;
 
     const badge = document.getElementById('voucher-status-badge');
     if (badge) {
-        badge.innerText = booking.status;
-        if (booking.status === 'Confirmed') {
+        const bStatus = booking.bookingStatus || booking.status;
+        if (bStatus === 'confirmed' || bStatus === 'Confirmed' || bStatus === 'completed') {
+            badge.innerText = 'Confirmed (Paid Full)';
             badge.className = 'inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold';
-        } else if (booking.status === 'Cancelled') {
+        } else if (bStatus === 'deposit_paid') {
+            badge.innerText = `Deposit Paid (₱${paid.toFixed(2)} / Due: ₱${balance.toFixed(2)})`;
+            badge.className = 'inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold';
+        } else if (bStatus === 'pending_arrival') {
+            badge.innerText = `Pending Arrival (Due at Desk: ₱${balance.toFixed(2)})`;
+            badge.className = 'inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold';
+        } else if (bStatus === 'cancelled_expired' || bStatus === 'Cancelled' || bStatus === 'no_show') {
+            badge.innerText = 'Cancelled / Expired';
             badge.className = 'inline-block px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-bold';
         } else {
+            badge.innerText = 'Pending GCash Verification';
             badge.className = 'inline-block px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold';
         }
     }

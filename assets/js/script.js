@@ -238,6 +238,7 @@ async function init() {
             updateAuthUI();
             setupMobileNav();
             initGuestSelector();
+            initDateConstraints();
             fetchRooms();
 
             const hash = window.location.hash.replace('#', '');
@@ -372,6 +373,12 @@ async function setupMarquee() {
                 target.classList.add('active');
                 target.style.display = 'block';
                 window.scrollTo(0,0);
+            }
+
+            if (pageId === 'rooms' || pageId === 'booking-summary') {
+                if (typeof initDateConstraints === 'function') {
+                    initDateConstraints();
+                }
             }
 
             if (pageId.startsWith('room-')) {
@@ -874,6 +881,73 @@ async function setupMarquee() {
 
         let pendingBooking = null;
 
+        // Local date string helper (YYYY-MM-DD)
+        function getLocalDateString(d) {
+            const date = d || new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Initialize and enforce date restrictions on Check-In and Check-Out pickers
+        function initDateConstraints() {
+            const checkInInput = document.getElementById('check-in-date');
+            const checkOutInput = document.getElementById('check-out-date');
+            if (!checkInInput || !checkOutInput) return;
+
+            const todayStr = getLocalDateString(new Date());
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = getLocalDateString(tomorrow);
+
+            // Minimum check-in is today
+            checkInInput.min = todayStr;
+            if (!checkInInput.value || checkInInput.value < todayStr) {
+                checkInInput.value = todayStr;
+            }
+
+            function syncCheckOut() {
+                const currentCheckIn = checkInInput.value;
+                if (!currentCheckIn || currentCheckIn < todayStr) {
+                    checkInInput.value = todayStr;
+                }
+
+                // Minimum check-out is check-in + 1 day
+                const cinDate = new Date(checkInInput.value + 'T00:00:00');
+                const minCheckOutDate = new Date(cinDate);
+                minCheckOutDate.setDate(minCheckOutDate.getDate() + 1);
+                const minCheckOutStr = getLocalDateString(minCheckOutDate);
+
+                checkOutInput.min = minCheckOutStr;
+
+                if (!checkOutInput.value || checkOutInput.value <= checkInInput.value) {
+                    checkOutInput.value = minCheckOutStr;
+                }
+            }
+
+            syncCheckOut();
+
+            checkInInput.onchange = () => {
+                if (checkInInput.value < todayStr) {
+                    showToast('Check-in date cannot be in the past or outdated.', 'warning');
+                    checkInInput.value = todayStr;
+                }
+                syncCheckOut();
+            };
+
+            checkOutInput.onchange = () => {
+                const cinVal = checkInInput.value || todayStr;
+                if (checkOutInput.value <= cinVal) {
+                    showToast('Check-out date must be strictly after check-in date.', 'warning');
+                    const cinDate = new Date(cinVal + 'T00:00:00');
+                    cinDate.setDate(cinDate.getDate() + 1);
+                    checkOutInput.value = getLocalDateString(cinDate);
+                }
+            };
+        }
+
         // Initialize Guest Selector (handles manual input with max 5 validation)
         function initGuestSelector() {
             const input = document.getElementById('guest-count');
@@ -911,8 +985,9 @@ async function setupMarquee() {
         if (availabilityForm) {
             availabilityForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const checkIn = document.getElementById('check-in-date').value;
-                const checkOut = document.getElementById('check-out-date').value;
+                const todayStr = getLocalDateString(new Date());
+                let checkIn = document.getElementById('check-in-date').value;
+                let checkOut = document.getElementById('check-out-date').value;
                 const guestCountEl = document.getElementById('guest-count');
                 let guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
                 if (guests > 5) {
@@ -924,13 +999,18 @@ async function setupMarquee() {
                     if (guestCountEl) guestCountEl.value = 1;
                 }
 
-                if (!checkIn || !checkOut) {
-                    showToast('Please select dates', 'warning');
+                if (!checkIn || checkIn < todayStr) {
+                    showToast('Check-in date cannot be in the past or outdated.', 'warning');
+                    document.getElementById('check-in-date').value = todayStr;
+                    checkIn = todayStr;
                     return;
                 }
                 
-                if (new Date(checkOut) <= new Date(checkIn)) {
-                    showToast('Check-out must be after check-in', 'warning');
+                if (!checkOut || checkOut <= checkIn) {
+                    showToast('Check-out date must be strictly after check-in date.', 'warning');
+                    const cinDate = new Date(checkIn + 'T00:00:00');
+                    cinDate.setDate(cinDate.getDate() + 1);
+                    document.getElementById('check-out-date').value = getLocalDateString(cinDate);
                     return;
                 }
 
@@ -1077,7 +1157,125 @@ async function setupMarquee() {
             }
         }
 
-        // Initialize booking with availability checks
+        // --- PAYMENT PATHWAY & BOOKING LOGIC ---
+        window.handlePaymentMethodChange = function(method) {
+            const fullCard = document.getElementById('label-payment-full');
+            const depositCard = document.getElementById('label-payment-deposit');
+            const hotelCard = document.getElementById('label-payment-hotel');
+            const gcashSection = document.getElementById('gcash-payment-section');
+            const arrivalSection = document.getElementById('arrival-time-section');
+            const upfrontEl = document.getElementById('summary-upfront-amount');
+            const balanceEl = document.getElementById('summary-balance-amount');
+            const gcashAmountEl = document.getElementById('gcash-amount-to-send');
+            const timerHintEl = document.getElementById('summary-timer-hint');
+            const btnText = document.getElementById('btn-confirm-text');
+
+            if (!pendingBooking) return;
+
+            const total = pendingBooking.total;
+
+            // Reset Card Styles
+            [fullCard, depositCard, hotelCard].forEach(card => {
+                if (card) {
+                    card.classList.remove('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
+                    card.classList.add('border-gray-200', 'bg-white');
+                }
+            });
+
+            if (method === 'full_gcash') {
+                if (fullCard) {
+                    fullCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
+                    fullCard.classList.remove('border-gray-200', 'bg-white');
+                }
+                if (gcashSection) gcashSection.classList.remove('hidden');
+                if (arrivalSection) arrivalSection.classList.add('hidden');
+
+                const upfront = total;
+                const balance = 0.00;
+                if (upfrontEl) upfrontEl.textContent = '₱' + upfront.toFixed(2);
+                if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
+                if (gcashAmountEl) gcashAmountEl.textContent = '₱' + upfront.toFixed(2);
+                if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-stopwatch text-amber-500"></i> <span>2-Hour hold while payment proof is verified.</span>';
+                if (btnText) btnText.textContent = 'Submit Receipt & Confirm (Full Payment)';
+            } else if (method === 'deposit_gcash') {
+                if (depositCard) {
+                    depositCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
+                    depositCard.classList.remove('border-gray-200', 'bg-white');
+                }
+                if (gcashSection) gcashSection.classList.remove('hidden');
+                if (arrivalSection) arrivalSection.classList.add('hidden');
+
+                const upfront = Math.round(total * 0.30 * 100) / 100;
+                const balance = Math.round((total - upfront) * 100) / 100;
+                if (upfrontEl) upfrontEl.textContent = '₱' + upfront.toFixed(2);
+                if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
+                if (gcashAmountEl) gcashAmountEl.textContent = '₱' + upfront.toFixed(2);
+                if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-coins text-amber-500"></i> <span>30% deposit now. Pay ₱' + balance.toFixed(2) + ' balance at front desk.</span>';
+                if (btnText) btnText.textContent = 'Submit Deposit Receipt & Confirm (30%)';
+            } else if (method === 'pay_at_hotel') {
+                if (hotelCard) {
+                    hotelCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
+                    hotelCard.classList.remove('border-gray-200', 'bg-white');
+                }
+                if (gcashSection) gcashSection.classList.add('hidden');
+                if (arrivalSection) arrivalSection.classList.remove('hidden');
+
+                const upfront = 0.00;
+                const balance = total;
+                if (upfrontEl) upfrontEl.textContent = '₱0.00';
+                if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
+                if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-clock text-purple-600"></i> <span>Held strictly until expected arrival time + 1 hour.</span>';
+                if (btnText) btnText.textContent = 'Lock Room Hold (Pay at Hotel)';
+            }
+        };
+
+        // Copy GCash number helper
+        window.copyGcashNumber = function() {
+            navigator.clipboard.writeText('09123456789').then(() => {
+                showToast('GCash number copied to clipboard: 0912-345-6789', 'success');
+            }).catch(() => {
+                showToast('GCash Number: 0912-345-6789', 'info');
+            });
+        };
+
+        // Handle live receipt preview
+        window.handleReceiptPreview = function(event) {
+            const input = event.target;
+            const previewContainer = document.getElementById('receipt-preview-container');
+            const previewImg = document.getElementById('receipt-preview-img');
+            const placeholder = document.getElementById('receipt-upload-placeholder');
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('Receipt file size must be less than 5MB.', 'error');
+                    input.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (previewImg) previewImg.src = e.target.result;
+                    if (previewContainer) previewContainer.classList.remove('hidden');
+                    if (placeholder) placeholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        window.removeReceiptFile = function(event) {
+            event.stopPropagation();
+            const input = document.getElementById('book-receipt-file');
+            const previewContainer = document.getElementById('receipt-preview-container');
+            const previewImg = document.getElementById('receipt-preview-img');
+            const placeholder = document.getElementById('receipt-upload-placeholder');
+
+            if (input) input.value = '';
+            if (previewImg) previewImg.src = '';
+            if (previewContainer) previewContainer.classList.add('hidden');
+            if (placeholder) placeholder.classList.remove('hidden');
+        };
+
+        // Initialize booking with availability checks & 24-hour rule
         async function initiateBooking(roomId) {
             if (!appState.currentUser || appState.currentUser.role === 'admin') {
                 showToast('Please log in as a guest to book a room.', 'warning');
@@ -1088,12 +1286,30 @@ async function setupMarquee() {
             const room = appState.rooms.find(r => r.id == roomId) || { id: roomId, name: 'Room ' + roomId, price: 0, image: 'assets/image/background.jpg', type: '' };
 
             try {
-                // Get selected dates
-                const checkIn = document.getElementById('check-in-date').value || new Date().toISOString().split('T')[0];
-                const checkOut = document.getElementById('check-out-date').value || new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0];
+                // Get selected dates and ensure they are valid and not outdated
+                const todayStr = getLocalDateString(new Date());
+                let checkIn = document.getElementById('check-in-date') ? document.getElementById('check-in-date').value : todayStr;
+                let checkOut = document.getElementById('check-out-date') ? document.getElementById('check-out-date').value : '';
 
-                if (new Date(checkOut) <= new Date(checkIn)) {
-                    showToast('Check-out must be after check-in', 'error');
+                if (!checkIn || checkIn < todayStr) {
+                    showToast('Check-in date cannot be in the past or outdated.', 'warning');
+                    checkIn = todayStr;
+                    if (document.getElementById('check-in-date')) {
+                        document.getElementById('check-in-date').value = todayStr;
+                    }
+                }
+
+                const cinDate = new Date(checkIn + 'T00:00:00');
+                const minCheckOutDate = new Date(cinDate);
+                minCheckOutDate.setDate(minCheckOutDate.getDate() + 1);
+                const minCheckOutStr = getLocalDateString(minCheckOutDate);
+
+                if (!checkOut || checkOut <= checkIn) {
+                    showToast('Check-out date must be strictly after check-in date.', 'warning');
+                    checkOut = minCheckOutStr;
+                    if (document.getElementById('check-out-date')) {
+                        document.getElementById('check-out-date').value = minCheckOutStr;
+                    }
                     return;
                 }
 
@@ -1127,7 +1343,7 @@ async function setupMarquee() {
                     return;
                 }
 
-                // All good - create pending booking
+                // All good - create pending booking object
                 const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000));
                 const total = (room.price * nights) + 15; // tax
                 const guestCountEl = document.getElementById('guest-count');
@@ -1146,28 +1362,66 @@ async function setupMarquee() {
                     pricePerNight: room.price
                 };
 
-                // Update summary UI
-                document.getElementById('summary-room-img').src = room.image;
+                // Update summary UI elements
+                const roomImgEl = document.getElementById('summary-room-img');
+                const roomTypeBadge = document.getElementById('summary-room-type-badge');
+                if (roomImgEl) roomImgEl.src = room.image;
+                if (roomTypeBadge) roomTypeBadge.textContent = room.type || 'Room';
                 document.getElementById('summary-room-name').textContent = room.name;
-                document.getElementById('summary-room-desc').textContent = room.type;
-                document.getElementById('summary-price').textContent = '₱' + room.price;
-                document.getElementById('summary-nights').textContent = pendingBooking.nights;
+                document.getElementById('summary-room-desc').textContent = room.desc || room.type;
+                document.getElementById('summary-price').textContent = '₱' + room.price.toFixed(2);
+                document.getElementById('summary-nights').textContent = pendingBooking.nights + (pendingBooking.nights > 1 ? ' Nights' : ' Night');
                 document.getElementById('summary-total').textContent = '₱' + total.toFixed(2);
 
                 document.getElementById('booking-details-content').innerHTML = `
-                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg mb-4 space-y-1.5 text-sm">
-                        <div class="flex justify-between"><span>Check In:</span> <strong>${checkIn}</strong></div>
-                        <div class="flex justify-between"><span>Check Out:</span> <strong>${checkOut}</strong></div>
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2 text-xs">
+                        <div class="flex justify-between"><span>Check-in Date:</span> <strong class="text-gray-800">${checkIn} (2:00 PM)</strong></div>
+                        <div class="flex justify-between"><span>Check-out Date:</span> <strong class="text-gray-800">${checkOut} (12:00 PM)</strong></div>
                         <div class="flex justify-between"><span>Guests:</span> <strong>${guests} ${guests === 1 ? 'Guest' : 'Guests'}</strong></div>
-                        <div class="flex justify-between"><span>Room:</span> <strong>${room.name}</strong></div>
-                        <div class="flex justify-between text-green-700 font-bold mt-2 pt-2 border-t border-green-200">
-                            <span>Availability OK</span><i class="fas fa-check-circle ml-1"></i>
+                        <div class="flex justify-between"><span>Accommodation:</span> <strong>${room.name} (${room.type})</strong></div>
+                        <div class="flex justify-between text-emerald-700 font-bold mt-2 pt-2 border-t border-emerald-200">
+                            <span>Real-Time Availability</span><span class="flex items-center gap-1"><i class="fas fa-check-circle text-emerald-500"></i> Locked & Available</span>
                         </div>
                     </div>
                 `;
 
-                document.getElementById('book-name').value = appState.currentUser.name;
-                document.getElementById('book-email').value = appState.currentUser.email;
+                // Fill guest information
+                document.getElementById('book-name').value = appState.currentUser.name || '';
+                document.getElementById('book-email').value = appState.currentUser.email || '';
+                const phoneInput = document.getElementById('book-phone');
+                if (phoneInput) phoneInput.value = appState.currentUser.phone || '';
+
+                // --- 24-HOUR RULE CONDITIONAL LOGIC FOR OPTION C (PAY AT HOTEL) ---
+                const checkInDateObj = new Date(checkIn + 'T14:00:00');
+                const now = new Date();
+                const diffHours = (checkInDateObj.getTime() - now.getTime()) / (1000 * 60 * 60);
+                const isWithin24Hours = (diffHours <= 30); // within 24-30 hours
+
+                const hotelCard = document.getElementById('label-payment-hotel');
+                const lockedNotice = document.getElementById('pay-at-hotel-locked-notice');
+                const hotelRadio = document.getElementById('input-payment-hotel');
+
+                if (isWithin24Hours) {
+                    if (hotelCard) hotelCard.classList.remove('hidden');
+                    if (lockedNotice) lockedNotice.classList.add('hidden');
+                    if (hotelRadio) hotelRadio.disabled = false;
+                } else {
+                    if (hotelCard) hotelCard.classList.add('hidden');
+                    if (lockedNotice) lockedNotice.classList.remove('hidden');
+                    if (hotelRadio) hotelRadio.disabled = true;
+                }
+
+                // Default selection to Option A
+                const fullRadio = document.querySelector('input[name="payment"][value="full_gcash"]');
+                if (fullRadio) fullRadio.checked = true;
+                handlePaymentMethodChange('full_gcash');
+
+                // Reset file preview
+                if (typeof removeReceiptFile === 'function') {
+                    removeReceiptFile({ stopPropagation: () => {} });
+                }
+                const gcashRefInput = document.getElementById('book-gcash-ref');
+                if (gcashRefInput) gcashRefInput.value = '';
 
                 router('booking-summary');
             } catch (error) {
@@ -1176,49 +1430,117 @@ async function setupMarquee() {
             }
         }
 
-        // Submit the final booking to the server
+        // Submit the final multi-tier booking to the server
         const bookingForm = document.getElementById('booking-form');
         if (bookingForm) {
-            bookingForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            if (!appState.currentUser) {
-                showToast("Please login to continue.", 'warning');
-                return;
-            }
-
-            if(appState.currentUser.role === 'admin') {
-                showToast("Admins are not allowed to book rooms.", 'error');
-                return;
-            }
-
-            const booking = {
-                action: 'create',
-                user_id: appState.currentUser.id,
-                room_id: pendingBooking.roomId,
-                check_in: pendingBooking.checkIn,
-                check_out: pendingBooking.checkOut,
-                nights: pendingBooking.nights,
-                total: pendingBooking.total,
-                guest_name: document.getElementById('book-name').value,
-                payment_method: 'Full Payment'
-            };
-
-            fetch('actions/bookings_action.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(booking)
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(`Booking Confirmed! Reference: ${data.ref_id}. Receipt sent to email.`, 'success');
-                    showInvoiceModal(data.ref_id, pendingBooking);
-                } else {
-                    showToast("Booking Failed: " + data.message, 'error');
+            bookingForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!appState.currentUser) {
+                    showToast("Please login to continue.", 'warning');
+                    return;
                 }
-            })
-            .catch(err => console.error('Booking Error:', err));
+
+                if(appState.currentUser.role === 'admin') {
+                    showToast("Admins are not allowed to book rooms.", 'error');
+                    return;
+                }
+
+                if (!pendingBooking) {
+                    showToast("Please select a room and dates first.", 'warning');
+                    router('rooms');
+                    return;
+                }
+
+                const todayStr = getLocalDateString(new Date());
+                if (!pendingBooking.checkIn || pendingBooking.checkIn < todayStr) {
+                    showToast("Check-in date cannot be in the past or outdated. Please select new dates.", 'error');
+                    router('rooms');
+                    return;
+                }
+                if (!pendingBooking.checkOut || pendingBooking.checkOut <= pendingBooking.checkIn) {
+                    showToast("Check-out date must be strictly after check-in date.", 'error');
+                    router('rooms');
+                    return;
+                }
+
+                const paymentMethodEl = document.querySelector('input[name="payment"]:checked');
+                const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'full_gcash';
+                const guestName = document.getElementById('book-name').value.trim();
+                const guestEmail = document.getElementById('book-email').value.trim();
+                const guestPhone = document.getElementById('book-phone') ? document.getElementById('book-phone').value.trim() : '';
+                const requests = document.getElementById('book-requests') ? document.getElementById('book-requests').value.trim() : '';
+
+                const formData = new FormData();
+                formData.append('action', 'create');
+                formData.append('user_id', appState.currentUser.id);
+                formData.append('room_id', pendingBooking.roomId);
+                formData.append('check_in', pendingBooking.checkIn);
+                formData.append('check_out', pendingBooking.checkOut);
+                formData.append('nights', pendingBooking.nights);
+                formData.append('total', pendingBooking.total);
+                formData.append('guest_name', guestName);
+                formData.append('guest_email', guestEmail);
+                formData.append('guest_phone', guestPhone);
+                formData.append('special_requests', requests);
+                formData.append('payment_method', paymentMethod);
+
+                // Pathway-specific validations
+                if (paymentMethod === 'full_gcash' || paymentMethod === 'deposit_gcash') {
+                    const gcashRef = document.getElementById('book-gcash-ref') ? document.getElementById('book-gcash-ref').value.trim() : '';
+                    const receiptFileInput = document.getElementById('book-receipt-file');
+
+                    if (!gcashRef || gcashRef.length < 6) {
+                        showToast("Please enter a valid GCash Reference Number from your transaction receipt.", 'error');
+                        document.getElementById('book-gcash-ref').focus();
+                        return;
+                    }
+
+                    if (!receiptFileInput || !receiptFileInput.files || receiptFileInput.files.length === 0) {
+                        showToast("Please upload a screenshot/image of your GCash receipt proof.", 'error');
+                        return;
+                    }
+
+                    formData.append('gcash_reference_no', gcashRef);
+                    formData.append('receipt_image', receiptFileInput.files[0]);
+                } else if (paymentMethod === 'pay_at_hotel') {
+                    const arrivalTime = document.getElementById('book-arrival-time') ? document.getElementById('book-arrival-time').value : '';
+                    if (!arrivalTime) {
+                        showToast("Please select your expected arrival time.", 'error');
+                        document.getElementById('book-arrival-time').focus();
+                        return;
+                    }
+                    formData.append('expected_arrival_time', arrivalTime);
+                }
+
+                const confirmBtn = document.getElementById('btn-confirm-booking');
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing Reservation...';
+                }
+
+                try {
+                    const response = await fetch('actions/bookings_action.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showToast(`Reservation Created! Ref: ${data.ref_id}`, 'success');
+                        showInvoiceModal(data.ref_id, pendingBooking, data);
+                    } else {
+                        showToast("Booking Failed: " + (data.message || 'Unknown error'), 'error');
+                    }
+                } catch (err) {
+                    console.error('Booking Error:', err);
+                    showToast("Network error occurred during booking. Please try again.", 'error');
+                } finally {
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> <span id="btn-confirm-text">Confirm Reservation</span>';
+                    }
+                }
             });
         }
 
@@ -1330,7 +1652,7 @@ async function setupMarquee() {
         }
 
         // --- INVOICE / RECEIPT MODAL ---
-        function showInvoiceModal(refId, bookingDetails) {
+        function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
             const modal = document.createElement('div');
             modal.id = 'invoice-modal';
             modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4';
@@ -1338,113 +1660,137 @@ async function setupMarquee() {
             const guestName = document.getElementById('book-name').value;
             const guestEmail = document.getElementById('book-email').value;
             const paymentMethodEl = document.querySelector('input[name="payment"]:checked');
-            const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'Full Payment';
+            const paymentMethodVal = paymentMethodEl ? paymentMethodEl.value : 'full_gcash';
             const dateNow = new Date().toLocaleDateString();
+
+            let paymentLabel = 'Full Payment (GCash)';
+            let statusBadge = '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-xs">Pending Verification (2-Hr Hold)</span>';
+            let paidAmount = apiResponse.paid_amount !== undefined ? apiResponse.paid_amount : bookingDetails.total;
+            let balanceDue = apiResponse.balance_due !== undefined ? apiResponse.balance_due : 0;
+
+            if (paymentMethodVal === 'deposit_gcash') {
+                paymentLabel = 'Partial Downpayment (30% GCash)';
+                statusBadge = '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-xs">Pending Deposit Verification</span>';
+            } else if (paymentMethodVal === 'pay_at_hotel') {
+                paymentLabel = 'Strict Pay at Hotel (Conditional)';
+                statusBadge = '<span class="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full font-bold text-xs">Pending Arrival (Strict Hold)</span>';
+            }
         
             modal.innerHTML = `
-                <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-brand-blue text-white">
-                        <h3 class="text-2xl font-bold">Booking Receipt</h3>
-                        <button onclick="closeInvoiceModal()" class="text-white/80 hover:text-white transition-colors">
-                            <i class="fas fa-times text-xl"></i>
+                <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-gray-100">
+                    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-brand-dark via-slate-900 to-brand-blue text-white">
+                        <div>
+                            <span class="text-xs uppercase font-bold text-teal-300 tracking-wider">Official Booking Voucher</span>
+                            <h3 class="text-2xl font-serif font-bold mt-0.5">Reservation Confirmation</h3>
+                        </div>
+                        <button onclick="closeInvoiceModal()" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition">
+                            <i class="fas fa-times text-lg"></i>
                         </button>
                     </div>
                     
-                    <div id="invoice-content" class="p-8 overflow-y-auto flex-1 bg-white text-gray-800">
-                        <div class="flex justify-between items-start mb-8 border-b pb-6">
+                    <div id="invoice-content" class="p-6 sm:p-8 overflow-y-auto flex-1 bg-white text-gray-800 space-y-6">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-6">
                             <div>
-                                <h2 class="text-3xl font-serif font-bold text-brand-dark mb-2">W Island Hub</h2>
-                                <p class="text-sm text-gray-500">Backpackers Inn</p>
-                                <p class="text-sm text-gray-500">Paradise Island, PH</p>
+                                <h2 class="text-2xl font-serif font-bold text-brand-dark mb-1">W Island Hub</h2>
+                                <p class="text-xs text-gray-500">Backpackers Inn & Multi-Tier Gateway</p>
+                                <p class="text-xs text-gray-500">Paradise Island, Philippines</p>
                             </div>
-                            <div class="text-right flex items-center gap-4">
-                                <div class="text-right">
-                                    <div class="text-xl font-bold text-brand-blue mb-1">INVOICE</div>
-                                    <div class="text-sm font-semibold text-gray-600">Ref: ${refId}</div>
-                                    <div class="text-sm text-gray-500">Date: ${dateNow}</div>
+                            <div class="text-right flex items-center gap-3">
+                                <div>
+                                    <div class="text-lg font-bold text-brand-blue mb-0.5">INVOICE</div>
+                                    <div class="text-xs font-mono font-bold text-gray-700">Ref: ${refId}</div>
+                                    <div class="text-[11px] text-gray-400">Date: ${dateNow}</div>
                                 </div>
-                                <div class="bg-white p-1 border border-gray-100 rounded-lg shadow-sm">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(refId)}" alt="QR Code" class="w-20 h-20">
+                                <div class="bg-white p-1.5 border border-gray-200 rounded-xl shadow-sm">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(refId)}" alt="QR Code" class="w-16 h-16">
                                 </div>
                             </div>
                         </div>
         
-                        <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-gray-100 text-xs">
                             <div>
-                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To:</h4>
-                                <div class="font-bold text-gray-800">${guestName}</div>
-                                <div class="text-sm text-gray-600">${guestEmail}</div>
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Guest Details:</span>
+                                <div class="font-bold text-gray-800 text-sm">${guestName}</div>
+                                <div class="text-gray-500">${guestEmail}</div>
                             </div>
-                            <div class="text-right">
-                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Payment Method:</h4>
-                                <div class="font-bold text-gray-800">${paymentMethod}</div>
-                                <div class="text-sm text-gray-600">Status: Pending</div>
+                            <div class="sm:text-right">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Payment Method & Status:</span>
+                                <div class="font-bold text-gray-800 text-sm mb-1">${paymentLabel}</div>
+                                <div>${statusBadge}</div>
                             </div>
                         </div>
         
-                        <div class="mb-8">
-                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Reservation Details:</h4>
-                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Reservation Stay:</span>
+                            <div class="bg-white rounded-2xl p-4 border border-gray-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                                 <div>
-                                    <span class="text-gray-500 block mb-1">Room</span>
-                                    <strong class="text-gray-800 text-base">${bookingDetails.roomName}</strong>
+                                    <span class="text-gray-400 block text-[10px]">Room</span>
+                                    <strong class="text-gray-800">${bookingDetails.roomName}</strong>
                                 </div>
                                 <div>
-                                    <span class="text-gray-500 block mb-1">Nights</span>
-                                    <strong class="text-gray-800">${bookingDetails.nights}</strong>
+                                    <span class="text-gray-400 block text-[10px]">Duration</span>
+                                    <strong class="text-gray-800">${bookingDetails.nights} Night(s)</strong>
                                 </div>
                                 <div>
-                                    <span class="text-gray-500 block mb-1">Check-in</span>
+                                    <span class="text-gray-400 block text-[10px]">Check-in</span>
                                     <strong class="text-gray-800">${bookingDetails.checkIn}</strong>
                                 </div>
                                 <div>
-                                    <span class="text-gray-500 block mb-1">Check-out</span>
+                                    <span class="text-gray-400 block text-[10px]">Check-out</span>
                                     <strong class="text-gray-800">${bookingDetails.checkOut}</strong>
                                 </div>
                             </div>
                         </div>
         
-                        <table class="w-full text-left border-collapse mb-8">
+                        <table class="w-full text-left border-collapse text-xs">
                             <thead>
-                                <tr class="border-b-2 border-gray-200">
-                                    <th class="py-3 font-bold text-gray-800">Description</th>
-                                    <th class="py-3 font-bold text-gray-800 text-right">Amount</th>
+                                <tr class="border-b border-gray-200 text-gray-500">
+                                    <th class="py-2.5 font-bold">Item Description</th>
+                                    <th class="py-2.5 font-bold text-right">Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr class="border-b border-gray-100">
-                                    <td class="py-4">
-                                        <div class="font-bold text-gray-800">Room Rate</div>
-                                        <div class="text-xs text-gray-500">₱${bookingDetails.pricePerNight} x ${bookingDetails.nights} nights</div>
+                                    <td class="py-3">
+                                        <div class="font-bold text-gray-800">Room Accommodation Rate</div>
+                                        <div class="text-[10px] text-gray-400">₱${bookingDetails.pricePerNight.toFixed(2)} x ${bookingDetails.nights} nights</div>
                                     </td>
-                                    <td class="py-4 text-right font-medium">₱${(bookingDetails.pricePerNight * bookingDetails.nights).toFixed(2)}</td>
+                                    <td class="py-3 text-right font-semibold text-gray-700">₱${(bookingDetails.pricePerNight * bookingDetails.nights).toFixed(2)}</td>
                                 </tr>
                                 <tr class="border-b border-gray-100">
-                                    <td class="py-4">
-                                        <div class="font-bold text-gray-800">Taxes & Fees</div>
+                                    <td class="py-3">
+                                        <div class="font-bold text-gray-800">Taxes, Service & Eco Fees</div>
                                     </td>
-                                    <td class="py-4 text-right font-medium">₱15.00</td>
+                                    <td class="py-3 text-right font-semibold text-gray-700">₱15.00</td>
                                 </tr>
                             </tbody>
                             <tfoot>
-                                <tr>
-                                    <td class="py-4 font-bold text-xl text-gray-800 text-right pr-4">Total:</td>
-                                    <td class="py-4 font-bold text-2xl text-brand-blue text-right">₱${bookingDetails.total.toFixed(2)}</td>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-3 font-bold text-sm text-gray-800 text-right pr-4">Total Bill:</td>
+                                    <td class="py-3 font-bold text-base text-gray-900 text-right">₱${bookingDetails.total.toFixed(2)}</td>
+                                </tr>
+                                <tr class="bg-emerald-50/50">
+                                    <td class="py-2 font-bold text-xs text-emerald-800 text-right pr-4">Paid / Deposit Proof:</td>
+                                    <td class="py-2 font-bold text-sm text-emerald-600 text-right">₱${parseFloat(paidAmount).toFixed(2)}</td>
+                                </tr>
+                                <tr class="bg-blue-50/50">
+                                    <td class="py-2 font-bold text-xs text-brand-blue text-right pr-4">Remaining Balance at Front Desk:</td>
+                                    <td class="py-2 font-bold text-sm text-brand-blue text-right">₱${parseFloat(balanceDue).toFixed(2)}</td>
                                 </tr>
                             </tfoot>
                         </table>
                         
-                        <div class="text-center text-sm text-gray-500 mt-8 pt-8 border-t border-gray-100">
-                            <p>Thank you for choosing W Island Hub Backpackers Inn!</p>
-                            <p>We look forward to welcoming you.</p>
+                        <div class="text-center text-xs text-gray-500 pt-4 border-t border-gray-100 space-y-1">
+                            <p class="font-semibold text-gray-700">Thank you for booking with W Island Hub Backpackers Inn!</p>
+                            <p class="text-[11px]">Please present this voucher or Reference ID upon check-in at the front desk.</p>
                         </div>
                     </div>
                     
-                    <div class="p-6 bg-gray-50 border-t border-gray-100 flex gap-4 justify-end">
-                        <button onclick="printInvoice()" class="px-6 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
-                            <i class="fas fa-print"></i> Print
+                    <div class="p-5 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
+                        <button onclick="printInvoice()" class="px-5 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium transition shadow-sm flex items-center gap-2 text-xs">
+                            <i class="fas fa-print"></i> Print Voucher
                         </button>
-                        <button onclick="closeInvoiceModal()" class="px-6 py-2.5 bg-brand-blue hover:bg-sky-600 text-white rounded-xl font-medium transition-colors shadow-sm">
+                        <button onclick="closeInvoiceModal()" class="px-6 py-2.5 bg-brand-blue hover:bg-sky-600 text-white rounded-xl font-medium transition shadow-sm text-xs">
                             Done
                         </button>
                     </div>
