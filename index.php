@@ -38,10 +38,10 @@ if (session_status() == PHP_SESSION_NONE) {
         <?php include 'includes/footer.php'; ?>
 
         <!-- JAVASCRIPT LOGIC -->
-        <script src="assets/js/modules/booking.js"></script>
-        <script src="assets/js/script.js"></script>
-        <script src="assets/js/homepage_reviews.js"></script>
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
+      
+       <script src="assets/js/script.js"></script>
+       <script src="assets/js/homepage_reviews.js"></script>
+       <script src="https://accounts.google.com/gsi/client" async defer></script>
        
      
     </body>

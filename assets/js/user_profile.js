@@ -269,21 +269,12 @@ function renderBookingsList() {
 
     container.innerHTML = filtered.map(b => {
         let statusBadge = '';
-        const bs = (b.booking_status || b.status || '').toLowerCase();
-        if (bs === 'confirmed') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-check-circle text-[10px]"></i> Confirmed (Full)</span>`;
-        } else if (bs === 'deposit_paid') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fas fa-percentage text-[10px]"></i> Deposit Paid</span>`;
-        } else if (bs === 'pending_arrival') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200"><i class="fas fa-store text-[10px]"></i> Pay at Hotel (Arrival)</span>`;
-        } else if (bs === 'completed') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-check-double text-[10px]"></i> Checked-In</span>`;
-        } else if (bs === 'cancelled_expired' || bs === 'cancelled') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="fas fa-times-circle text-[10px]"></i> Cancelled / Expired</span>`;
-        } else if (bs === 'no_show') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800 border border-gray-200"><i class="fas fa-user-slash text-[10px]"></i> No-Show</span>`;
+        if (b.status === 'Confirmed') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-check-circle text-[10px]"></i> Confirmed</span>`;
+        } else if (b.status === 'Cancelled') {
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="fas fa-times-circle text-[10px]"></i> Cancelled</span>`;
         } else {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-hourglass-half text-[10px]"></i> Pending Verification</span>`;
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-clock text-[10px]"></i> Pending</span>`;
         }
 
         const checkInFmt = b.checkIn ? new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
@@ -292,7 +283,7 @@ function renderBookingsList() {
 
         // Review Button for Completed/Confirmed Stays
         let reviewBtn = '';
-        if ((bs === 'confirmed' || bs === 'completed' || b.status === 'Confirmed') && b.roomId) {
+        if (b.status === 'Confirmed' && b.roomId) {
             reviewBtn = `
                 <button onclick="openReviewModal(${b.roomId}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center gap-1.5">
                     <i class="fas fa-star text-amber-500"></i> Write Review
@@ -368,41 +359,18 @@ function openVoucherModal(bookingId) {
     document.getElementById('voucher-check-in').innerText = checkInFmt;
     document.getElementById('voucher-check-out').innerText = checkOutFmt;
     document.getElementById('voucher-nights').innerText = `${booking.nights} Night${booking.nights > 1 ? 's' : ''}`;
-    const refCodeElem = document.getElementById('voucher-ref-code');
-    if (refCodeElem) refCodeElem.innerText = `Ref: ${booking.refId || ('WIH-' + booking.id)}`;
-
-    const paidAmount = parseFloat(booking.paidAmount || 0);
-    const balanceDue = parseFloat(booking.balanceDue || 0);
-    const totalAmount = parseFloat(booking.total || 0);
-
-    let methodLabel = booking.paymentMethod || 'Online';
-    if (booking.paymentMethod === 'full_gcash') methodLabel = 'Full Payment (GCash 100%)';
-    else if (booking.paymentMethod === 'deposit_gcash') methodLabel = `30% Deposit (₱${paidAmount.toFixed(2)}) • Balance at Check-in (₱${balanceDue.toFixed(2)})`;
-    else if (booking.paymentMethod === 'pay_at_hotel') methodLabel = `Pay at Hotel (Arrival at ${booking.arrivalTime || '2:00 PM'})`;
-
-    document.getElementById('voucher-payment-method').innerText = methodLabel;
-    document.getElementById('voucher-total-price').innerText = `₱${totalAmount.toFixed(2)}`;
+    document.getElementById('voucher-ref-code').innerText = `Ref: ${booking.refId || ('WIH-' + booking.id)}`;
+    document.getElementById('voucher-payment-method').innerText = booking.paymentMethod || 'Online';
+    document.getElementById('voucher-total-price').innerText = `₱${parseFloat(booking.total).toFixed(2)}`;
 
     const badge = document.getElementById('voucher-status-badge');
     if (badge) {
-        const bs = (booking.booking_status || booking.status || '').toLowerCase();
-        if (bs === 'confirmed') {
-            badge.innerText = 'Confirmed (Paid)';
+        badge.innerText = booking.status;
+        if (booking.status === 'Confirmed') {
             badge.className = 'inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold';
-        } else if (bs === 'deposit_paid') {
-            badge.innerText = 'Deposit Paid (Balance Due)';
-            badge.className = 'inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold';
-        } else if (bs === 'pending_arrival') {
-            badge.innerText = 'Pay at Hotel (Arrival)';
-            badge.className = 'inline-block px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-xs font-bold';
-        } else if (bs === 'completed') {
-            badge.innerText = 'Completed / Checked-In';
-            badge.className = 'inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold';
-        } else if (bs === 'cancelled_expired' || bs === 'cancelled' || bs === 'no_show') {
-            badge.innerText = bs === 'no_show' ? 'No-Show' : 'Cancelled / Expired';
+        } else if (booking.status === 'Cancelled') {
             badge.className = 'inline-block px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-bold';
         } else {
-            badge.innerText = 'Pending Verification';
             badge.className = 'inline-block px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold';
         }
     }

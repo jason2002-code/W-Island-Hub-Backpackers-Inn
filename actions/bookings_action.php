@@ -3,12 +3,9 @@
  * BOOKINGS API ACTION
  * Handles CRUD for bookings + dashboard counts.
  */
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/cron_expire_bookings.php';
+require_once '../config/db.php';
 
-if (!headers_sent()) {
-    header('Content-Type: application/json');
-}
+header('Content-Type: application/json');
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -33,17 +30,12 @@ if ($method === 'GET') {
 }
 
 // Gets all bookings with user/room details for admin list
-if (!function_exists('getBookings')) {
 function getBookings() {
     $pdo = getDB();
     if (!$pdo) {
         echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-    
-    // Opportunistically expire holds
-    expirePendingBookings($pdo);
-
     try {
         $stmt = $pdo->prepare("
             SELECT b.*, r.name as room_name, r.price as room_price, COALESCE(b.guest_name, u.name) as final_guest_name, u.email as guest_email 
@@ -63,17 +55,12 @@ function getBookings() {
                 'roomName' => $b['room_name'],
                 'checkIn' => $b['check_in'],
                 'checkOut' => $b['check_out'],
-                'total' => $b['total_amount'] ?: $b['total_price'],
-                'paid_amount' => $b['paid_amount'] ?? 0,
-                'balance_due' => $b['balance_due'] ?? 0,
+                'total' => $b['total_price'],
                 'status' => $b['status'],
-                'booking_status' => $b['booking_status'] ?? 'pending_verification',
                 'created_at' => $b['created_at'],
                 'nights' => $b['nights'],
                 'room_price' => $b['room_price'],
-                'payment_method' => $b['payment_method'],
-                'gcash_reference_no' => $b['gcash_reference_no'] ?? null,
-                'receipt_url' => $b['receipt_url'] ?? null
+                'payment_method' => $b['payment_method']
             ];
         }, $bookings);
         echo json_encode(['success' => true, 'bookings' => $formatted]);
@@ -81,10 +68,8 @@ function getBookings() {
         echo json_encode(['success' => false, 'message' => 'Query failed: ' . $e->getMessage()]);
     }
 }
-}
 
 // Updates booking status (Pending->Confirmed->Cancelled) with validation
-if (!function_exists('updateBookingStatus')) {
 function updateBookingStatus($data) {
     $pdo = getDB();
     if (!$pdo) {
@@ -110,10 +95,8 @@ function updateBookingStatus($data) {
         echo json_encode(['success' => false, 'message' => 'DB error']);
     }
 }
-}
 
 // Creates new booking reservation with validation and ref ID
-if (!function_exists('createBooking')) {
 function createBooking($data) {
     $pdo = getDB();
     if (!$pdo) {
@@ -132,6 +115,12 @@ function createBooking($data) {
         echo json_encode(['success' => false, 'message' => 'Missing details']);
         exit;
     }
+    $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    if ($stmt->fetchColumn() === 'admin') {
+        echo json_encode(['success' => false, 'message' => 'Admins cannot book']);
+        exit;
+    }
     $stmt = $pdo->prepare("SELECT id FROM rooms WHERE id = ?");
     $stmt->execute([$roomId]);
     if ($stmt->rowCount() === 0) {
@@ -140,17 +129,15 @@ function createBooking($data) {
     }
     try {
         $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
-        $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, check_in_date, check_out_date, nights, total_price, total_amount, paid_amount, balance_due, payment_method, status, booking_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'Pending', 'pending_arrival', NOW())");
-        $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $checkIn, $checkOut, $nights, $total, $total, $total, $paymentMethod]);
+        $stmt = $pdo->prepare("INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, payment_method, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmed', NOW())");
+        $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $total, $paymentMethod]);
         echo json_encode(['success' => true, 'message' => 'Booking created', 'ref_id' => $refId]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'DB error: ' . $e->getMessage()]);
     }
 }
-}
 
 // Deletes specific booking
-if (!function_exists('deleteBooking')) {
 function deleteBooking() {
     $pdo = getDB();
     if (!$pdo) {
@@ -170,10 +157,8 @@ function deleteBooking() {
         echo json_encode(['success' => false, 'message' => 'DB error']);
     }
 }
-}
 
 // Counts bookings by status for dashboard badges
-if (!function_exists('getBookingCounts')) {
 function getBookingCounts() {
     $pdo = getDB();
     if (!$pdo) {
@@ -194,4 +179,4 @@ function getBookingCounts() {
         echo json_encode(['success' => false, 'message' => 'DB error']);
     }
 }
-}
+?>

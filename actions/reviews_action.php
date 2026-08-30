@@ -1,9 +1,7 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
+require_once '../config/db.php';
 
-if (!headers_sent()) {
-    header('Content-Type: application/json');
-}
+header('Content-Type: application/json');
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();

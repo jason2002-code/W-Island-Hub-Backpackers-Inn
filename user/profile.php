@@ -49,20 +49,13 @@ $jsBookings = array_map(function($b) {
         'roomName' => $b['room_name'] ?? 'Island Room',
         'roomId' => $b['room_id'] ?? null,
         'roomImage' => $b['room_image'] ?? 'assets/image/background.jpg',
-        'checkIn' => $b['check_in'] ?? $b['check_in_date'] ?? '',
-        'checkOut' => $b['check_out'] ?? $b['check_out_date'] ?? '',
+        'checkIn' => $b['check_in'] ?? '',
+        'checkOut' => $b['check_out'] ?? '',
         'nights' => (int)($b['nights'] ?? 1),
         'dateBooked' => $b['created_at'] ?? '',
-        'total' => (float)($b['total_amount'] ?? $b['total_price'] ?? 0),
-        'paidAmount' => (float)($b['paid_amount'] ?? 0),
-        'balanceDue' => (float)($b['balance_due'] ?? 0),
+        'total' => (float)($b['total_price'] ?? 0),
         'status' => $b['status'] ?? 'Pending',
-        'booking_status' => $b['booking_status'] ?? 'pending_verification',
         'paymentMethod' => $b['payment_method'] ?? 'Full Payment',
-        'gcashRef' => $b['gcash_reference_no'] ?? null,
-        'receiptUrl' => $b['receipt_url'] ?? null,
-        'arrivalTime' => $b['expected_arrival_time'] ?? null,
-        'expiresAt' => $b['expires_at'] ?? null,
         'userId' => $b['user_id'],
         'guestName' => $b['guest_name'] ?? ''
     ];
@@ -93,17 +86,14 @@ $cancelledBookings = 0;
 $totalSpent = 0;
 
 foreach ($bookings as $b) {
-    $bs = $b['booking_status'] ?? ($b['status'] === 'Confirmed' ? 'confirmed' : 'pending_verification');
-    $checkOut = $b['check_out'] ?? $b['check_out_date'] ?? '';
-    
-    if ($b['status'] === 'Confirmed' || in_array($bs, ['confirmed', 'deposit_paid', 'completed'])) {
-        if ($checkOut >= $todayStr) {
+    if ($b['status'] === 'Confirmed') {
+        if ($b['check_out'] >= $todayStr) {
             $upcomingBookings++;
         } else {
             $completedBookings++;
         }
-        $totalSpent += (float)($b['paid_amount'] ?: $b['total_price']);
-    } elseif ($b['status'] === 'Cancelled' || in_array($bs, ['cancelled_expired', 'no_show'])) {
+        $totalSpent += (float)$b['total_price'];
+    } elseif ($b['status'] === 'Cancelled') {
         $cancelledBookings++;
     }
 }
