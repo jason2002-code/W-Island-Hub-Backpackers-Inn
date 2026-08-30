@@ -4,6 +4,9 @@
  * Handles connection to MySQL database using PDO.
  */
 
+// Timezone configuration
+date_default_timezone_set('Asia/Manila');
+
 // Database credentials - CHECK THESE IN XAMPP
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'w_island_hub');

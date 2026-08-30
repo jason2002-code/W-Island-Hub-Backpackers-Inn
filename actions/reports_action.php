@@ -4,12 +4,14 @@
  * Provides comprehensive hotel operational, financial, and manifest reporting
  * alongside guest feedback/inquiry management.
  */
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
-header('Content-Type: application/json');
+if (!headers_sent()) {
+    header('Content-Type: application/json');
+}
 
 // Handle requests
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($method === 'GET') {
     $action = $_GET['action'] ?? '';
