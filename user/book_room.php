@@ -114,28 +114,14 @@
                                             </div>
                                         </label>
 
-                                        <!-- Option B: Partial Downpayment (30% GCash) -->
-                                        <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-200 bg-white cursor-pointer hover:border-brand-blue transition" id="label-payment-deposit">
-                                            <input type="radio" name="payment" value="deposit_gcash" onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
-                                            <div class="flex-1">
-                                                <div class="flex items-center justify-between">
-                                                    <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                                        <i class="fas fa-coins text-amber-500 text-base"></i> Option B: Partial Downpayment (30% GCash)
-                                                    </span>
-                                                    <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">30% Deposit</span>
-                                                </div>
-                                                <p class="text-xs text-gray-500 mt-1">Lock your reservation with a 30% deposit now. Pay the remaining 70% balance upon check-in at the front desk.</p>
-                                            </div>
-                                        </label>
-
-                                        <!-- Option C: Strict "Pay at Hotel" (Conditional) -->
+                                        <!-- Option B: Strict "Pay at Hotel" (Conditional) -->
                                         <div id="option-c-wrapper">
                                             <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-200 bg-white cursor-pointer hover:border-brand-blue transition" id="label-payment-hotel">
                                                 <input type="radio" name="payment" value="pay_at_hotel" id="input-payment-hotel" onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
                                                 <div class="flex-1">
                                                     <div class="flex items-center justify-between">
                                                         <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                                            <i class="fas fa-store text-purple-600 text-base"></i> Option C: Strict "Pay at Hotel"
+                                                            <i class="fas fa-store text-purple-600 text-base"></i> Option B: Strict "Pay at Hotel"
                                                         </span>
                                                         <span class="text-xs font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Same-Day / &le;24h Only</span>
                                                     </div>
@@ -143,16 +129,16 @@
                                                 </div>
                                             </label>
 
-                                            <!-- Notice shown when Option C is unavailable due to >24hr rule -->
+                                            <!-- Notice shown when Pay at Hotel is unavailable due to >24hr rule -->
                                             <div id="pay-at-hotel-locked-notice" class="hidden p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-500 flex items-center gap-2 mt-1">
                                                 <i class="fas fa-lock text-gray-400"></i>
-                                                <span><strong>Pay at Hotel</strong> is locked because your check-in date is more than 24 hours away. Please select Option A or B.</span>
+                                                <span><strong>Pay at Hotel</strong> is locked because your check-in date is more than 24 hours away. Please select Option A (Full Payment via GCash).</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Expected Arrival Time Section (Required for Option C) -->
+                                <!-- Expected Arrival Time Section (Required for Pay at Hotel) -->
                                 <div id="arrival-time-section" class="hidden bg-purple-50/70 p-5 rounded-2xl border border-purple-200 space-y-3">
                                     <div class="flex items-center justify-between">
                                         <label class="block text-xs font-bold text-purple-900 uppercase tracking-wide">
@@ -167,7 +153,7 @@
                                     </div>
                                 </div>
 
-                                <!-- GCash Proof of Payment Section (Required for Option A & B) -->
+                                <!-- GCash Proof of Payment Section (Required for Option A: Full Payment) -->
                                 <div id="gcash-payment-section" class="bg-slate-50 p-6 rounded-2xl border border-blue-100 space-y-5">
                                     <div class="flex items-center justify-between border-b border-gray-200 pb-3">
                                         <div class="flex items-center gap-2">

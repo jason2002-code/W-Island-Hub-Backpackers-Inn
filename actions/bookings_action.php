@@ -212,10 +212,11 @@ function createBooking($data) {
     // Normalizing payment method identifier
     if ($paymentMethod === 'GCash' || $paymentMethod === 'Full Payment' || $paymentMethod === 'full_gcash') {
         $paymentMethod = 'full_gcash';
-    } elseif ($paymentMethod === 'Deposit' || $paymentMethod === 'deposit_gcash') {
-        $paymentMethod = 'deposit_gcash';
     } elseif ($paymentMethod === 'Pay at Hotel' || $paymentMethod === 'pay_at_hotel') {
         $paymentMethod = 'pay_at_hotel';
+    } elseif ($paymentMethod === 'Deposit' || $paymentMethod === 'deposit_gcash') {
+        echo json_encode(['success' => false, 'message' => 'Downpayment is no longer supported. Please select GCash Full Payment or Pay at Hotel.']);
+        exit;
     }
 
     // 1. Option A: Full Payment (GCash)
@@ -237,27 +238,7 @@ function createBooking($data) {
         $legacyStatus = 'Pending';
         $expiresAt = (new DateTime())->modify('+2 hours')->format('Y-m-d H:i:s');
     }
-    // 2. Option B: Partial Downpayment (30% GCash)
-    elseif ($paymentMethod === 'deposit_gcash') {
-        if (empty($gcashRefNo)) {
-            echo json_encode(['success' => false, 'message' => 'GCash Reference Number is required for downpayment deposit.']);
-            exit;
-        }
-
-        $receiptUrl = handleReceiptUpload();
-        if (!$receiptUrl) {
-            echo json_encode(['success' => false, 'message' => 'Proof of payment receipt image is required (JPG, PNG, WebP up to 5MB).']);
-            exit;
-        }
-
-        $depositAmount = round($totalAmount * 0.30, 2);
-        $paidAmount = $depositAmount;
-        $balanceDue = round($totalAmount - $depositAmount, 2);
-        $bookingStatus = 'pending_verification';
-        $legacyStatus = 'Pending';
-        $expiresAt = (new DateTime())->modify('+2 hours')->format('Y-m-d H:i:s');
-    }
-    // 3. Option C: Strict "Pay at Hotel" (Conditional: check-in <= 24 hrs)
+    // 2. Option B: Strict "Pay at Hotel" (Conditional: check-in <= 24 hrs)
     elseif ($paymentMethod === 'pay_at_hotel') {
         // Enforce 24-hour rule: check-in must be within 24 hours from now
         $now = new DateTime();
@@ -268,7 +249,7 @@ function createBooking($data) {
         if ($diffHours > 30) {
             echo json_encode([
                 'success' => false, 
-                'message' => 'Strict "Pay at Hotel" is available only for reservations within 24 hours of check-in. Please select GCash Full Payment or 30% Downpayment.'
+                'message' => 'Strict "Pay at Hotel" is available only for reservations within 24 hours of check-in. Please select GCash Full Payment.'
             ]);
             exit;
         }

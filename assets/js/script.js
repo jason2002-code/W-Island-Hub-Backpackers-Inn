@@ -892,93 +892,123 @@ async function setupMarquee() {
 
         // Initialize and enforce date restrictions on Check-In and Check-Out pickers
         function initDateConstraints() {
-            const checkInInput = document.getElementById('check-in-date');
-            const checkOutInput = document.getElementById('check-out-date');
-            if (!checkInInput || !checkOutInput) return;
+            const pairs = [
+                { in: document.getElementById('check-in-date'), out: document.getElementById('check-out-date') },
+                { in: document.getElementById('home-check-in-date'), out: document.getElementById('home-check-out-date') }
+            ];
 
             const todayStr = getLocalDateString(new Date());
 
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = getLocalDateString(tomorrow);
+            pairs.forEach(pair => {
+                const checkInInput = pair.in;
+                const checkOutInput = pair.out;
+                if (!checkInInput || !checkOutInput) return;
 
-            // Minimum check-in is today
-            checkInInput.min = todayStr;
-            if (!checkInInput.value || checkInInput.value < todayStr) {
-                checkInInput.value = todayStr;
-            }
-
-            function syncCheckOut() {
-                const currentCheckIn = checkInInput.value;
-                if (!currentCheckIn || currentCheckIn < todayStr) {
+                checkInInput.min = todayStr;
+                if (!checkInInput.value || checkInInput.value < todayStr) {
                     checkInInput.value = todayStr;
                 }
 
-                // Minimum check-out is check-in + 1 day
-                const cinDate = new Date(checkInInput.value + 'T00:00:00');
-                const minCheckOutDate = new Date(cinDate);
-                minCheckOutDate.setDate(minCheckOutDate.getDate() + 1);
-                const minCheckOutStr = getLocalDateString(minCheckOutDate);
+                function syncCheckOut() {
+                    const currentCheckIn = checkInInput.value;
+                    if (!currentCheckIn || currentCheckIn < todayStr) {
+                        checkInInput.value = todayStr;
+                    }
 
-                checkOutInput.min = minCheckOutStr;
+                    // Minimum check-out is check-in + 1 day
+                    const cinDate = new Date(checkInInput.value + 'T00:00:00');
+                    const minCheckOutDate = new Date(cinDate);
+                    minCheckOutDate.setDate(minCheckOutDate.getDate() + 1);
+                    const minCheckOutStr = getLocalDateString(minCheckOutDate);
 
-                if (!checkOutInput.value || checkOutInput.value <= checkInInput.value) {
-                    checkOutInput.value = minCheckOutStr;
+                    checkOutInput.min = minCheckOutStr;
+
+                    if (!checkOutInput.value || checkOutInput.value <= checkInInput.value) {
+                        checkOutInput.value = minCheckOutStr;
+                    }
                 }
-            }
 
-            syncCheckOut();
-
-            checkInInput.onchange = () => {
-                if (checkInInput.value < todayStr) {
-                    showToast('Check-in date cannot be in the past or outdated.', 'warning');
-                    checkInInput.value = todayStr;
-                }
                 syncCheckOut();
-            };
 
-            checkOutInput.onchange = () => {
-                const cinVal = checkInInput.value || todayStr;
-                if (checkOutInput.value <= cinVal) {
-                    showToast('Check-out date must be strictly after check-in date.', 'warning');
-                    const cinDate = new Date(cinVal + 'T00:00:00');
-                    cinDate.setDate(cinDate.getDate() + 1);
-                    checkOutInput.value = getLocalDateString(cinDate);
-                }
-            };
+                checkInInput.onchange = () => {
+                    if (checkInInput.value < todayStr) {
+                        showToast('Check-in date cannot be in the past or outdated.', 'warning');
+                        checkInInput.value = todayStr;
+                    }
+                    syncCheckOut();
+                };
+
+                checkOutInput.onchange = () => {
+                    const cinVal = checkInInput.value || todayStr;
+                    if (checkOutInput.value <= cinVal) {
+                        showToast('Check-out date must be strictly after check-in date.', 'warning');
+                        const cinDate = new Date(cinVal + 'T00:00:00');
+                        cinDate.setDate(cinDate.getDate() + 1);
+                        checkOutInput.value = getLocalDateString(cinDate);
+                    }
+                };
+            });
         }
 
         // Initialize Guest Selector (handles manual input with max 5 validation)
         function initGuestSelector() {
-            const input = document.getElementById('guest-count');
-            if (!input) return;
+            ['guest-count', 'home-guest-count'].forEach(id => {
+                const input = document.getElementById(id);
+                if (!input) return;
 
-            input.addEventListener('input', (e) => {
-                let val = parseInt(e.target.value, 10);
-                if (val > 5) {
-                    e.target.value = 5;
-                    showToast('Maximum 5 guests allowed', 'info');
-                }
-            });
+                input.addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (val > 5) {
+                        e.target.value = 5;
+                        showToast('Maximum 5 guests allowed', 'info');
+                    }
+                });
 
-            input.addEventListener('blur', (e) => {
-                let val = parseInt(e.target.value, 10);
-                if (isNaN(val) || val < 1) {
-                    e.target.value = 1;
-                } else if (val > 5) {
-                    e.target.value = 5;
-                }
-            });
+                input.addEventListener('blur', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (isNaN(val) || val < 1) {
+                        e.target.value = 1;
+                    } else if (val > 5) {
+                        e.target.value = 5;
+                    }
+                });
 
-            input.addEventListener('change', (e) => {
-                let val = parseInt(e.target.value, 10);
-                if (isNaN(val) || val < 1) {
-                    e.target.value = 1;
-                } else if (val > 5) {
-                    e.target.value = 5;
-                }
+                input.addEventListener('change', (e) => {
+                    let val = parseInt(e.target.value, 10);
+                    if (isNaN(val) || val < 1) {
+                        e.target.value = 1;
+                    } else if (val > 5) {
+                        e.target.value = 5;
+                    }
+                });
             });
         }
+
+        // Quick availability search triggered from Homepage Hero Search Bar
+        window.searchFromHome = function(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            
+            const homeCheckIn = document.getElementById('home-check-in-date')?.value;
+            const homeCheckOut = document.getElementById('home-check-out-date')?.value;
+            const homeGuests = document.getElementById('home-guest-count')?.value;
+
+            if (homeCheckIn && document.getElementById('check-in-date')) {
+                document.getElementById('check-in-date').value = homeCheckIn;
+            }
+            if (homeCheckOut && document.getElementById('check-out-date')) {
+                document.getElementById('check-out-date').value = homeCheckOut;
+            }
+            if (homeGuests && document.getElementById('guest-count')) {
+                document.getElementById('guest-count').value = homeGuests;
+            }
+
+            router('rooms');
+
+            const form = document.getElementById('check-availability-form');
+            if (form) {
+                form.dispatchEvent(new Event('submit'));
+            }
+        };
 
         // Availability check form handler
         const availabilityForm = document.getElementById('check-availability-form');
@@ -1160,7 +1190,6 @@ async function setupMarquee() {
         // --- PAYMENT PATHWAY & BOOKING LOGIC ---
         window.handlePaymentMethodChange = function(method) {
             const fullCard = document.getElementById('label-payment-full');
-            const depositCard = document.getElementById('label-payment-deposit');
             const hotelCard = document.getElementById('label-payment-hotel');
             const gcashSection = document.getElementById('gcash-payment-section');
             const arrivalSection = document.getElementById('arrival-time-section');
@@ -1175,7 +1204,7 @@ async function setupMarquee() {
             const total = pendingBooking.total;
 
             // Reset Card Styles
-            [fullCard, depositCard, hotelCard].forEach(card => {
+            [fullCard, hotelCard].forEach(card => {
                 if (card) {
                     card.classList.remove('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
                     card.classList.add('border-gray-200', 'bg-white');
@@ -1197,21 +1226,6 @@ async function setupMarquee() {
                 if (gcashAmountEl) gcashAmountEl.textContent = '₱' + upfront.toFixed(2);
                 if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-stopwatch text-amber-500"></i> <span>2-Hour hold while payment proof is verified.</span>';
                 if (btnText) btnText.textContent = 'Submit Receipt & Confirm (Full Payment)';
-            } else if (method === 'deposit_gcash') {
-                if (depositCard) {
-                    depositCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
-                    depositCard.classList.remove('border-gray-200', 'bg-white');
-                }
-                if (gcashSection) gcashSection.classList.remove('hidden');
-                if (arrivalSection) arrivalSection.classList.add('hidden');
-
-                const upfront = Math.round(total * 0.30 * 100) / 100;
-                const balance = Math.round((total - upfront) * 100) / 100;
-                if (upfrontEl) upfrontEl.textContent = '₱' + upfront.toFixed(2);
-                if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
-                if (gcashAmountEl) gcashAmountEl.textContent = '₱' + upfront.toFixed(2);
-                if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-coins text-amber-500"></i> <span>30% deposit now. Pay ₱' + balance.toFixed(2) + ' balance at front desk.</span>';
-                if (btnText) btnText.textContent = 'Submit Deposit Receipt & Confirm (30%)';
             } else if (method === 'pay_at_hotel') {
                 if (hotelCard) {
                     hotelCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
@@ -1486,7 +1500,7 @@ async function setupMarquee() {
                 formData.append('payment_method', paymentMethod);
 
                 // Pathway-specific validations
-                if (paymentMethod === 'full_gcash' || paymentMethod === 'deposit_gcash') {
+                if (paymentMethod === 'full_gcash') {
                     const gcashRef = document.getElementById('book-gcash-ref') ? document.getElementById('book-gcash-ref').value.trim() : '';
                     const receiptFileInput = document.getElementById('book-receipt-file');
 
@@ -1668,10 +1682,7 @@ async function setupMarquee() {
             let paidAmount = apiResponse.paid_amount !== undefined ? apiResponse.paid_amount : bookingDetails.total;
             let balanceDue = apiResponse.balance_due !== undefined ? apiResponse.balance_due : 0;
 
-            if (paymentMethodVal === 'deposit_gcash') {
-                paymentLabel = 'Partial Downpayment (30% GCash)';
-                statusBadge = '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-xs">Pending Deposit Verification</span>';
-            } else if (paymentMethodVal === 'pay_at_hotel') {
+            if (paymentMethodVal === 'pay_at_hotel') {
                 paymentLabel = 'Strict Pay at Hotel (Conditional)';
                 statusBadge = '<span class="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full font-bold text-xs">Pending Arrival (Strict Hold)</span>';
             }
