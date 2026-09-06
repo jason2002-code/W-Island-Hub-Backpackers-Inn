@@ -37,11 +37,19 @@ if (session_status() == PHP_SESSION_NONE) {
          
         <?php include 'includes/footer.php'; ?>
 
-        <!-- JAVASCRIPT LOGIC -->
-      
-       <script src="assets/js/script.js"></script>
-       <script src="assets/js/homepage_reviews.js"></script>
-       <script src="https://accounts.google.com/gsi/client" async defer></script>
+        <!-- JAVASCRIPT MODULAR LOGIC -->
+        <script src="assets/js/modules/state.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/ui.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/router.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/carousel.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/auth.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/rooms.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/booking.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/reviews.js?v=<?= time() ?>"></script>
+        <script src="assets/js/modules/invoice.js?v=<?= time() ?>"></script>
+        <script src="assets/js/homepage_reviews.js?v=<?= time() ?>"></script>
+        <script src="assets/js/script.js?v=<?= time() ?>"></script>
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
        
      
     </body>

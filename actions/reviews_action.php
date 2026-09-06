@@ -44,15 +44,15 @@ function getReviews($room_id = null) {
 
     try {
         // Build WHERE clause
-$where = "WHERE status = 'approved' AND visible = 1";
+        $where = "WHERE r.status = 'approved' AND r.visible = 1";
         $params = [];
         if ($room_id) {
-            $where .= " AND room_id = ?";
+            $where .= " AND r.room_id = ?";
             $params[] = $room_id;
         }
 
         // Get average rating and count
-        $sql = "SELECT AVG(rating) as avg_rating, COUNT(*) as total FROM reviews " . $where;
+        $sql = "SELECT AVG(r.rating) as avg_rating, COUNT(*) as total FROM reviews r " . $where;
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $stats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -60,12 +60,13 @@ $where = "WHERE status = 'approved' AND visible = 1";
         $totalReviews = intval($stats['total'] ?? 0);
 
         // Get latest approved reviews
-        $limitSql = "SELECT r.*, COALESCE(u.name, 'Anonymous') as user_name, DATE_FORMAT(r.created_at, '%b %d, %Y') as formatted_date 
+        $limitSql = "SELECT r.*, COALESCE(u.name, 'Anonymous') as user_name, COALESCE(rm.name, 'Island Stay') as room_name, DATE_FORMAT(r.created_at, '%b %d, %Y') as formatted_date 
                      FROM reviews r 
                      LEFT JOIN users u ON r.user_id = u.id 
+                     LEFT JOIN rooms rm ON r.room_id = rm.id 
                      " . $where . " 
                      ORDER BY r.created_at DESC 
-                     LIMIT 6";
+                     LIMIT 15";
         $stmt = $pdo->prepare($limitSql);
         $stmt->execute($params);
         $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);

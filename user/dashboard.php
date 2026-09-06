@@ -176,193 +176,82 @@
         </div>
     </section>
 
-    <!-- ================= FEATURED STAY STYLES / ACCOMMODATIONS SHOWCASE ================= -->
-    <section class="py-20 bg-white px-4 sm:px-6 lg:px-8">
+    <!-- ================= ISLAND GALLERY CAROUSEL SECTION ================= -->
+    <section id="gallery-carousel-section" class="py-20 bg-white px-4 sm:px-6 lg:px-8 border-b border-slate-100 relative overflow-hidden">
         <div class="max-w-7xl mx-auto">
             
             <!-- Section Header -->
-            <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
                 <div>
-                    <span class="text-xs font-bold uppercase tracking-widest text-amber-600 bg-amber-50 px-3.5 py-1.5 rounded-full border border-amber-100">
-                        Sanctuary In Paradise
+                    <span class="text-xs font-bold uppercase tracking-widest text-amber-600 bg-amber-50 px-3.5 py-1.5 rounded-full border border-amber-100 inline-flex items-center gap-1.5">
+                        <i class="fas fa-camera-retro text-amber-500"></i> Visual Journey
                     </span>
                     <h2 class="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-slate-900 mt-3">
-                        Curated Accommodations
+                        Our Island Gallery
                     </h2>
                     <p class="text-slate-500 text-base sm:text-lg mt-2 max-w-xl">
-                        Thoughtfully crafted spaces for solo adventurers, couples, digital nomads, and traveling families.
+                        Snapshots of life, chill vibes, tranquil spaces, and friendly tropical adventures at W Island Hub Backpackers Inn.
                     </p>
                 </div>
-                <div>
-                    <button onclick="router('rooms')" class="inline-flex items-center gap-2 text-sm font-bold text-slate-900 hover:text-amber-600 transition-colors group">
-                        <span>View All Rooms & Live Availability</span>
-                        <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+
+                <!-- Carousel Navigation Controls & CTA -->
+                <div class="flex items-center gap-3">
+                    <button onclick="prevGallerySlide()" 
+                            aria-label="Previous Gallery Photo" 
+                            class="w-12 h-12 rounded-full border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-500 text-slate-700 hover:text-slate-950 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer group">
+                        <i class="fas fa-chevron-left text-sm group-hover:-translate-x-0.5 transition-transform"></i>
+                    </button>
+                    <button onclick="nextGallerySlide()" 
+                            aria-label="Next Gallery Photo" 
+                            class="w-12 h-12 rounded-full border border-slate-200 hover:border-amber-500 bg-slate-50 hover:bg-amber-500 text-slate-700 hover:text-slate-950 flex items-center justify-center transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer group">
+                        <i class="fas fa-chevron-right text-sm group-hover:translate-x-0.5 transition-transform"></i>
+                    </button>
+                    <button onclick="router('rooms')" 
+                            class="hidden sm:inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-3 rounded-full transition-colors ml-2">
+                        <span>Explore Rooms</span>
+                        <i class="fas fa-arrow-right text-[10px]"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Accommodations Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                
-                <!-- Card 1: Backpacker Dorm -->
-                <div class="group bg-slate-50 rounded-3xl overflow-hidden border border-slate-100 hover:border-amber-200 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
-                    <div class="h-56 relative overflow-hidden">
-                        <img src="assets/image/background.jpg" alt="Backpacker Dorm" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <span class="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold uppercase text-slate-800 shadow-sm">
-                            Social Dorm
-                        </span>
-                        <div class="absolute bottom-3 left-4 text-white text-xs font-semibold flex items-center gap-1">
-                            <i class="fas fa-user-friends text-amber-400"></i> Up to 1 Guest / Bunk
-                        </div>
-                    </div>
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-xl font-serif font-bold text-slate-900 mb-2">Backpacker Dorm</h3>
-                        <p class="text-slate-500 text-xs sm:text-sm mb-4 leading-relaxed line-clamp-2">
-                            Cozy bunk bed with individual power outlets, reading lamp, privacy curtain, A/C, and large secure locker.
-                        </p>
-                        
-                        <!-- Amenities list -->
-                        <div class="flex flex-wrap gap-1.5 mb-6">
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-snowflake mr-1 text-sky-400"></i>A/C</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-wifi mr-1 text-amber-400"></i>Fast WiFi</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-lock mr-1 text-emerald-400"></i>Locker</span>
-                        </div>
-
-                        <!-- Price & CTA -->
-                        <div class="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs text-slate-400 block">Starting from</span>
-                                <span class="text-xl font-bold text-slate-900">₱15.00</span>
-                                <span class="text-xs text-slate-400">/ night</span>
-                            </div>
-                            <button onclick="router('rooms')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-md">
-                                Book Now
-                            </button>
-                        </div>
-                    </div>
+            <!-- Gallery Carousel Viewport -->
+            <div id="gallery-carousel-container" class="relative overflow-hidden rounded-3xl pb-2">
+                <!-- Sliding Track -->
+                <div id="gallery-carousel-track" class="flex transition-transform duration-500 ease-out">
+                    <!-- Populated dynamically by initGalleryCarousel() in carousel.js -->
                 </div>
-
-                <!-- Card 2: Standard Double -->
-                <div class="group bg-slate-50 rounded-3xl overflow-hidden border border-slate-100 hover:border-amber-200 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
-                    <div class="h-56 relative overflow-hidden">
-                        <img src="assets/image/background.jpg" alt="Standard Double" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <span class="absolute top-4 left-4 bg-amber-500 px-3 py-1 rounded-full text-[11px] font-bold uppercase text-slate-950 shadow-sm">
-                            Couples Choice
-                        </span>
-                        <div class="absolute bottom-3 left-4 text-white text-xs font-semibold flex items-center gap-1">
-                            <i class="fas fa-user-friends text-amber-400"></i> Up to 2 Guests
-                        </div>
-                    </div>
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-xl font-serif font-bold text-slate-900 mb-2">Standard Double</h3>
-                        <p class="text-slate-500 text-xs sm:text-sm mb-4 leading-relaxed line-clamp-2">
-                            Private serene room with queen-sized plush bed, dedicated workspace, garden views, and private bath.
-                        </p>
-                        
-                        <!-- Amenities list -->
-                        <div class="flex flex-wrap gap-1.5 mb-6">
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-bath mr-1 text-teal-400"></i>Private Bath</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-snowflake mr-1 text-sky-400"></i>A/C</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-tv mr-1 text-purple-400"></i>Smart TV</span>
-                        </div>
-
-                        <!-- Price & CTA -->
-                        <div class="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs text-slate-400 block">Starting from</span>
-                                <span class="text-xl font-bold text-slate-900">₱45.00</span>
-                                <span class="text-xs text-slate-400">/ night</span>
-                            </div>
-                            <button onclick="router('rooms')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-md">
-                                Book Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 3: Ocean Deluxe -->
-                <div class="group bg-slate-50 rounded-3xl overflow-hidden border border-slate-100 hover:border-amber-200 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
-                    <div class="h-56 relative overflow-hidden">
-                        <img src="assets/image/background.jpg" alt="Ocean Deluxe" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <span class="absolute top-4 left-4 bg-sky-500 px-3 py-1 rounded-full text-[11px] font-bold uppercase text-white shadow-sm">
-                            Sea View Balcony
-                        </span>
-                        <div class="absolute bottom-3 left-4 text-white text-xs font-semibold flex items-center gap-1">
-                            <i class="fas fa-user-friends text-amber-400"></i> Up to 2 Guests
-                        </div>
-                    </div>
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-xl font-serif font-bold text-slate-900 mb-2">Ocean Deluxe</h3>
-                        <p class="text-slate-500 text-xs sm:text-sm mb-4 leading-relaxed line-clamp-2">
-                            Premium suite with private balcony overlooking the island sunset, rainfall shower, and complimentary breakfast.
-                        </p>
-                        
-                        <!-- Amenities list -->
-                        <div class="flex flex-wrap gap-1.5 mb-6">
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-cocktail mr-1 text-amber-400"></i>Balcony</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-coffee mr-1 text-amber-600"></i>Breakfast</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-wifi mr-1 text-sky-400"></i>Fast WiFi</span>
-                        </div>
-
-                        <!-- Price & CTA -->
-                        <div class="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs text-slate-400 block">Starting from</span>
-                                <span class="text-xl font-bold text-slate-900">₱85.00</span>
-                                <span class="text-xs text-slate-400">/ night</span>
-                            </div>
-                            <button onclick="router('rooms')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-md">
-                                Book Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 4: Family Suite -->
-                <div class="group bg-slate-50 rounded-3xl overflow-hidden border border-slate-100 hover:border-amber-200 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
-                    <div class="h-56 relative overflow-hidden">
-                        <img src="assets/image/background.jpg" alt="Family Suite" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <span class="absolute top-4 left-4 bg-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold uppercase text-white shadow-sm">
-                            Family & Groups
-                        </span>
-                        <div class="absolute bottom-3 left-4 text-white text-xs font-semibold flex items-center gap-1">
-                            <i class="fas fa-user-friends text-amber-400"></i> Up to 4 Guests
-                        </div>
-                    </div>
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-xl font-serif font-bold text-slate-900 mb-2">Family Suite</h3>
-                        <p class="text-slate-500 text-xs sm:text-sm mb-4 leading-relaxed line-clamp-2">
-                            Expansive suite with 2 bathrooms, kitchenette, lounge area, and comfortable sleeping arrangements for group stays.
-                        </p>
-                        
-                        <!-- Amenities list -->
-                        <div class="flex flex-wrap gap-1.5 mb-6">
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-utensils mr-1 text-emerald-500"></i>Kitchenette</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-couch mr-1 text-amber-500"></i>Lounge</span>
-                            <span class="text-[11px] bg-white border border-slate-200 px-2 py-0.5 rounded-lg text-slate-600"><i class="fas fa-bath mr-1 text-teal-400"></i>2 Baths</span>
-                        </div>
-
-                        <!-- Price & CTA -->
-                        <div class="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs text-slate-400 block">Starting from</span>
-                                <span class="text-xl font-bold text-slate-900">₱120.00</span>
-                                <span class="text-xs text-slate-400">/ night</span>
-                            </div>
-                            <button onclick="router('rooms')" class="px-4 py-2 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-md">
-                                Book Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
             </div>
+
+            <!-- Carousel Pagination Dots -->
+            <div id="gallery-dots" class="flex items-center justify-center gap-2 mt-8">
+                <!-- Populated dynamically by carousel.js -->
+            </div>
+
         </div>
     </section>
+
+    <!-- Fullscreen Gallery Lightbox Modal -->
+    <div id="gallery-lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="relative max-w-5xl w-full flex flex-col items-center animate-fadeIn">
+            <!-- Close Button -->
+            <button onclick="closeGalleryLightbox()" 
+                    aria-label="Close Lightbox" 
+                    class="absolute -top-12 right-0 sm:right-2 text-white/70 hover:text-white text-2xl p-2 cursor-pointer transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- Lightbox Image -->
+            <div class="max-h-[80vh] overflow-hidden rounded-2xl shadow-2xl border border-white/10 bg-black flex items-center justify-center">
+                <img id="lightbox-image" src="" alt="Enlarged Gallery Photo" class="max-h-[78vh] w-auto object-contain">
+            </div>
+
+            <!-- Caption & Details -->
+            <div class="mt-4 text-center">
+                <h4 id="lightbox-title" class="text-white font-serif font-bold text-lg sm:text-xl"></h4>
+                <p class="text-slate-400 text-xs sm:text-sm mt-1">W Island Hub Backpackers Inn &bull; Panglao Island, Bohol</p>
+            </div>
+        </div>
+    </div>
 
     <!-- ================= SIGNATURE INN AMENITIES & LIFESTYLE ================= -->
     <section id="inn-amenities" class="py-24 bg-slate-950 text-white px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -548,28 +437,6 @@
     <!-- ================= GUEST REVIEWS & STORIES SECTION ================= -->
     <!-- Integrated with existing dynamic reviews loader in user/reviews.php & homepage_reviews.js -->
     <?php include 'user/reviews.php'; ?>
-
-    <!-- ================= PARADISE PHOTO MARQUEE GALLERY ================= -->
-    <!-- Auto-Scroll Marquee (Populated by JS setupMarquee()) -->
-    <div class="py-16 bg-white overflow-hidden border-t border-slate-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 mb-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-                <span class="text-xs font-bold uppercase tracking-widest text-amber-600">Visual Journey</span>
-                <h3 class="text-2xl sm:text-3xl font-serif font-bold text-slate-900 mt-1">Our Island Gallery</h3>
-                <p class="text-slate-500 text-sm">Snapshots of life, laughter, and relaxation at W Island Hub</p>
-            </div>
-            <div class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-100 px-4 py-2 rounded-full">
-                <i class="fab fa-instagram text-amber-600 text-sm"></i>
-                <span>Tag #WIslandHub on Instagram</span>
-            </div>
-        </div>
-
-        <div class="marquee-container">
-            <div class="marquee-content reverse" id="marquee-track">
-                <!-- Populated dynamically by setupMarquee() in script.js -->
-            </div>
-        </div>
-    </div>
 
     <!-- ================= LOCATION & GETTING HERE ================= -->
     <section class="py-20 bg-slate-900 text-white px-4 sm:px-6 lg:px-8">

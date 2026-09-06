@@ -956,6 +956,111 @@ function submitReport(e) {
 }
 
 /**
+ * Render User's Reviews in Support & Reviews Tab
+ */
+function renderReviewsList() {
+    const container = document.getElementById('user-reviews-container');
+    if (!container) return;
+
+    const reviews = (window.appState && Array.isArray(window.appState.reviews)) ? window.appState.reviews : [];
+
+    if (reviews.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <i class="far fa-star text-slate-300 text-3xl mb-2"></i>
+                <p class="text-slate-500 text-sm font-medium">You haven't written any room reviews yet.</p>
+                <p class="text-slate-400 text-xs mt-1">Share your experience after completing your stay!</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = reviews.map(rev => {
+        const rating = Math.max(1, Math.min(5, Math.round(parseFloat(rev.rating || 5))));
+        let stars = '';
+        for (let i = 0; i < 5; i++) {
+            stars += `<i class="fas fa-star ${i < rating ? 'text-amber-400' : 'text-slate-200'} text-xs"></i>`;
+        }
+
+        const replyHtml = rev.admin_reply ? `
+            <div class="mt-3 p-3 bg-amber-50/70 border-l-2 border-amber-500 rounded-r-xl text-xs">
+                <strong class="text-slate-800 block mb-0.5 font-bold"><i class="fas fa-reply mr-1 text-amber-600"></i> Host Response:</strong>
+                <span class="text-slate-600">${rev.admin_reply}</span>
+            </div>
+        ` : '';
+
+        return `
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <h4 class="font-bold text-slate-900 text-sm">${rev.room_name || 'Room Stay'}</h4>
+                        <span class="text-xs text-slate-400">${new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="flex gap-0.5">${stars}</div>
+                        <span class="text-xs font-bold text-slate-700 ml-1.5">${parseFloat(rev.rating).toFixed(1)}</span>
+                    </div>
+                </div>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">${rev.comment}</p>
+                ${replyHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Render User's Support Inquiries & Tickets
+ */
+function renderFeedbackList() {
+    const container = document.getElementById('user-reports-container');
+    if (!container) return;
+
+    const reports = (window.appState && Array.isArray(window.appState.reports)) ? window.appState.reports : [];
+
+    if (reports.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <i class="far fa-envelope-open text-slate-300 text-3xl mb-2"></i>
+                <p class="text-slate-500 text-sm font-medium">No support inquiries filed.</p>
+                <p class="text-slate-400 text-xs mt-1">Need help or have questions? Click "New Ticket".</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = reports.map(rep => {
+        const isResolved = rep.status === 'Resolved';
+        const badgeClass = isResolved ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100';
+
+        const replyHtml = rep.admin_reply ? `
+            <div class="mt-3 p-3 bg-blue-50/70 border-l-2 border-brand-blue rounded-r-xl text-xs">
+                <strong class="text-brand-dark block mb-0.5 font-bold"><i class="fas fa-reply mr-1 text-brand-blue"></i> Support Response:</strong>
+                <span class="text-slate-600">${rep.admin_reply}</span>
+            </div>
+        ` : '';
+
+        return `
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">${rep.type || 'Inquiry'}</span>
+                        <h4 class="font-bold text-slate-900 text-sm">${rep.subject || 'Support Ticket'}</h4>
+                    </div>
+                    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">
+                        ${rep.status || 'Pending'}
+                    </span>
+                </div>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">${rep.message}</p>
+                ${replyHtml}
+                <div class="mt-2 text-[10px] text-slate-400 text-right">
+                    ${new Date(rep.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
  * Logout Helper
  */
 function logout() {
@@ -966,4 +1071,5 @@ function logout() {
     sessionStorage.removeItem('w_currentUser');
     window.location.href = '../logout.php?type=' + role;
 }
+
 

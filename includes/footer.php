@@ -61,11 +61,11 @@
                     </li>
                     <li class="flex items-center gap-3">
                         <i class="fas fa-phone-alt text-amber-400 flex-shrink-0"></i>
-                        <span>+63 912 345 6789</span>
+                        <span>+63 995 068 7551 / 0975-361-4030</span>
                     </li>
                     <li class="flex items-center gap-3">
                         <i class="fas fa-envelope text-amber-400 flex-shrink-0"></i>
-                        <span>hello@wislandhub.com</span>
+                        <span>reservations@wislandhub.ph</span>
                     </li>
                     <li class="flex items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-800">
                         <i class="fas fa-clock text-teal-400 flex-shrink-0"></i>

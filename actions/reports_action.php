@@ -167,15 +167,26 @@ function generateHotelReport($postData = null) {
 
         $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
-        // Fetch Row-level Bookings
+        // 1. Fetch Property Inventory
+        $stmtAllRooms = $pdo->query("SELECT * FROM rooms ORDER BY id ASC");
+        $allRooms = $stmtAllRooms ? $stmtAllRooms->fetchAll(PDO::FETCH_ASSOC) : [];
+        $totalInventory = count($allRooms);
+        $maintenanceRoomsList = array_filter($allRooms, function($r) { return ($r['status'] ?? '') === 'Maintenance'; });
+        $maintenanceCount = count($maintenanceRoomsList);
+        $rentableRoomsCount = max(1, $totalInventory - $maintenanceCount);
+
+        // 2. Fetch Row-level Bookings for Main Reservation Ledger
         $sql = "
             SELECT 
                 b.*, 
                 r.name AS room_name, 
                 r.type AS room_type, 
                 r.price AS room_base_price, 
+                r.capacity AS room_capacity,
+                r.status AS room_inventory_status,
                 COALESCE(b.guest_name, u.name, 'Guest') AS final_guest_name, 
-                COALESCE(u.email, 'N/A') AS guest_email,
+                COALESCE(b.guest_email, u.email, 'N/A') AS guest_email,
+                COALESCE(b.guest_phone, 'N/A') AS guest_phone,
                 u.created_at AS user_registered_at
             FROM bookings b
             LEFT JOIN rooms r ON b.room_id = r.id
@@ -188,70 +199,206 @@ function generateHotelReport($postData = null) {
         $stmt->execute($paramsSql);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Compute Key Metrics
+        // 3. Compute Key Metrics across the ledger
         $totalBookings = count($rows);
         $confirmedCount = 0;
         $pendingCount = 0;
         $cancelledCount = 0;
+        $checkedInCount = 0;
+        $checkedOutCount = 0;
+        $noShowCount = 0;
 
         $confirmedRevenue = 0.00;
         $pendingRevenue = 0.00;
         $cancelledRevenue = 0.00;
+        $totalDepositsCollected = 0.00;
+        $totalOutstandingBalance = 0.00;
         $totalNightsSold = 0;
+        $totalOccupantsCount = 0;
 
         $roomTypeSummary = [];
         $paymentSummary = [];
         $dailySummary = [];
+        $specialRemarksList = [];
+        $occupiedRoomIds = [];
 
         foreach ($rows as &$b) {
-            $status = $b['status'];
-            $price = floatval($b['total_price']);
-            $nights = max(1, intval($b['nights']));
+            $rawStatus = $b['status'] ?? 'Pending';
+            $bookingStatus = $b['booking_status'] ?? 'pending_verification';
+            $nights = max(1, intval($b['nights'] ?? 1));
             $rType = $b['room_type'] ?? 'Standard';
-            $payMethod = !empty($b['payment_method']) ? $b['payment_method'] : 'Cash / Front Desk';
+            $capacity = max(1, intval($b['room_capacity'] ?? 2));
             $bDate = !empty($b['created_at']) ? date('Y-m-d', strtotime($b['created_at'])) : $today;
+            
+            // Financials
+            $totalCharges = floatval($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0));
+            $paidAmount = floatval($b['paid_amount'] ?? 0);
+            $balanceDue = max(0.00, floatval($b['balance_due'] > 0 ? $b['balance_due'] : ($totalCharges - $paidAmount)));
 
-            if ($status === 'Confirmed') {
+            // Canonical Operational Status determination
+            // Confirmed, Checked In, Checked Out, No-Show, or Cancelled
+            $operationalStatus = 'Confirmed';
+            $checkInVal = !empty($b['check_in_date']) ? $b['check_in_date'] : $b['check_in'];
+            $checkOutVal = !empty($b['check_out_date']) ? $b['check_out_date'] : $b['check_out'];
+
+            if ($rawStatus === 'Cancelled' || $bookingStatus === 'cancelled_expired') {
+                $operationalStatus = 'Cancelled';
+                $cancelledCount++;
+                $cancelledRevenue += $totalCharges;
+            } elseif ($bookingStatus === 'no_show') {
+                $operationalStatus = 'No-Show';
+                $noShowCount++;
+            } elseif ($bookingStatus === 'completed' || ($rawStatus === 'Confirmed' && $checkOutVal < $today)) {
+                $operationalStatus = 'Checked Out';
+                $checkedOutCount++;
                 $confirmedCount++;
-                $confirmedRevenue += $price;
+                $confirmedRevenue += $totalCharges;
                 $totalNightsSold += $nights;
+                $totalDepositsCollected += $paidAmount;
+                $totalOutstandingBalance += $balanceDue;
+            } elseif ($rawStatus === 'Confirmed' || in_array($bookingStatus, ['confirmed', 'deposit_paid'])) {
+                if ($today >= $checkInVal && $today < $checkOutVal) {
+                    $operationalStatus = 'Checked In';
+                    $checkedInCount++;
+                    if (!empty($b['room_id'])) $occupiedRoomIds[$b['room_id']] = true;
+                } else {
+                    $operationalStatus = 'Confirmed';
+                }
+                $confirmedCount++;
+                $confirmedRevenue += $totalCharges;
+                $totalNightsSold += $nights;
+                $totalDepositsCollected += $paidAmount;
+                $totalOutstandingBalance += $balanceDue;
+            } else { // Pending
+                if ($today > $checkInVal) {
+                    $operationalStatus = 'No-Show';
+                    $noShowCount++;
+                } else {
+                    $operationalStatus = 'Confirmed';
+                }
+                $pendingCount++;
+                $pendingRevenue += $totalCharges;
+                $totalOutstandingBalance += $balanceDue;
+            }
 
-                // Room Type Breakdown
+            // Occupants breakdown
+            $adults = min($capacity, 2);
+            $children = max(0, $capacity - 2);
+            $occupantsSummary = "{$capacity} Pax ({$adults} Adults" . ($children > 0 ? ", {$children} Children" : ", 0 Children") . ")";
+            $totalOccupantsCount += $capacity;
+
+            // Normalized Payment Channel
+            $paymentRaw = $b['payment_method'] ?? 'cash';
+            $paymentChannel = 'Over-the-counter Cash / Pay at Hotel';
+            if (stripos($paymentRaw, 'full_gcash') !== false || ($paymentRaw === 'gcash' && $balanceDue <= 0)) {
+                $paymentChannel = 'GCash (Full Payment)';
+            } elseif (stripos($paymentRaw, 'deposit') !== false || stripos($paymentRaw, '30%') !== false) {
+                $paymentChannel = 'GCash (30% Down Payment)';
+            } elseif (stripos($paymentRaw, 'card') !== false || stripos($paymentRaw, 'credit') !== false) {
+                $paymentChannel = 'Credit / Debit Card';
+            } elseif (stripos($paymentRaw, 'gcash') !== false) {
+                $paymentChannel = 'GCash Digital Folio';
+            }
+
+            // Down Payment / Deposit Status
+            $depositStatus = 'Pending / Unpaid';
+            if ($paidAmount >= $totalCharges && $totalCharges > 0) {
+                $depositStatus = '100% Fully Settled';
+            } elseif ($paidAmount > 0) {
+                $depositStatus = 'Deposit Confirmed (₱' . number_format($paidAmount, 2) . ')';
+            }
+
+            // Enrich row object
+            $b['operational_status'] = $operationalStatus;
+            $b['total_charges'] = $totalCharges;
+            $b['paid_amount'] = $paidAmount;
+            $b['balance_due'] = $balanceDue;
+            $b['occupants_summary'] = $occupantsSummary;
+            $b['occupants_count'] = $capacity;
+            $b['payment_channel'] = $paymentChannel;
+            $b['deposit_status'] = $depositStatus;
+            $b['check_in_formatted'] = date('M d, Y', strtotime($checkInVal));
+            $b['check_out_formatted'] = date('M d, Y', strtotime($checkOutVal));
+            $b['created_at_formatted'] = !empty($b['created_at']) ? date('M d, Y h:i A', strtotime($b['created_at'])) : '-';
+
+            // Collect remarks for handover notes
+            if (!empty($b['special_requests'])) {
+                $specialRemarksList[] = [
+                    'ref_id' => $b['ref_id'],
+                    'guest' => $b['final_guest_name'],
+                    'room' => $b['room_name'] ?? ('Room #' . $b['room_id']),
+                    'category' => 'Guest Arrangement',
+                    'note' => $b['special_requests']
+                ];
+            }
+            if (!empty($b['expected_arrival_time']) && $b['expected_arrival_time'] >= '18:00:00') {
+                $specialRemarksList[] = [
+                    'ref_id' => $b['ref_id'],
+                    'guest' => $b['final_guest_name'],
+                    'room' => $b['room_name'] ?? ('Room #' . $b['room_id']),
+                    'category' => 'Flight / Late Arrival',
+                    'note' => 'Expected late arrival at ' . date('h:i A', strtotime($b['expected_arrival_time']))
+                ];
+            }
+
+            // Aggregations for charts & breakdown
+            if ($rawStatus === 'Confirmed' || $operationalStatus === 'Confirmed' || $operationalStatus === 'Checked In') {
                 if (!isset($roomTypeSummary[$rType])) {
                     $roomTypeSummary[$rType] = ['count' => 0, 'revenue' => 0.00, 'nights' => 0];
                 }
                 $roomTypeSummary[$rType]['count']++;
-                $roomTypeSummary[$rType]['revenue'] += $price;
+                $roomTypeSummary[$rType]['revenue'] += $totalCharges;
                 $roomTypeSummary[$rType]['nights'] += $nights;
 
-                // Payment Breakdown
-                if (!isset($paymentSummary[$payMethod])) {
-                    $paymentSummary[$payMethod] = ['count' => 0, 'revenue' => 0.00];
+                if (!isset($paymentSummary[$paymentChannel])) {
+                    $paymentSummary[$paymentChannel] = ['count' => 0, 'revenue' => 0.00];
                 }
-                $paymentSummary[$payMethod]['count']++;
-                $paymentSummary[$payMethod]['revenue'] += $price;
+                $paymentSummary[$paymentChannel]['count']++;
+                $paymentSummary[$paymentChannel]['revenue'] += $totalCharges;
 
-                // Daily trend
                 if (!isset($dailySummary[$bDate])) {
                     $dailySummary[$bDate] = ['date' => $bDate, 'revenue' => 0.00, 'count' => 0];
                 }
-                $dailySummary[$bDate]['revenue'] += $price;
+                $dailySummary[$bDate]['revenue'] += $totalCharges;
                 $dailySummary[$bDate]['count']++;
-
-            } elseif ($status === 'Pending') {
-                $pendingCount++;
-                $pendingRevenue += $price;
-            } elseif ($status === 'Cancelled') {
-                $cancelledCount++;
-                $cancelledRevenue += $price;
             }
         }
 
-        $grossRevenue = $confirmedRevenue + $pendingRevenue;
+        // Add maintenance holds into special handover remarks
+        foreach ($maintenanceRoomsList as $mr) {
+            $specialRemarksList[] = [
+                'ref_id' => 'MAINT-' . $mr['id'],
+                'guest' => 'Facility Staff',
+                'room' => $mr['name'],
+                'category' => 'Maintenance Hold',
+                'note' => 'Room is currently tagged under Maintenance status (Out of Order)'
+            ];
+        }
+
+        // 4. Movement Counters Calculation (Check-ins, Check-outs, Stay-overs, Vacant clean/dirty)
+        // Check-ins: arriving today or within selected date range
+        $stmtMovements = $pdo->prepare("
+            SELECT 
+                SUM(CASE WHEN (COALESCE(check_in_date, check_in) BETWEEN :s_date AND :e_date AND status != 'Cancelled') THEN 1 ELSE 0 END) AS arrivals_count,
+                SUM(CASE WHEN (COALESCE(check_out_date, check_out) BETWEEN :s_date AND :e_date AND status != 'Cancelled') THEN 1 ELSE 0 END) AS departures_count,
+                SUM(CASE WHEN (COALESCE(check_in_date, check_in) < :s_date AND COALESCE(check_out_date, check_out) > :e_date AND status = 'Confirmed') THEN 1 ELSE 0 END) AS stayovers_count
+            FROM bookings
+        ");
+        $stmtMovements->execute([':s_date' => $startDate, ':e_date' => $endDate]);
+        $movementStats = $stmtMovements->fetch(PDO::FETCH_ASSOC);
+
+        $expectedCheckIns = intval($movementStats['arrivals_count'] ?? 0);
+        $expectedCheckOuts = intval($movementStats['departures_count'] ?? 0);
+        $stayOvers = intval($movementStats['stayovers_count'] ?? 0);
+
+        // Occupancy calculation
+        $occupiedCount = max(count($occupiedRoomIds), min($rentableRoomsCount, $checkedInCount + $stayOvers));
+        $vacantCleanCount = max(0, $rentableRoomsCount - $occupiedCount);
+        $occupancyPercentage = $rentableRoomsCount > 0 ? round(($occupiedCount / $rentableRoomsCount) * 100, 1) : 0.0;
+
+        // Revenue metrics
         $averageDailyRate = $totalNightsSold > 0 ? ($confirmedRevenue / $totalNightsSold) : 0.00;
         $averageBookingValue = $confirmedCount > 0 ? ($confirmedRevenue / $confirmedCount) : 0.00;
-        
-        // Estimated Taxes & Fees portion (Assuming ~₱15 standard fee per booking)
         $taxAndFeesPortion = $confirmedCount * 15.00;
         $netRoomRevenue = max(0, $confirmedRevenue - $taxAndFeesPortion);
 
@@ -261,30 +408,64 @@ function generateHotelReport($postData = null) {
         echo json_encode([
             'success' => true,
             'report_type' => $reportType,
-            'report_ref' => 'RPT-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
+            'report_title' => 'Daily Reservation Summary & Front Office Night Audit',
+            'report_ref' => 'RES-AUDIT-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
+            'database_instance' => 'w_island_hub',
+            'system_version' => 'W Island Hub PMS v2.4.0 (Enterprise Reservation Engine)',
             'generated_at' => date('Y-m-d H:i:s'),
-            'generated_at_formatted' => date('F d, Y - h:i A'),
+            'generated_at_formatted' => date('F d, Y • h:i:s A') . ' PHT (UTC+8)',
             'date_range_label' => $rangeLabel,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'operational_snapshot' => [
+                // Occupancy Percentage
+                'occupancy_percentage' => $occupancyPercentage,
+                'occupied_rooms' => $occupiedCount,
+                'rentable_rooms' => $rentableRoomsCount,
+                'total_inventory' => $totalInventory,
+                'maintenance_rooms' => $maintenanceCount,
+                'vacant_clean_rooms' => $vacantCleanCount,
+                
+                // Movement Counters
+                'expected_check_ins' => $expectedCheckIns,
+                'expected_check_outs' => $expectedCheckOuts,
+                'stay_overs' => $stayOvers,
+                'vacant_clean' => $vacantCleanCount,
+                'vacant_dirty' => $maintenanceCount,
+
+                // Revenue Metrics
+                'room_sales' => $confirmedRevenue,
+                'average_daily_rate' => $averageDailyRate,
+                'total_pending_balance' => $totalOutstandingBalance,
+                'total_deposits_collected' => $totalDepositsCollected,
+                'gross_folio_value' => ($confirmedRevenue + $pendingRevenue),
+                'net_room_revenue' => $netRoomRevenue,
+                'taxes_and_fees' => $taxAndFeesPortion
+            ],
             'summary' => [
                 'total_bookings' => $totalBookings,
                 'confirmed_bookings' => $confirmedCount,
+                'checked_in_bookings' => $checkedInCount,
+                'checked_out_bookings' => $checkedOutCount,
+                'no_show_bookings' => $noShowCount,
                 'pending_bookings' => $pendingCount,
                 'cancelled_bookings' => $cancelledCount,
                 'confirmed_revenue' => $confirmedRevenue,
                 'pending_revenue' => $pendingRevenue,
                 'cancelled_revenue' => $cancelledRevenue,
-                'gross_revenue' => $grossRevenue,
-                'net_room_revenue' => $netRoomRevenue,
-                'tax_and_fees' => $taxAndFeesPortion,
                 'total_nights_sold' => $totalNightsSold,
+                'total_occupants' => $totalOccupantsCount,
                 'average_daily_rate' => $averageDailyRate,
                 'average_booking_value' => $averageBookingValue,
+                'net_room_revenue' => $netRoomRevenue,
+                'tax_and_fees' => $taxAndFeesPortion,
+                'total_pending_balance' => $totalOutstandingBalance,
+                'total_deposits_collected' => $totalDepositsCollected
             ],
             'room_type_summary' => $roomTypeSummary,
             'payment_summary' => $paymentSummary,
             'daily_summary' => array_values($dailySummary),
+            'special_remarks' => $specialRemarksList,
             'rows' => $rows
         ]);
 

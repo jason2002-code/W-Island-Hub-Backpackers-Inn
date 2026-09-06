@@ -40,9 +40,10 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Report Type</label>
                         <select id="hotel-report-type" onchange="handleReportTypeChange()" class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium">
+                            <option value="daily_summary" selected>📋 Daily Reservation Summary (Night Audit)</option>
+                            <option value="bookings">📑 Main Reservation Ledger</option>
                             <option value="financial">💰 Financial & Revenue Summary</option>
-                            <option value="bookings">📑 Bookings & Reservations Register</option>
-                            <option value="daily_manifest">📋 Front Desk Daily Manifest</option>
+                            <option value="daily_manifest">🛎️ Front Desk Daily Manifest</option>
                             <option value="room_performance">🛏️ Room Occupancy & Performance</option>
                             <option value="feedback">⭐ Guest Feedback & Satisfaction</option>
                         </select>
@@ -130,110 +131,304 @@
                 </div>
             </div>
 
-            <!-- Summary KPI Metric Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="report-kpi-cards">
-                <!-- Card 1 -->
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider" id="kpi-1-label">Confirmed Revenue</p>
-                        <h4 class="text-2xl font-bold text-brand-dark mt-1" id="kpi-1-val">₱0.00</h4>
-                        <p class="text-xs text-gray-500 mt-1" id="kpi-1-sub">Net Room: ₱0.00</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center text-xl">
-                        <i class="fas fa-peso-sign"></i>
+            <!-- ================= REPORT STRUCTURE CONTAINER ================= -->
+            <div id="official-report-container" class="space-y-6">
+
+                <!-- 1. DOCUMENT HEADER -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-gray-100 pb-6">
+                        <!-- Brand Identity -->
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-purple to-indigo-600 text-white flex items-center justify-center text-2xl font-serif font-black shadow-md shrink-0">
+                                W
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">W Island Hub Backpackers Inn</h2>
+                                    <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Official PMS</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                                    <i class="fas fa-map-marker-alt text-brand-purple"></i> Sitio Duli, Barangay Bucana, El Nido, Palawan 5313, Philippines
+                                </p>
+                                <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                                    <span><i class="fas fa-phone-alt"></i> +63 912 345 6789 / +63 998 765 4321</span>
+                                    <span>•</span>
+                                    <span><i class="fas fa-envelope"></i> info@wislandhub.com</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Document Classification -->
+                        <div class="flex flex-col items-start lg:items-end">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold bg-red-50 text-red-700 border border-red-200 tracking-wider uppercase mb-1.5">
+                                <i class="fas fa-shield-alt"></i> Confidential // Official Property Audit Report
+                            </span>
+                            <h3 class="text-base font-bold text-gray-800" id="report-doc-title">Daily Reservation Summary & Front Office Night Audit</h3>
+                            <div class="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 mt-1 font-mono">
+                                <span><strong>Cycle:</strong> <span id="report-doc-cycle">Current Period</span></span>
+                                <span>•</span>
+                                <span><strong>Audit Ref:</strong> <span id="report-doc-ref" class="text-brand-purple font-bold">RES-AUDIT</span></span>
+                            </div>
+                            <div class="text-[11px] text-gray-400 mt-0.5">
+                                Generated: <span id="report-doc-timestamp">-</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Card 2 -->
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider" id="kpi-2-label">Total Bookings</p>
-                        <h4 class="text-2xl font-bold text-brand-dark mt-1" id="kpi-2-val">0</h4>
-                        <p class="text-xs text-emerald-600 font-semibold mt-1" id="kpi-2-sub">0 Confirmed</p>
+                <!-- 2. OPERATIONAL SNAPSHOT (EXECUTIVE KPI BAR) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-5" id="operational-snapshot-section">
+                    <!-- 2A. Occupancy Percentage -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="fas fa-chart-pie text-brand-purple"></i> Occupancy Percentage
+                                </span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-brand-purple" id="kpi-inventory-ratio">
+                                    0 / 0 Rooms
+                                </span>
+                            </div>
+                            <div class="mt-3 flex items-baseline gap-3">
+                                <h4 class="text-3xl font-extrabold text-gray-900" id="kpi-occupancy-rate">0.0%</h4>
+                                <span class="text-xs text-gray-500 font-medium">rentable rooms occupied</span>
+                            </div>
+                            <!-- Visual Progress Bar -->
+                            <div class="w-full bg-gray-100 rounded-full h-2.5 mt-3 overflow-hidden">
+                                <div id="kpi-occupancy-bar" class="bg-gradient-to-r from-brand-purple to-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-500">
+                            <span>Total Inventory: <strong id="kpi-total-inventory" class="text-gray-700">0</strong></span>
+                            <span>Rentable: <strong id="kpi-rentable-inventory" class="text-gray-700">0</strong></span>
+                            <span>Maintenance: <strong id="kpi-maintenance-inventory" class="text-amber-600">0</strong></span>
+                        </div>
                     </div>
-                    <div class="w-12 h-12 rounded-xl bg-purple-50 text-brand-purple flex items-center justify-center text-xl">
-                        <i class="fas fa-calendar-check"></i>
+
+                    <!-- 2B. Movement Counters -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fas fa-arrows-alt text-brand-blue"></i> Movement Counters
+                            </span>
+                            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Operational Status</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="p-2.5 bg-blue-50/60 rounded-xl border border-blue-100/50">
+                                <div class="text-[10px] font-bold uppercase text-blue-700">Expected Check-Ins</div>
+                                <div class="text-xl font-extrabold text-blue-900 mt-0.5" id="kpi-arrivals-count">0</div>
+                                <div class="text-[10px] text-blue-600">Arrivals in window</div>
+                            </div>
+                            <div class="p-2.5 bg-orange-50/60 rounded-xl border border-orange-100/50">
+                                <div class="text-[10px] font-bold uppercase text-orange-700">Expected Check-Outs</div>
+                                <div class="text-xl font-extrabold text-orange-900 mt-0.5" id="kpi-departures-count">0</div>
+                                <div class="text-[10px] text-orange-600">Scheduled departures</div>
+                            </div>
+                            <div class="p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-100/50">
+                                <div class="text-[10px] font-bold uppercase text-emerald-700">Stay-Overs</div>
+                                <div class="text-xl font-extrabold text-emerald-900 mt-0.5" id="kpi-stayovers-count">0</div>
+                                <div class="text-[10px] text-emerald-600">In-house guests</div>
+                            </div>
+                            <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200/60">
+                                <div class="text-[10px] font-bold uppercase text-gray-600">Vacant Clean / Dirty</div>
+                                <div class="text-xl font-extrabold text-gray-800 mt-0.5" id="kpi-vacant-count">0 / 0</div>
+                                <div class="text-[10px] text-gray-500">Clean / Maintenance</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2C. Revenue Metrics -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="fas fa-coins text-emerald-500"></i> Revenue Metrics
+                                </span>
+                                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Reconciled Folio</span>
+                            </div>
+                            <div class="space-y-2.5 mt-2">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-gray-500 font-medium">Room Sales (Gross Confirmed):</span>
+                                    <span class="text-lg font-extrabold text-emerald-700 font-mono" id="kpi-room-sales">₱0.00</span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-gray-500 font-medium">Average Daily Rate (ADR):</span>
+                                    <span class="text-sm font-bold text-gray-800 font-mono" id="kpi-adr-val">₱0.00 / nt</span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-gray-500 font-medium">Total Pending Balances:</span>
+                                    <span class="text-sm font-bold text-amber-600 font-mono" id="kpi-pending-balance">₱0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
+                            <span>Deposits Collected: <strong id="kpi-deposits-collected" class="text-gray-600">₱0.00</strong></span>
+                            <span>Taxes/Fees: <strong id="kpi-taxes-portion" class="text-gray-600">₱0.00</strong></span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Card 3 -->
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider" id="kpi-3-label">Occupied Nights</p>
-                        <h4 class="text-2xl font-bold text-brand-dark mt-1" id="kpi-3-val">0</h4>
-                        <p class="text-xs text-gray-500 mt-1" id="kpi-3-sub">ADR: ₱0.00 / night</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                        <i class="fas fa-bed"></i>
-                    </div>
-                </div>
-
-                <!-- Card 4 -->
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider" id="kpi-4-label">Pending / Cancelled</p>
-                        <h4 class="text-2xl font-bold text-yellow-600 mt-1" id="kpi-4-val">0 / 0</h4>
-                        <p class="text-xs text-gray-500 mt-1" id="kpi-4-sub">₱0.00 pending value</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl">
-                        <i class="fas fa-hourglass-half"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Distribution & Breakdown Pill Bar (For Financial & Performance) -->
-            <div id="breakdown-container" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h5 class="font-bold text-gray-800 text-sm">Category & Payment Distribution</h5>
-                        <p class="text-xs text-gray-400">Proportion of reservations and earnings by category</p>
-                    </div>
-                    <div id="breakdown-pills" class="flex flex-wrap gap-2">
-                        <span class="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-lg border border-gray-100">Loading metrics...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Report Results Table Container -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50/50">
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-base" id="report-table-title">Financial & Revenue Report Details</h4>
-                        <p class="text-xs text-gray-500" id="report-table-subtitle">Showing all matching records within the selected timeframe</p>
-                    </div>
-                    <div class="flex items-center gap-3 text-xs text-gray-500">
-                        <span id="record-count-badge" class="bg-white px-3 py-1 rounded-lg border border-gray-200 font-bold text-gray-700">0 Records</span>
+                <!-- Category & Payment Distribution Strip -->
+                <div id="breakdown-container" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h5 class="font-bold text-gray-800 text-sm">Room Category & Payment Channel Distribution</h5>
+                            <p class="text-xs text-gray-400">Inventory proportion and revenue channels for this audit window</p>
+                        </div>
+                        <div id="breakdown-pills" class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-lg border border-gray-100">Loading distribution metrics...</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[900px]">
-                        <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100" id="report-table-head">
-                            <tr>
-                                <th class="p-4">Ref ID</th>
-                                <th class="p-4">Guest Name</th>
-                                <th class="p-4">Room & Type</th>
-                                <th class="p-4">Stay Dates</th>
-                                <th class="p-4">Nights</th>
-                                <th class="p-4">Payment</th>
-                                <th class="p-4">Amount</th>
-                                <th class="p-4">Status</th>
-                                <th class="p-4">Booked On</th>
-                            </tr>
-                        </thead>
-                        <tbody id="report-table-body" class="text-sm divide-y divide-gray-100">
-                            <tr>
-                                <td colspan="9" class="p-12 text-center text-gray-400">
-                                    <i class="fas fa-spinner fa-spin text-2xl mb-3 block text-brand-purple"></i>
-                                    Generating report data...
-                                </td>
-                            </tr>
-                        </tbody>
-                        <tfoot id="report-table-foot" class="bg-gray-50/80 text-sm font-bold text-gray-800 border-t-2 border-gray-200">
-                            <!-- Populated dynamically -->
-                        </tfoot>
-                    </table>
+                <!-- 3. MAIN RESERVATION LEDGER (TABULAR DATA) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50/50">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-gray-900 text-base flex items-center gap-2" id="report-table-title">
+                                    <i class="fas fa-book-open text-brand-purple"></i> Main Reservation Ledger
+                                </h4>
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-brand-purple border border-purple-100">
+                                    Tabular Data
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" id="report-table-subtitle">Transaction identifiers, guest credentials, accommodation data, operational status, and folio billing</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span id="record-count-badge" class="bg-white px-3 py-1.5 rounded-xl border border-gray-200 font-bold text-gray-700 shadow-sm">0 Records</span>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[1050px]">
+                            <thead class="bg-gray-50/80 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200/80" id="report-table-head">
+                                <tr>
+                                    <th class="p-3.5 pl-5">Transaction ID</th>
+                                    <th class="p-3.5">Guest Credentials</th>
+                                    <th class="p-3.5">Accommodation Data</th>
+                                    <th class="p-3.5">Stay Schedule</th>
+                                    <th class="p-3.5 text-center">Operational Status</th>
+                                    <th class="p-3.5 text-right">Billing Details</th>
+                                    <th class="p-3.5 pr-5 text-right">Folio Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-table-body" class="text-sm divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="7" class="p-12 text-center text-gray-400">
+                                        <i class="fas fa-spinner fa-spin text-2xl mb-3 block text-brand-purple"></i>
+                                        Compiling hotel operational ledger...
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot id="report-table-foot" class="bg-gray-50/90 text-sm font-bold text-gray-800 border-t-2 border-gray-200">
+                                <!-- Populated dynamically with grand totals -->
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- 4. VERIFICATION AND SIGN-OFF BLOCK -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6" id="verification-signoff-section">
+                    <div class="border-b border-gray-100 pb-3">
+                        <h4 class="font-bold text-gray-800 text-base flex items-center gap-2">
+                            <i class="fas fa-file-signature text-brand-purple"></i> Verification and Sign-Off Block
+                        </h4>
+                        <p class="text-xs text-gray-400 mt-0.5">Dual-authorization accountability signatures & front-office handover remarks</p>
+                    </div>
+
+                    <!-- Special Remarks & Handover Notes -->
+                    <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200/70">
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fas fa-clipboard-list text-amber-500"></i> Special Remarks & Front-Desk Handover Notes
+                            </h5>
+                            <span class="text-[11px] text-gray-400">Flight Delays • Maintenance Holds • Guest Arrangements</span>
+                        </div>
+                        <div id="special-remarks-container" class="space-y-2 mb-3">
+                            <p class="text-xs text-gray-400 italic">No special flight delays or maintenance holds recorded for this reporting cycle.</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Supervisor Duty Handover Remarks (Front-Desk Log):</label>
+                            <textarea id="handover-notes-input" rows="2" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" placeholder="Add duty handover notes, flight delay updates, maintenance check notes, or cash drawer handover details..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Accountability Signatures Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+                        <!-- Signature 1: Front Office Supervisor -->
+                        <div class="p-5 rounded-xl border border-gray-200 bg-gray-50/40 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[11px] font-bold text-brand-purple uppercase tracking-wider">Accountability Seal 1</span>
+                                    <span class="text-[10px] bg-purple-50 text-brand-purple font-semibold px-2 py-0.5 rounded">Front Office Shift</span>
+                                </div>
+                                <p class="text-[11px] text-gray-500 leading-relaxed italic mb-6">
+                                    "I hereby certify that all room inventory counts, arrivals/departures movements, and key handovers for this operational cycle have been personally verified and matched against physical room status."
+                                </p>
+                            </div>
+                            <div>
+                                <div class="border-b border-gray-300 mb-2 h-10 flex items-end">
+                                    <span class="text-xs text-gray-400 italic">Signature over Printed Name</span>
+                                </div>
+                                <div class="flex justify-between items-baseline text-xs">
+                                    <div>
+                                        <div class="font-bold text-gray-800">Front-Office Supervisor on Duty</div>
+                                        <div class="text-[11px] text-gray-400">Role Tag: Operations / Front Desk Lead</div>
+                                    </div>
+                                    <div class="text-right text-[11px] text-gray-500">
+                                        Date & Duty Shift: ____________
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Signature 2: Night Auditor / General Manager -->
+                        <div class="p-5 rounded-xl border border-gray-200 bg-gray-50/40 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider">Accountability Seal 2</span>
+                                    <span class="text-[10px] bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded">Night Audit & Management</span>
+                                </div>
+                                <p class="text-[11px] text-gray-500 leading-relaxed italic mb-6">
+                                    "I have audited and balanced the reservation folio ledger, end-of-day revenue transactions, payment channel reconciliations, and confirmed outstanding folio balances for hotel administration."
+                                </p>
+                            </div>
+                            <div>
+                                <div class="border-b border-gray-300 mb-2 h-10 flex items-end">
+                                    <span class="text-xs text-gray-400 italic">Signature over Printed Name</span>
+                                </div>
+                                <div class="flex justify-between items-baseline text-xs">
+                                    <div>
+                                        <div class="font-bold text-gray-800">Night Auditor / General Manager</div>
+                                        <div class="text-[11px] text-gray-400">Role Tag: Executive / Audit Sign-Off</div>
+                                    </div>
+                                    <div class="text-right text-[11px] text-gray-500">
+                                        Date & Official Stamp: ____________
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SYSTEM FOOTER -->
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 text-xs text-gray-500 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div class="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+                        <strong class="text-gray-700 font-semibold flex items-center gap-1.5">
+                            <i class="fas fa-server text-brand-purple"></i> W Island Hub PMS v2.4.0
+                        </strong>
+                        <span class="hidden sm:inline text-gray-300">•</span>
+                        <span>DB Instance: <code class="bg-white px-1.5 py-0.5 rounded border border-gray-200 text-gray-700">w_island_hub</code></span>
+                        <span class="hidden sm:inline text-gray-300">•</span>
+                        <span id="footer-db-ref">Ref: RES-AUDIT</span>
+                    </div>
+                    <div class="flex items-center gap-4 text-[11px]">
+                        <span>System Generation: <strong id="footer-timestamp" class="text-gray-700">-</strong></span>
+                        <span class="bg-white px-2.5 py-1 rounded-lg border border-gray-200 font-bold text-gray-600 shadow-2xs">Page 1 of 1</span>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -416,10 +611,49 @@ function generateHotelReportData(forceRefresh = false) {
         });
 }
 
+// Operational Status Badge Helper
+function getOperationalBadge(status) {
+    switch (status) {
+        case 'Checked In':
+            return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-house-user text-[10px]"></i> Checked In</span>';
+        case 'Checked Out':
+            return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200"><i class="fas fa-sign-out-alt text-[10px]"></i> Checked Out</span>';
+        case 'No-Show':
+            return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-user-times text-[10px]"></i> No-Show</span>';
+        case 'Cancelled':
+            return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200"><i class="fas fa-ban text-[10px]"></i> Cancelled</span>';
+        case 'Confirmed':
+        default:
+            return '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200"><i class="fas fa-check-circle text-[10px]"></i> Confirmed</span>';
+    }
+}
+
 // Render report data into UI
 function renderReportView(data) {
-    document.getElementById('report-ref-badge').innerText = `Ref: ${data.report_ref || 'RPT-READY'}`;
-    document.getElementById('active-filter-summary').innerText = `Scope: ${data.date_range_label || 'Current Period'} • Ref: ${data.report_ref}`;
+    if (document.getElementById('report-ref-badge')) {
+        document.getElementById('report-ref-badge').innerText = `Ref: ${data.report_ref || 'RPT-READY'}`;
+    }
+    if (document.getElementById('active-filter-summary')) {
+        document.getElementById('active-filter-summary').innerText = `Scope: ${data.date_range_label || 'Current Period'} • Ref: ${data.report_ref || 'RPT-OFFICIAL'}`;
+    }
+
+    // Always update Section 1 (Header) & Section 5 (Footer) metadata
+    const reportTitleMap = {
+        'daily_summary': 'Daily Reservation Summary & Front Office Night Audit',
+        'bookings': 'Hotel Reservations & Main Reservation Ledger',
+        'financial': 'Financial & Revenue Summary Report',
+        'daily_manifest': 'Front Desk Daily Operations Manifest',
+        'room_performance': 'Room Occupancy & Utilization Performance Report',
+        'feedback': 'Guest Satisfaction & Reviews Audit Report'
+    };
+    const titleText = data.report_title || reportTitleMap[data.report_type] || 'Hotel Operations Audit Report';
+
+    if (document.getElementById('report-doc-title')) document.getElementById('report-doc-title').innerText = titleText;
+    if (document.getElementById('report-doc-cycle')) document.getElementById('report-doc-cycle').innerText = data.date_range_label || 'Current Period';
+    if (document.getElementById('report-doc-ref')) document.getElementById('report-doc-ref').innerText = data.report_ref || 'RES-AUDIT';
+    if (document.getElementById('report-doc-timestamp')) document.getElementById('report-doc-timestamp').innerText = data.generated_at_formatted || new Date().toLocaleString();
+    if (document.getElementById('footer-db-ref')) document.getElementById('footer-db-ref').innerText = 'Audit Ref: ' + (data.report_ref || 'RES-AUDIT');
+    if (document.getElementById('footer-timestamp')) document.getElementById('footer-timestamp').innerText = data.generated_at_formatted || new Date().toLocaleString();
 
     if (data.report_type === 'daily_manifest') {
         renderManifestView(data);
@@ -432,61 +666,73 @@ function renderReportView(data) {
     }
 }
 
-// 1. Render Financial & Bookings Register
+// 1. Render Financial & Bookings Register (Main 5-Section Layout)
 function renderFinancialOrBookingsView(data) {
     const s = data.summary || {};
-    
-    // KPI Cards
-    document.getElementById('kpi-1-label').innerText = 'Confirmed Revenue';
-    document.getElementById('kpi-1-val').innerText = formatCurrency(s.confirmed_revenue);
-    document.getElementById('kpi-1-sub').innerText = `Net Room: ${formatCurrency(s.net_room_revenue)}`;
+    const ops = data.operational_snapshot || {};
 
-    document.getElementById('kpi-2-label').innerText = 'Total Bookings';
-    document.getElementById('kpi-2-val').innerText = s.total_bookings || 0;
-    document.getElementById('kpi-2-sub').innerText = `${s.confirmed_bookings || 0} Confirmed • ${s.pending_bookings || 0} Pending`;
+    // SECTION 2: OPERATIONAL SNAPSHOT (EXECUTIVE KPI BAR)
+    // 2A. Occupancy Percentage
+    const occPct = ops.occupancy_percentage !== undefined ? ops.occupancy_percentage : 0;
+    if (document.getElementById('kpi-occupancy-rate')) document.getElementById('kpi-occupancy-rate').innerText = occPct + '%';
+    if (document.getElementById('kpi-occupancy-bar')) document.getElementById('kpi-occupancy-bar').style.width = Math.min(100, Math.max(0, occPct)) + '%';
+    if (document.getElementById('kpi-inventory-ratio')) document.getElementById('kpi-inventory-ratio').innerText = `${ops.occupied_rooms || 0} / ${ops.rentable_rooms || 0} Rooms`;
+    if (document.getElementById('kpi-total-inventory')) document.getElementById('kpi-total-inventory').innerText = ops.total_inventory || 0;
+    if (document.getElementById('kpi-rentable-inventory')) document.getElementById('kpi-rentable-inventory').innerText = ops.rentable_rooms || 0;
+    if (document.getElementById('kpi-maintenance-inventory')) document.getElementById('kpi-maintenance-inventory').innerText = ops.maintenance_rooms || 0;
 
-    document.getElementById('kpi-3-label').innerText = 'Nights Sold';
-    document.getElementById('kpi-3-val').innerText = s.total_nights_sold || 0;
-    document.getElementById('kpi-3-sub').innerText = `ADR: ${formatCurrency(s.average_daily_rate)} / night`;
+    // 2B. Movement Counters
+    if (document.getElementById('kpi-arrivals-count')) document.getElementById('kpi-arrivals-count').innerText = ops.expected_check_ins !== undefined ? ops.expected_check_ins : (s.expected_arrivals || 0);
+    if (document.getElementById('kpi-departures-count')) document.getElementById('kpi-departures-count').innerText = ops.expected_check_outs !== undefined ? ops.expected_check_outs : (s.expected_departures || 0);
+    if (document.getElementById('kpi-stayovers-count')) document.getElementById('kpi-stayovers-count').innerText = ops.stay_overs !== undefined ? ops.stay_overs : (s.in_house_guests || 0);
+    if (document.getElementById('kpi-vacant-count')) document.getElementById('kpi-vacant-count').innerText = `${ops.vacant_clean !== undefined ? ops.vacant_clean : 0} Clean / ${ops.vacant_dirty !== undefined ? ops.vacant_dirty : 0} Hold`;
 
-    document.getElementById('kpi-4-label').innerText = 'Pending / Cancelled';
-    document.getElementById('kpi-4-val').innerText = `${s.pending_bookings || 0} / ${s.cancelled_bookings || 0}`;
-    document.getElementById('kpi-4-sub').innerText = `Pending Val: ${formatCurrency(s.pending_revenue)}`;
+    // 2C. Revenue Metrics
+    if (document.getElementById('kpi-room-sales')) document.getElementById('kpi-room-sales').innerText = formatCurrency(ops.room_sales !== undefined ? ops.room_sales : (s.confirmed_revenue || 0));
+    if (document.getElementById('kpi-adr-val')) document.getElementById('kpi-adr-val').innerText = formatCurrency(ops.average_daily_rate !== undefined ? ops.average_daily_rate : (s.average_daily_rate || 0)) + ' / nt';
+    if (document.getElementById('kpi-pending-balance')) document.getElementById('kpi-pending-balance').innerText = formatCurrency(ops.total_pending_balance !== undefined ? ops.total_pending_balance : (s.pending_revenue || 0));
+    if (document.getElementById('kpi-deposits-collected')) document.getElementById('kpi-deposits-collected').innerText = formatCurrency(ops.total_deposits_collected !== undefined ? ops.total_deposits_collected : (s.total_deposits_collected || 0));
+    if (document.getElementById('kpi-taxes-portion')) document.getElementById('kpi-taxes-portion').innerText = formatCurrency(ops.taxes_and_fees !== undefined ? ops.taxes_and_fees : (s.tax_and_fees || 0));
 
-    // Breakdown Pills
+    // Distribution Pills
     const pillsContainer = document.getElementById('breakdown-pills');
-    let pillsHtml = '';
-
-    if (data.room_type_summary) {
-        for (const [type, info] of Object.entries(data.room_type_summary)) {
-            pillsHtml += `<span class="px-3 py-1 bg-purple-50 text-brand-purple text-xs rounded-lg border border-purple-100 font-semibold">${type}: ${formatCurrency(info.revenue)} (${info.count} bks)</span>`;
+    if (pillsContainer) {
+        let pillsHtml = '';
+        if (data.room_type_summary) {
+            for (const [type, info] of Object.entries(data.room_type_summary)) {
+                pillsHtml += `<span class="px-3 py-1 bg-purple-50 text-brand-purple text-xs rounded-lg border border-purple-100 font-semibold">${type}: ${formatCurrency(info.revenue)} (${info.count} bks)</span>`;
+            }
         }
-    }
-    if (data.payment_summary) {
-        for (const [method, info] of Object.entries(data.payment_summary)) {
-            pillsHtml += `<span class="px-3 py-1 bg-blue-50 text-brand-blue text-xs rounded-lg border border-blue-100 font-semibold">${method}: ${formatCurrency(info.revenue)}</span>`;
+        if (data.payment_summary) {
+            for (const [method, info] of Object.entries(data.payment_summary)) {
+                pillsHtml += `<span class="px-3 py-1 bg-blue-50 text-brand-blue text-xs rounded-lg border border-blue-100 font-semibold">${method}: ${formatCurrency(info.revenue)}</span>`;
+            }
         }
+        pillsContainer.innerHTML = pillsHtml || '<span class="text-xs text-gray-400">No category breakdown data available for this range</span>';
     }
-    pillsContainer.innerHTML = pillsHtml || '<span class="text-xs text-gray-400">No category breakdown data available for this range</span>';
 
-    // Titles
-    document.getElementById('report-table-title').innerText = data.report_type === 'financial' ? 'Financial & Revenue Ledger' : 'Bookings & Reservations Register';
-    document.getElementById('report-table-subtitle').innerText = `Period: ${data.date_range_label} • Showing ${data.rows ? data.rows.length : 0} bookings`;
-    document.getElementById('record-count-badge').innerText = `${data.rows ? data.rows.length : 0} Records`;
+    // SECTION 3: MAIN RESERVATION LEDGER (TABULAR DATA)
+    const tableTitle = document.getElementById('report-table-title');
+    if (tableTitle) {
+        tableTitle.innerHTML = '<i class="fas fa-book-open text-brand-purple mr-1.5"></i> ' + (data.report_type === 'financial' ? 'Financial & Revenue Ledger' : 'Main Reservation Ledger');
+    }
+    if (document.getElementById('report-table-subtitle')) {
+        document.getElementById('report-table-subtitle').innerText = `Period: ${data.date_range_label} • Showing ${data.rows ? data.rows.length : 0} reservation records`;
+    }
+    if (document.getElementById('record-count-badge')) {
+        document.getElementById('record-count-badge').innerText = `${data.rows ? data.rows.length : 0} Records`;
+    }
 
-    // Table Header
+    // Table Header with 7 Grouped Pillars
     document.getElementById('report-table-head').innerHTML = `
         <tr>
-            <th class="p-4">Ref ID</th>
-            <th class="p-4">Guest Name</th>
-            <th class="p-4">Room & Type</th>
-            <th class="p-4">Check-In</th>
-            <th class="p-4">Check-Out</th>
-            <th class="p-4">Nights</th>
-            <th class="p-4">Payment</th>
-            <th class="p-4">Amount</th>
-            <th class="p-4">Status</th>
-            <th class="p-4">Booked Date</th>
+            <th class="p-3.5 pl-5">Transaction ID</th>
+            <th class="p-3.5">Guest Credentials</th>
+            <th class="p-3.5">Accommodation Data</th>
+            <th class="p-3.5">Stay Schedule</th>
+            <th class="p-3.5 text-center">Operational Status</th>
+            <th class="p-3.5 text-right">Billing Details</th>
+            <th class="p-3.5 pr-5 text-right">Folio Balance</th>
         </tr>
     `;
 
@@ -495,47 +741,101 @@ function renderFinancialOrBookingsView(data) {
     const rows = data.rows || [];
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="p-12 text-center text-gray-400">No reservations found matching the selected parameters.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="p-12 text-center text-gray-400">No reservations found matching the selected parameters.</td></tr>`;
     } else {
         tbody.innerHTML = rows.map(b => {
-            const statusClass = b.status === 'Confirmed' ? 'bg-green-100 text-green-700' : (b.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
-            const checkInFormatted = new Date(b.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const checkOutFormatted = new Date(b.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const createdFormatted = b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+            const checkInFormatted = b.check_in_formatted || new Date(b.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const checkOutFormatted = b.check_out_formatted || new Date(b.check_out).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const createdFormatted = b.created_at_formatted || (b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-');
+            const opStatus = b.operational_status || b.status;
+            const charges = parseFloat(b.total_charges !== undefined ? b.total_charges : (b.total_price || 0));
+            const paid = parseFloat(b.paid_amount || 0);
+            const balance = parseFloat(b.balance_due !== undefined ? b.balance_due : Math.max(0, charges - paid));
+            const paymentChannel = b.payment_channel || b.payment_method || 'Over-the-counter Cash / Pay at Hotel';
+            const occupants = b.occupants_summary || `${b.room_capacity || 2} Pax (${Math.min(b.room_capacity || 2, 2)} Adults, ${Math.max(0, (b.room_capacity || 2) - 2)} Children)`;
 
             return `
                 <tr class="hover:bg-gray-50/80 transition">
-                    <td class="p-4 font-mono font-bold text-gray-600 text-xs">${b.ref_id}</td>
-                    <td class="p-4">
-                        <div class="font-bold text-gray-800">${b.final_guest_name}</div>
-                        <div class="text-xs text-gray-400">${b.guest_email || ''}</div>
+                    <td class="p-3.5 pl-5 align-top">
+                        <div class="font-mono font-bold text-gray-800 text-xs">${b.ref_id}</div>
+                        <div class="text-[11px] text-gray-400 font-mono mt-0.5">${createdFormatted}</div>
                     </td>
-                    <td class="p-4">
-                        <span class="font-medium text-gray-800">${b.room_name || 'Room'}</span>
-                        <span class="block text-xs text-gray-400">${b.room_type || 'Standard'}</span>
+                    <td class="p-3.5 align-top">
+                        <div class="font-bold text-gray-900">${b.final_guest_name}</div>
+                        <div class="text-[11px] text-gray-500">${b.guest_email || 'N/A'} • ${b.guest_phone || 'N/A'}</div>
+                        <div class="text-[11px] text-brand-purple font-semibold mt-0.5 flex items-center gap-1">
+                            <i class="fas fa-user-friends text-[10px]"></i> ${occupants}
+                        </div>
                     </td>
-                    <td class="p-4 text-gray-600">${checkInFormatted}</td>
-                    <td class="p-4 text-gray-600">${checkOutFormatted}</td>
-                    <td class="p-4 text-center font-medium">${b.nights || 1}</td>
-                    <td class="p-4 text-xs font-medium text-gray-600">${b.payment_method || 'Cash / Hotel'}</td>
-                    <td class="p-4 font-bold text-brand-dark">${formatCurrency(b.total_price)}</td>
-                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${statusClass}">${b.status}</span></td>
-                    <td class="p-4 text-xs text-gray-500">${createdFormatted}</td>
+                    <td class="p-3.5 align-top">
+                        <div class="font-bold text-gray-800">${b.room_name || ('Room #' + b.room_id)}</div>
+                        <div class="text-[11px] text-gray-500 font-medium">${b.room_type || 'Standard'} (Base: ${formatCurrency(b.room_base_price || 0)})</div>
+                    </td>
+                    <td class="p-3.5 align-top">
+                        <div class="text-xs text-gray-800 font-semibold">${checkInFormatted} &rarr; ${checkOutFormatted}</div>
+                        <div class="text-[11px] text-gray-500 font-medium">${b.nights || 1} Night${(b.nights || 1) > 1 ? 's' : ''}</div>
+                    </td>
+                    <td class="p-3.5 align-top text-center">
+                        ${getOperationalBadge(opStatus)}
+                    </td>
+                    <td class="p-3.5 align-top text-right">
+                        <div class="font-bold text-gray-900 font-mono text-sm">${formatCurrency(charges)}</div>
+                        <div class="text-[11px] text-gray-500">${paymentChannel}</div>
+                        <div class="text-[10px] ${paid > 0 ? 'text-emerald-600 font-bold' : 'text-gray-400'}">${b.deposit_status || (paid > 0 ? `Deposit Paid: ${formatCurrency(paid)}` : 'Unpaid')}</div>
+                    </td>
+                    <td class="p-3.5 pr-5 align-top text-right">
+                        <div class="font-bold font-mono text-sm ${balance > 0 ? 'text-amber-600' : 'text-emerald-600'}">${balance > 0 ? formatCurrency(balance) : '₱0.00 Cleared'}</div>
+                        <div class="text-[10px] ${balance > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}">${balance > 0 ? 'Outstanding Due' : 'Folio Settled'}</div>
+                    </td>
                 </tr>
             `;
         }).join('');
     }
 
-    // Footer Totals
+    // Table Footer Totals
+    const totCharges = ops.room_sales !== undefined ? ops.room_sales : (s.confirmed_revenue || 0);
+    const totDeposits = ops.total_deposits_collected !== undefined ? ops.total_deposits_collected : (s.total_deposits_collected || 0);
+    const totBalance = ops.total_pending_balance !== undefined ? ops.total_pending_balance : (s.total_pending_balance || 0);
+    const totNights = s.total_nights_sold || 0;
+
     document.getElementById('report-table-foot').innerHTML = `
         <tr>
-            <td colspan="5" class="p-4 text-right">Confirmed Total:</td>
-            <td class="p-4 text-center">${s.total_nights_sold || 0} nts</td>
-            <td class="p-4"></td>
-            <td class="p-4 text-brand-purple text-base">${formatCurrency(s.confirmed_revenue)}</td>
-            <td colspan="2" class="p-4 text-xs text-gray-500 font-normal">Taxes/Fees Included: ${formatCurrency(s.tax_and_fees)}</td>
+            <td colspan="3" class="p-3.5 pl-5 text-right font-bold text-gray-700">RECONCILED AUDIT TOTALS:</td>
+            <td class="p-3.5 font-bold text-gray-900">${totNights} Nights</td>
+            <td class="p-3.5 text-center text-xs text-gray-500">${s.confirmed_bookings || 0} Confirmed / ${s.total_bookings || rows.length} Total</td>
+            <td class="p-3.5 text-right font-mono font-bold text-emerald-700 text-base">
+                <div>${formatCurrency(totCharges)}</div>
+                <div class="text-[10px] text-gray-500 font-normal">Deposits: ${formatCurrency(totDeposits)}</div>
+            </td>
+            <td class="p-3.5 pr-5 text-right font-mono font-bold text-amber-600 text-base">
+                <div>${formatCurrency(totBalance)}</div>
+                <div class="text-[10px] text-gray-500 font-normal">Total Pending</div>
+            </td>
         </tr>
     `;
+
+    // SECTION 4: VERIFICATION & SIGN-OFF BLOCK REMARKS
+    const remarksContainer = document.getElementById('special-remarks-container');
+    if (remarksContainer) {
+        const remarks = data.special_remarks || [];
+        if (remarks.length === 0) {
+            remarksContainer.innerHTML = '<p class="text-xs text-gray-400 italic">No special flight delays or maintenance holds recorded for this reporting cycle.</p>';
+        } else {
+            remarksContainer.innerHTML = remarks.map(r => {
+                const catColor = r.category === 'Flight / Late Arrival' ? 'bg-amber-100 text-amber-800 border-amber-200' : (r.category === 'Maintenance Hold' ? 'bg-red-100 text-red-800 border-red-200' : 'bg-purple-100 text-purple-800 border-purple-200');
+                return `
+                    <div class="flex items-start gap-2.5 p-2 bg-white rounded-lg border border-gray-200 text-xs">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${catColor} shrink-0">${r.category}</span>
+                        <div class="flex-1">
+                            <span class="font-bold text-gray-800 font-mono">${r.ref_id}</span>
+                            <span class="text-gray-400 font-normal">(${r.room} • ${r.guest}):</span>
+                            <span class="text-gray-700 ml-1">${r.note}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
 }
 
 // 2. Render Daily Front Desk Manifest
@@ -543,21 +843,15 @@ function renderManifestView(data) {
     const s = data.summary || {};
     
     // KPI Cards
-    document.getElementById('kpi-1-label').innerText = 'Expected Arrivals';
-    document.getElementById('kpi-1-val').innerText = s.expected_arrivals || 0;
-    document.getElementById('kpi-1-sub').innerText = 'Check-ins today';
-
-    document.getElementById('kpi-2-label').innerText = 'Expected Departures';
-    document.getElementById('kpi-2-val').innerText = s.expected_departures || 0;
-    document.getElementById('kpi-2-sub').innerText = 'Check-outs today';
-
-    document.getElementById('kpi-3-label').innerText = 'In-House Guests';
-    document.getElementById('kpi-3-val').innerText = s.in_house_guests || 0;
-    document.getElementById('kpi-3-sub').innerText = 'Staying overnight';
-
-    document.getElementById('kpi-4-label').innerText = 'Estimated Occupancy';
-    document.getElementById('kpi-4-val').innerText = `${s.estimated_occupancy_rate || 0}%`;
-    document.getElementById('kpi-4-sub').innerText = `${s.total_active_rooms || 0} active rooms`;
+    if (document.getElementById('kpi-arrivals-count')) document.getElementById('kpi-arrivals-count').innerText = s.expected_arrivals || 0;
+    if (document.getElementById('kpi-departures-count')) document.getElementById('kpi-departures-count').innerText = s.expected_departures || 0;
+    if (document.getElementById('kpi-stayovers-count')) document.getElementById('kpi-stayovers-count').innerText = s.in_house_guests || 0;
+    if (document.getElementById('kpi-occupancy-rate')) document.getElementById('kpi-occupancy-rate').innerText = `${s.estimated_occupancy_rate || 0}%`;
+    if (document.getElementById('kpi-occupancy-bar')) document.getElementById('kpi-occupancy-bar').style.width = `${Math.min(100, s.estimated_occupancy_rate || 0)}%`;
+    if (document.getElementById('kpi-inventory-ratio')) document.getElementById('kpi-inventory-ratio').innerText = `${(s.in_house_guests || 0) + (s.expected_arrivals || 0)} / ${s.total_active_rooms || 0} Rooms`;
+    if (document.getElementById('kpi-total-inventory')) document.getElementById('kpi-total-inventory').innerText = s.total_active_rooms || 0;
+    if (document.getElementById('kpi-rentable-inventory')) document.getElementById('kpi-rentable-inventory').innerText = s.total_active_rooms || 0;
+    if (document.getElementById('kpi-maintenance-inventory')) document.getElementById('kpi-maintenance-inventory').innerText = 0;
 
     document.getElementById('report-table-title').innerText = `Daily Front Desk Operations Manifest`;
     document.getElementById('report-table-subtitle').innerText = `Date: ${data.target_date_formatted || data.target_date} • Operational Room & Guest Schedule`;
@@ -570,41 +864,35 @@ function renderManifestView(data) {
 
     document.getElementById('report-table-head').innerHTML = `
         <tr>
-            <th class="p-4">Activity Type</th>
-            <th class="p-4">Ref ID</th>
-            <th class="p-4">Guest Name</th>
-            <th class="p-4">Room & Type</th>
-            <th class="p-4">Stay Duration</th>
-            <th class="p-4">Payment Method</th>
-            <th class="p-4">Total Amount</th>
-            <th class="p-4">Status</th>
+            <th class="p-3.5 pl-5">Activity</th>
+            <th class="p-3.5">Transaction ID</th>
+            <th class="p-3.5">Guest Credentials</th>
+            <th class="p-3.5">Room & Type</th>
+            <th class="p-3.5">Stay Schedule</th>
+            <th class="p-3.5">Payment Method</th>
+            <th class="p-3.5 pr-5 text-right">Total Charges</th>
         </tr>
     `;
 
     let rowsHtml = '';
 
     if (arrivals.length === 0 && departures.length === 0 && inHouse.length === 0) {
-        rowsHtml = `<tr><td colspan="8" class="p-12 text-center text-gray-400">No scheduled arrivals, departures, or staying guests on this date.</td></tr>`;
+        rowsHtml = `<tr><td colspan="7" class="p-12 text-center text-gray-400">No scheduled arrivals, departures, or staying guests on this date.</td></tr>`;
     } else {
-        // Arrivals Section
         if (arrivals.length > 0) {
-            rowsHtml += `<tr class="bg-blue-50/70 font-bold text-brand-blue text-xs uppercase"><td colspan="8" class="p-3"><i class="fas fa-plane-arrival mr-2"></i> Expected Arrivals / Check-Ins (${arrivals.length})</td></tr>`;
+            rowsHtml += `<tr class="bg-blue-50/70 font-bold text-brand-blue text-xs uppercase"><td colspan="7" class="p-3 pl-5"><i class="fas fa-plane-arrival mr-2"></i> Expected Arrivals / Check-Ins (${arrivals.length})</td></tr>`;
             arrivals.forEach(b => {
                 rowsHtml += renderManifestRow(b, 'Arrival (Check-in)', 'text-blue-600 bg-blue-50');
             });
         }
-
-        // Departures Section
         if (departures.length > 0) {
-            rowsHtml += `<tr class="bg-orange-50/70 font-bold text-orange-700 text-xs uppercase"><td colspan="8" class="p-3"><i class="fas fa-plane-departure mr-2"></i> Expected Departures / Check-Outs (${departures.length})</td></tr>`;
+            rowsHtml += `<tr class="bg-orange-50/70 font-bold text-orange-700 text-xs uppercase"><td colspan="7" class="p-3 pl-5"><i class="fas fa-plane-departure mr-2"></i> Expected Departures / Check-Outs (${departures.length})</td></tr>`;
             departures.forEach(b => {
                 rowsHtml += renderManifestRow(b, 'Departure (Check-out)', 'text-orange-600 bg-orange-50');
             });
         }
-
-        // In-House Section
         if (inHouse.length > 0) {
-            rowsHtml += `<tr class="bg-emerald-50/70 font-bold text-emerald-700 text-xs uppercase"><td colspan="8" class="p-3"><i class="fas fa-house-user mr-2"></i> Current In-House Guests (${inHouse.length})</td></tr>`;
+            rowsHtml += `<tr class="bg-emerald-50/70 font-bold text-emerald-700 text-xs uppercase"><td colspan="7" class="p-3 pl-5"><i class="fas fa-house-user mr-2"></i> Current In-House Guests (${inHouse.length})</td></tr>`;
             inHouse.forEach(b => {
                 rowsHtml += renderManifestRow(b, 'In-House Stay', 'text-emerald-600 bg-emerald-50');
             });
@@ -619,17 +907,16 @@ function renderManifestRow(b, typeLabel, badgeClass) {
     const statusClass = b.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
     return `
         <tr class="hover:bg-gray-50/80 transition">
-            <td class="p-4"><span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeClass}">${typeLabel}</span></td>
-            <td class="p-4 font-mono font-bold text-gray-600 text-xs">${b.ref_id}</td>
-            <td class="p-4">
+            <td class="p-3.5 pl-5"><span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeClass}">${typeLabel}</span></td>
+            <td class="p-3.5 font-mono font-bold text-gray-600 text-xs">${b.ref_id}</td>
+            <td class="p-3.5">
                 <div class="font-bold text-gray-800">${b.final_guest_name}</div>
                 <div class="text-xs text-gray-400">${b.guest_email || ''}</div>
             </td>
-            <td class="p-4 font-medium text-gray-800">${b.room_name} <span class="text-xs text-gray-400 font-normal">(${b.room_type})</span></td>
-            <td class="p-4 text-xs text-gray-600">${b.check_in} to ${b.check_out} (${b.nights} nts)</td>
-            <td class="p-4 text-xs text-gray-600 font-medium">${b.payment_method || 'Cash / Desk'}</td>
-            <td class="p-4 font-bold text-brand-dark">${formatCurrency(b.total_price)}</td>
-            <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-bold ${statusClass}">${b.status}</span></td>
+            <td class="p-3.5 font-medium text-gray-800">${b.room_name} <span class="text-xs text-gray-400 font-normal">(${b.room_type})</span></td>
+            <td class="p-3.5 text-xs text-gray-600">${b.check_in} &rarr; ${b.check_out} (${b.nights} nts)</td>
+            <td class="p-3.5 text-xs text-gray-600 font-medium">${b.payment_method || 'Cash / Desk'}</td>
+            <td class="p-3.5 pr-5 text-right font-bold text-brand-dark">${formatCurrency(b.total_price)}</td>
         </tr>
     `;
 }
@@ -638,21 +925,10 @@ function renderManifestRow(b, typeLabel, badgeClass) {
 function renderPerformanceView(data) {
     const s = data.summary || {};
     
-    document.getElementById('kpi-1-label').innerText = 'Hotel Room Revenue';
-    document.getElementById('kpi-1-val').innerText = formatCurrency(s.total_revenue);
-    document.getElementById('kpi-1-sub').innerText = `Avg/Room: ${formatCurrency(s.average_revenue_per_room)}`;
-
-    document.getElementById('kpi-2-label').innerText = 'Total Reservations';
-    document.getElementById('kpi-2-val').innerText = s.total_confirmed_bookings || 0;
-    document.getElementById('kpi-2-sub').innerText = `Across ${s.total_rooms || 0} Rooms`;
-
-    document.getElementById('kpi-3-label').innerText = 'Total Nights Sold';
-    document.getElementById('kpi-3-val').innerText = s.total_nights_sold || 0;
-    document.getElementById('kpi-3-sub').innerText = `In ${data.days_in_period || 30} Days Period`;
-
-    document.getElementById('kpi-4-label').innerText = 'Active Inventory';
-    document.getElementById('kpi-4-val').innerText = s.total_rooms || 0;
-    document.getElementById('kpi-4-sub').innerText = 'Total Managed Rooms';
+    if (document.getElementById('kpi-room-sales')) document.getElementById('kpi-room-sales').innerText = formatCurrency(s.total_revenue);
+    if (document.getElementById('kpi-adr-val')) document.getElementById('kpi-adr-val').innerText = formatCurrency(s.total_nights_sold > 0 ? (s.total_revenue / s.total_nights_sold) : 0) + ' / nt';
+    if (document.getElementById('kpi-total-inventory')) document.getElementById('kpi-total-inventory').innerText = s.total_rooms || 0;
+    if (document.getElementById('kpi-rentable-inventory')) document.getElementById('kpi-rentable-inventory').innerText = s.total_rooms || 0;
 
     document.getElementById('report-table-title').innerText = 'Room Occupancy & Utilization Performance';
     document.getElementById('report-table-subtitle').innerText = `Period: ${data.date_range_label} (${data.days_in_period} days)`;
@@ -662,15 +938,15 @@ function renderPerformanceView(data) {
 
     document.getElementById('report-table-head').innerHTML = `
         <tr>
-            <th class="p-4">Room Name</th>
-            <th class="p-4">Type</th>
-            <th class="p-4">Base Rate</th>
-            <th class="p-4">Capacity</th>
-            <th class="p-4">Total Bookings</th>
-            <th class="p-4">Nights Sold</th>
-            <th class="p-4">Est. Occupancy</th>
-            <th class="p-4">Revenue Generated</th>
-            <th class="p-4">Status</th>
+            <th class="p-3.5 pl-5">Room Name</th>
+            <th class="p-3.5">Type</th>
+            <th class="p-3.5">Base Rate</th>
+            <th class="p-3.5">Capacity</th>
+            <th class="p-3.5">Total Bookings</th>
+            <th class="p-3.5">Nights Sold</th>
+            <th class="p-3.5">Est. Occupancy</th>
+            <th class="p-3.5 text-right">Revenue Generated</th>
+            <th class="p-3.5 pr-5 text-center">Status</th>
         </tr>
     `;
 
@@ -680,13 +956,13 @@ function renderPerformanceView(data) {
     } else {
         tbody.innerHTML = rooms.map(r => `
             <tr class="hover:bg-gray-50/80 transition">
-                <td class="p-4 font-bold text-gray-800">${r.name}</td>
-                <td class="p-4"><span class="px-2 py-0.5 bg-purple-50 text-brand-purple text-xs font-semibold rounded">${r.type}</span></td>
-                <td class="p-4 font-medium text-gray-700">${formatCurrency(r.price)} / nt</td>
-                <td class="p-4 text-gray-600 text-xs">${r.capacity} Guests</td>
-                <td class="p-4 font-bold text-gray-800">${r.total_bookings}</td>
-                <td class="p-4 font-bold text-brand-blue">${r.nights_sold} nights</td>
-                <td class="p-4">
+                <td class="p-3.5 pl-5 font-bold text-gray-800">${r.name}</td>
+                <td class="p-3.5"><span class="px-2 py-0.5 bg-purple-50 text-brand-purple text-xs font-semibold rounded">${r.type}</span></td>
+                <td class="p-3.5 font-medium text-gray-700">${formatCurrency(r.price)} / nt</td>
+                <td class="p-3.5 text-gray-600 text-xs">${r.capacity} Guests</td>
+                <td class="p-3.5 font-bold text-gray-800">${r.total_bookings}</td>
+                <td class="p-3.5 font-bold text-brand-blue">${r.nights_sold} nights</td>
+                <td class="p-3.5">
                     <div class="flex items-center gap-2">
                         <div class="w-16 bg-gray-200 rounded-full h-2">
                             <div class="bg-brand-purple h-2 rounded-full" style="width: ${Math.min(100, r.occupancy_rate)}%"></div>
@@ -694,20 +970,20 @@ function renderPerformanceView(data) {
                         <span class="text-xs font-bold text-gray-700">${r.occupancy_rate}%</span>
                     </div>
                 </td>
-                <td class="p-4 font-bold text-emerald-700 text-base">${formatCurrency(r.revenue_generated)}</td>
-                <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-bold ${r.status === 'Maintenance' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${r.status}</span></td>
+                <td class="p-3.5 text-right font-bold text-emerald-700 text-base font-mono">${formatCurrency(r.revenue_generated)}</td>
+                <td class="p-3.5 pr-5 text-center"><span class="px-2 py-0.5 rounded text-xs font-bold ${r.status === 'Maintenance' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${r.status}</span></td>
             </tr>
         `).join('');
     }
 
     document.getElementById('report-table-foot').innerHTML = `
         <tr>
-            <td colspan="4" class="p-4 text-right font-bold">Total Performance:</td>
-            <td class="p-4 font-bold">${s.total_confirmed_bookings || 0}</td>
-            <td class="p-4 font-bold text-brand-blue">${s.total_nights_sold || 0} nts</td>
-            <td class="p-4"></td>
-            <td class="p-4 font-bold text-emerald-700 text-base">${formatCurrency(s.total_revenue)}</td>
-            <td class="p-4"></td>
+            <td colspan="4" class="p-3.5 pl-5 text-right font-bold">Total Performance:</td>
+            <td class="p-3.5 font-bold">${s.total_confirmed_bookings || 0}</td>
+            <td class="p-3.5 font-bold text-brand-blue">${s.total_nights_sold || 0} nts</td>
+            <td class="p-3.5"></td>
+            <td class="p-3.5 text-right font-bold text-emerald-700 text-base font-mono">${formatCurrency(s.total_revenue)}</td>
+            <td class="p-3.5 pr-5"></td>
         </tr>
     `;
 }
@@ -716,22 +992,6 @@ function renderPerformanceView(data) {
 function renderFeedbackReportView(data) {
     const s = data.summary || {};
     
-    document.getElementById('kpi-1-label').innerText = 'Average Rating';
-    document.getElementById('kpi-1-val').innerText = `${s.average_rating || 5.0} / 5.0`;
-    document.getElementById('kpi-1-sub').innerText = `Across ${s.total_reviews || 0} Verified Reviews`;
-
-    document.getElementById('kpi-2-label').innerText = 'Satisfaction Rate';
-    document.getElementById('kpi-2-val').innerText = `${s.satisfaction_rate || 100}%`;
-    document.getElementById('kpi-2-sub').innerText = '4★ & 5★ Ratings';
-
-    document.getElementById('kpi-3-label').innerText = 'Total Feedback Tickets';
-    document.getElementById('kpi-3-val').innerText = s.total_feedback || 0;
-    document.getElementById('kpi-3-sub').innerText = `${s.resolved_feedback || 0} Resolved`;
-
-    document.getElementById('kpi-4-label').innerText = 'Pending Inquiries';
-    document.getElementById('kpi-4-val').innerText = s.pending_feedback || 0;
-    document.getElementById('kpi-4-sub').innerText = 'Awaiting staff response';
-
     document.getElementById('report-table-title').innerText = 'Guest Satisfaction & Reviews Register';
     document.getElementById('report-table-subtitle').innerText = 'Recent guest ratings, feedback submissions, and management replies';
 
@@ -740,12 +1000,12 @@ function renderFeedbackReportView(data) {
 
     document.getElementById('report-table-head').innerHTML = `
         <tr>
-            <th class="p-4">Guest</th>
-            <th class="p-4">Room</th>
-            <th class="p-4">Rating</th>
-            <th class="p-4">Feedback / Comment</th>
-            <th class="p-4">Admin Reply</th>
-            <th class="p-4">Date</th>
+            <th class="p-3.5 pl-5">Guest</th>
+            <th class="p-3.5">Room</th>
+            <th class="p-3.5">Rating</th>
+            <th class="p-3.5">Feedback / Comment</th>
+            <th class="p-3.5">Admin Reply</th>
+            <th class="p-3.5 pr-5">Date</th>
         </tr>
     `;
 
@@ -755,18 +1015,18 @@ function renderFeedbackReportView(data) {
     } else {
         tbody.innerHTML = reviews.map(r => `
             <tr class="hover:bg-gray-50/80 transition">
-                <td class="p-4">
+                <td class="p-3.5 pl-5">
                     <div class="font-bold text-gray-800">${r.user_name || 'Guest'}</div>
                     <div class="text-xs text-gray-400">${r.user_email || ''}</div>
                 </td>
-                <td class="p-4 font-medium text-gray-700">${r.room_name || 'General'}</td>
-                <td class="p-4">
+                <td class="p-3.5 font-medium text-gray-700">${r.room_name || 'General'}</td>
+                <td class="p-3.5">
                     <span class="text-yellow-500 font-bold">${'★'.repeat(Math.round(r.rating || 5))}</span>
                     <span class="text-xs text-gray-400 font-semibold ml-1">(${r.rating})</span>
                 </td>
-                <td class="p-4 text-sm text-gray-700 max-w-xs">${r.comment || 'No comment provided'}</td>
-                <td class="p-4 text-xs text-gray-600">${r.admin_reply ? `<span class="bg-blue-50 text-blue-800 p-2 rounded block border border-blue-100">${r.admin_reply}</span>` : '<span class="text-gray-400 italic">No reply yet</span>'}</td>
-                <td class="p-4 text-xs text-gray-500">${r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
+                <td class="p-3.5 text-sm text-gray-700 max-w-xs">${r.comment || 'No comment provided'}</td>
+                <td class="p-3.5 text-xs text-gray-600">${r.admin_reply ? `<span class="bg-blue-50 text-blue-800 p-2 rounded block border border-blue-100">${r.admin_reply}</span>` : '<span class="text-gray-400 italic">No reply yet</span>'}</td>
+                <td class="p-3.5 pr-5 text-xs text-gray-500">${r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
             </tr>
         `).join('');
     }
@@ -776,7 +1036,7 @@ function renderFeedbackReportView(data) {
 
 /**
  * Professional Hotel Printable Report Generator
- * Opens a clean, branded, multi-page print document ready for physical printing or PDF export
+ * Opens a clean, branded, landscape multi-page print document adhering to the 5 Key Structural Sections
  */
 function printHotelReport() {
     if (!currentReportData) {
@@ -785,169 +1045,189 @@ function printHotelReport() {
     }
 
     const d = currentReportData;
-    const type = d.report_type || 'financial';
+    const type = d.report_type || 'daily_summary';
     const s = d.summary || {};
+    const ops = d.operational_snapshot || {};
     const hotelName = "W Island Hub Backpackers Inn";
-    const hotelAddress = "Paradise Island, Philippines • Contact: info@wislandhub.com • +63 912 345 6789";
-    const reportRef = d.report_ref || 'RPT-OFFICIAL';
+    const hotelAddress = "Sitio Duli, Barangay Bucana, El Nido, Palawan 5313, Philippines • Contact: +63 912 345 6789 / +63 998 765 4321 • info@wislandhub.com";
+    const reportRef = d.report_ref || 'RES-AUDIT-OFFICIAL';
     const generatedDate = d.generated_at_formatted || new Date().toLocaleString();
-    const datePeriod = d.date_range_label || 'Current Period';
+    const datePeriod = d.date_range_label || 'Current Audit Cycle';
+    const handoverText = (document.getElementById('handover-notes-input') ? document.getElementById('handover-notes-input').value.trim() : '') || 'Normal front-office shift turnover. All key slots accounted for and physical room states reconciled with system register.';
 
-    let reportTitle = "HOTEL FINANCIAL & REVENUE SUMMARY REPORT";
-    if (type === 'bookings') reportTitle = "HOTEL RESERVATIONS & BOOKINGS REGISTER";
+    let reportTitle = "DAILY RESERVATION SUMMARY & FRONT OFFICE NIGHT AUDIT";
+    if (type === 'bookings') reportTitle = "HOTEL RESERVATIONS & MAIN RESERVATION LEDGER";
+    else if (type === 'financial') reportTitle = "HOTEL FINANCIAL & REVENUE SUMMARY REPORT";
     else if (type === 'daily_manifest') reportTitle = "FRONT DESK DAILY OPERATIONS MANIFEST";
     else if (type === 'room_performance') reportTitle = "ROOM OCCUPANCY & UTILIZATION PERFORMANCE REPORT";
-    else if (type === 'feedback') reportTitle = "GUEST SATISFACTION & REVIEWS REPORT";
+    else if (type === 'feedback') reportTitle = "GUEST SATISFACTION & REVIEWS AUDIT REPORT";
 
-    // Build KPI Summary Cards HTML for Print
-    let kpiPrintHtml = `
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">Confirmed Revenue</div>
-                <div style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 4px;">${formatCurrency(s.confirmed_revenue || s.total_revenue || 0)}</div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Net: ${formatCurrency(s.net_room_revenue || s.total_revenue || 0)}</div>
+    // 1. Executive KPI Bar for Print
+    const occPct = ops.occupancy_percentage !== undefined ? ops.occupancy_percentage : 0;
+    const roomSales = ops.room_sales !== undefined ? ops.room_sales : (s.confirmed_revenue || 0);
+    const adr = ops.average_daily_rate !== undefined ? ops.average_daily_rate : (s.average_daily_rate || 0);
+    const pendingBal = ops.total_pending_balance !== undefined ? ops.total_pending_balance : (s.pending_revenue || 0);
+    const deposits = ops.total_deposits_collected !== undefined ? ops.total_deposits_collected : 0;
+
+    const kpiPrintHtml = `
+        <div style="display: grid; grid-template-columns: 1fr 1.3fr 1.2fr; gap: 12px; margin-bottom: 16px;">
+            <!-- Occupancy Box -->
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;">
+                <div style="font-size: 10px; text-transform: uppercase; color: #475569; font-weight: bold; letter-spacing: 0.5px;">1. Occupancy Percentage</div>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 3px;">
+                    <span style="font-size: 20px; font-weight: 800; color: #0f172a;">${occPct}%</span>
+                    <span style="font-size: 10px; color: #64748b; font-weight: 600;">(${ops.occupied_rooms || 0} / ${ops.rentable_rooms || 0} Rentable Rooms)</span>
+                </div>
+                <div style="font-size: 9.5px; color: #64748b; margin-top: 3px; border-top: 1px solid #e2e8f0; padding-top: 3px;">
+                    Total Property Inventory: <strong>${ops.total_inventory || 0}</strong> • Rentable: <strong>${ops.rentable_rooms || 0}</strong> • Maintenance: <strong>${ops.maintenance_rooms || 0}</strong>
+                </div>
             </div>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">Total Bookings</div>
-                <div style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 4px;">${s.total_bookings || s.total_confirmed_bookings || (d.arrivals ? (d.arrivals.length + d.departures.length) : 0)}</div>
-                <div style="font-size: 10px; color: #16a34a; margin-top: 2px;">${s.confirmed_bookings || s.total_confirmed_bookings || 0} Confirmed</div>
+
+            <!-- Movement Counters Box -->
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;">
+                <div style="font-size: 10px; text-transform: uppercase; color: #475569; font-weight: bold; letter-spacing: 0.5px;">2. Movement Counters</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 5px; text-align: center;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; padding: 4px 2px;">
+                        <div style="font-size: 8.5px; font-weight: bold; color: #1e40af; text-transform: uppercase;">Check-Ins</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #1e3a8a;">${ops.expected_check_ins || 0}</div>
+                    </div>
+                    <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 5px; padding: 4px 2px;">
+                        <div style="font-size: 8.5px; font-weight: bold; color: #9a3412; text-transform: uppercase;">Check-Outs</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #7c2d12;">${ops.expected_check_outs || 0}</div>
+                    </div>
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 5px; padding: 4px 2px;">
+                        <div style="font-size: 8.5px; font-weight: bold; color: #065f46; text-transform: uppercase;">Stay-Overs</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #064e3b;">${ops.stay_overs || 0}</div>
+                    </div>
+                    <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 5px; padding: 4px 2px;">
+                        <div style="font-size: 8.5px; font-weight: bold; color: #475569; text-transform: uppercase;">Clean/Hold</div>
+                        <div style="font-size: 13px; font-weight: 800; color: #334155;">${ops.vacant_clean || 0}/${ops.vacant_dirty || 0}</div>
+                    </div>
+                </div>
             </div>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">Guest Nights Sold</div>
-                <div style="font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 4px;">${s.total_nights_sold || 0}</div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">ADR: ${formatCurrency(s.average_daily_rate || 0)} / nt</div>
-            </div>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                <div style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold;">Pending / Cancelled</div>
-                <div style="font-size: 18px; font-weight: bold; color: #d97706; margin-top: 4px;">${s.pending_bookings || 0} / ${s.cancelled_bookings || 0}</div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Value: ${formatCurrency(s.pending_revenue || 0)}</div>
+
+            <!-- Revenue Metrics Box -->
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;">
+                <div style="font-size: 10px; text-transform: uppercase; color: #475569; font-weight: bold; letter-spacing: 0.5px;">3. Revenue Metrics</div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 3px;">
+                    <span style="color: #64748b;">Confirmed Room Sales:</span>
+                    <strong style="color: #15803d; font-family: monospace;">${formatCurrency(roomSales)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 1px;">
+                    <span style="color: #64748b;">Average Daily Rate (ADR):</span>
+                    <strong style="color: #0f172a; font-family: monospace;">${formatCurrency(adr)} / nt</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 1px; border-top: 1px solid #e2e8f0; padding-top: 2px;">
+                    <span style="color: #b45309; font-weight: 600;">Total Pending Folio:</span>
+                    <strong style="color: #b45309; font-family: monospace;">${formatCurrency(pendingBal)}</strong>
+                </div>
             </div>
         </div>
     `;
 
-    // Build Table Rows HTML for Print
-    let tableHeadersHtml = '';
+    // 2. Main Reservation Ledger Table for Print
+    let tableHeadersHtml = `
+        <tr style="background: #f1f5f9;">
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: left; font-size: 9.5px; text-transform: uppercase;">Transaction ID</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: left; font-size: 9.5px; text-transform: uppercase;">Guest Credentials</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: left; font-size: 9.5px; text-transform: uppercase;">Accommodation Data</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: left; font-size: 9.5px; text-transform: uppercase;">Stay Schedule</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9.5px; text-transform: uppercase;">Operational Status</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 9.5px; text-transform: uppercase;">Total Charges</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: left; font-size: 9.5px; text-transform: uppercase;">Payment Channel</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 9.5px; text-transform: uppercase;">Deposit Status</th>
+            <th style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 9.5px; text-transform: uppercase;">Folio Balance</th>
+        </tr>
+    `;
+
+    const rows = d.rows || [];
     let tableRowsHtml = '';
-    let tableFootHtml = '';
 
-    if (type === 'daily_manifest') {
-        tableHeadersHtml = `
-            <tr>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Activity</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Ref ID</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Guest Name</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Room</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Dates</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Payment</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: right;">Amount</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Status</th>
-            </tr>
-        `;
-
-        const allManifest = [
-            ...(d.arrivals || []).map(x => ({ ...x, _act: 'Arrival (Check-in)' })),
-            ...(d.departures || []).map(x => ({ ...x, _act: 'Departure (Check-out)' })),
-            ...(d.in_house || []).map(x => ({ ...x, _act: 'In-House Stay' }))
-        ];
-
-        if (allManifest.length === 0) {
-            tableRowsHtml = `<tr><td colspan="8" style="padding: 16px; text-align: center; border: 1px solid #cbd5e1; color: #64748b;">No scheduled guest activity for this date.</td></tr>`;
-        } else {
-            tableRowsHtml = allManifest.map(b => `
-                <tr>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 11px;">${b._act}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-size: 11px;">${b.ref_id}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: 600;">${b.final_guest_name}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${b.room_name} (${b.room_type})</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${b.check_in} to ${b.check_out}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${b.payment_method || 'Desk'}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold;">${formatCurrency(b.total_price)}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; font-weight: bold;">${b.status}</td>
-                </tr>
-            `).join('');
-        }
-    } else if (type === 'room_performance') {
-        tableHeadersHtml = `
-            <tr>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Room Name</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Type</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: right;">Base Rate</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Bookings</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Nights Sold</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Occupancy %</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: right;">Revenue Generated</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Status</th>
-            </tr>
-        `;
-
-        const rooms = d.rooms_performance || [];
-        tableRowsHtml = rooms.map(r => `
-            <tr>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold;">${r.name}</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.type}</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${formatCurrency(r.price)}</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${r.total_bookings}</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${r.nights_sold}</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${r.occupancy_rate}%</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #0f172a;">${formatCurrency(r.revenue_generated)}</td>
-                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${r.status}</td>
-            </tr>
-        `).join('');
-
-        tableFootHtml = `
-            <tr style="background: #f8fafc; font-weight: bold;">
-                <td colspan="3" style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">TOTAL:</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${s.total_confirmed_bookings || 0}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${s.total_nights_sold || 0}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;"></td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-size: 14px;">${formatCurrency(s.total_revenue)}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;"></td>
-            </tr>
-        `;
+    if (rows.length === 0) {
+        tableRowsHtml = `<tr><td colspan="9" style="padding: 16px; text-align: center; border: 1px solid #cbd5e1; color: #64748b;">No reservations found matching the specified parameters.</td></tr>`;
     } else {
-        // Financial / Bookings Register
-        tableHeadersHtml = `
-            <tr>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Ref ID</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Guest Name</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Room</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Check-In</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Check-Out</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Nts</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: left;">Payment</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: right;">Total Price</th>
-                <th style="padding: 8px; border: 1px solid #cbd5e1; background: #f1f5f9; text-align: center;">Status</th>
-            </tr>
-        `;
+        tableRowsHtml = rows.map((b, idx) => {
+            const checkInFormatted = b.check_in_formatted || b.check_in;
+            const checkOutFormatted = b.check_out_formatted || b.check_out;
+            const createdFormatted = b.created_at_formatted || (b.created_at ? b.created_at.substring(0, 16) : '-');
+            const opStatus = b.operational_status || b.status;
+            const charges = parseFloat(b.total_charges !== undefined ? b.total_charges : (b.total_price || 0));
+            const paid = parseFloat(b.paid_amount || 0);
+            const balance = parseFloat(b.balance_due !== undefined ? b.balance_due : Math.max(0, charges - paid));
+            const paymentChannel = b.payment_channel || b.payment_method || 'Cash / Desk';
+            const occupants = b.occupants_summary || `${b.room_capacity || 2} Pax`;
+            const bgRow = idx % 2 === 1 ? 'background: #fbfcfe;' : 'background: #fff;';
 
-        const rows = d.rows || [];
-        if (rows.length === 0) {
-            tableRowsHtml = `<tr><td colspan="9" style="padding: 16px; text-align: center; border: 1px solid #cbd5e1; color: #64748b;">No booking transactions found.</td></tr>`;
-        } else {
-            tableRowsHtml = rows.map(b => `
-                <tr>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-size: 11px;">${b.ref_id}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: 600;">${b.final_guest_name}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${b.room_name} (${b.room_type})</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${b.check_in}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${b.check_out}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${b.nights}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${b.payment_method || 'Desk'}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold;">${formatCurrency(b.total_price)}</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 11px;">${b.status}</td>
+            let statusBadge = `<span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;">${opStatus}</span>`;
+            if (opStatus === 'Checked In') statusBadge = `<span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;">Checked In</span>`;
+            else if (opStatus === 'Checked Out') statusBadge = `<span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">Checked Out</span>`;
+            else if (opStatus === 'No-Show') statusBadge = `<span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa;">No-Show</span>`;
+            else if (opStatus === 'Cancelled') statusBadge = `<span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">Cancelled</span>`;
+
+            return `
+                <tr style="${bgRow} page-break-inside: avoid;">
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; font-family: monospace; font-size: 9.5px; font-weight: bold;">
+                        ${b.ref_id}<br>
+                        <span style="font-size: 8.5px; color: #64748b; font-family: sans-serif; font-weight: normal;">${createdFormatted}</span>
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1;">
+                        <strong style="color: #0f172a; font-size: 10.5px;">${b.final_guest_name}</strong><br>
+                        <span style="font-size: 9px; color: #64748b;">${b.guest_email || 'N/A'} • ${b.guest_phone || 'N/A'}</span><br>
+                        <span style="font-size: 8.5px; color: #4338ca; font-weight: bold;">${occupants}</span>
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1;">
+                        <strong style="font-size: 10px;">${b.room_name || ('Room #' + b.room_id)}</strong><br>
+                        <span style="font-size: 9px; color: #64748b;">${b.room_type || 'Standard'}</span>
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; font-size: 9.5px;">
+                        ${checkInFormatted} &rarr; ${checkOutFormatted}<br>
+                        <span style="color: #64748b; font-weight: bold;">${b.nights || 1} Night${(b.nights || 1) > 1 ? 's' : ''}</span>
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; text-align: center;">
+                        ${statusBadge}
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; font-family: monospace; font-size: 10px;">
+                        ${formatCurrency(charges)}
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; font-size: 9.5px; color: #334155;">
+                        ${paymentChannel}
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 9.5px; ${paid > 0 ? 'color: #15803d; font-weight: bold;' : 'color: #64748b;'}">
+                        ${paid > 0 ? formatCurrency(paid) : 'Unpaid'}
+                    </td>
+                    <td style="padding: 5px 6px; border: 1px solid #cbd5e1; text-align: right; font-family: monospace; font-weight: bold; font-size: 10px; ${balance > 0 ? 'color: #b45309;' : 'color: #15803d;'}">
+                        ${balance > 0 ? formatCurrency(balance) : '₱0.00'}
+                    </td>
                 </tr>
-            `).join('');
-        }
+            `;
+        }).join('');
+    }
 
-        tableFootHtml = `
-            <tr style="background: #f8fafc; font-weight: bold;">
-                <td colspan="5" style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">GRAND TOTAL CONFIRMED:</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">${s.total_nights_sold || 0}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1;"></td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-size: 14px; color: #4338ca;">${formatCurrency(s.confirmed_revenue)}</td>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px;">${s.confirmed_bookings || 0} Bks</td>
-            </tr>
-        `;
+    const tableFootHtml = `
+        <tr style="background: #f1f5f9; font-weight: bold; page-break-inside: avoid;">
+            <td colspan="3" style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 9.5px; text-transform: uppercase;">Reconciled Audit Totals:</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; font-size: 9.5px;">${s.total_nights_sold || 0} Nights</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 8.5px; color: #475569;">${s.confirmed_bookings || 0} Confirmed / ${rows.length} Total</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 11px; font-family: monospace; color: #15803d;">${formatCurrency(roomSales)}</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1;"></td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 10px; font-family: monospace; color: #15803d;">${formatCurrency(deposits)}</td>
+            <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 11px; font-family: monospace; color: #b45309;">${formatCurrency(pendingBal)}</td>
+        </tr>
+    `;
+
+    // 3. Special Remarks & Handover Notes List for Print
+    const remarks = d.special_remarks || [];
+    let remarksListHtml = '';
+    if (remarks.length === 0) {
+        remarksListHtml = `<div style="font-size: 9.5px; color: #64748b; font-style: italic;">No exception holds or flight arrival delays logged for this cycle.</div>`;
+    } else {
+        remarksListHtml = remarks.map(r => `
+            <div style="font-size: 9.5px; margin-bottom: 2px;">
+                <strong style="color: #4338ca;">[${r.category}]</strong> 
+                <strong>${r.ref_id}</strong> (${r.room} - ${r.guest}): 
+                <span style="color: #334155;">${r.note}</span>
+            </div>
+        `).join('');
     }
 
     const printWindow = window.open('', '_blank');
@@ -963,57 +1243,80 @@ function printHotelReport() {
             <title>${reportTitle} - ${reportRef}</title>
             <meta charset="utf-8">
             <style>
-                @page { size: portrait; margin: 12mm 15mm; }
+                @page { 
+                    size: landscape; 
+                    margin: 8mm 10mm; 
+                    @bottom-right { content: "Page " counter(page) " of " counter(pages); }
+                }
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                    color: #1e293b;
+                    color: #0f172a;
                     background: #fff;
                     margin: 0;
-                    padding: 20px;
-                    font-size: 12px;
-                    line-height: 1.4;
+                    padding: 12px;
+                    font-size: 11px;
+                    line-height: 1.35;
                 }
                 .header-container {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
                     border-bottom: 2px solid #0f172a;
-                    padding-bottom: 12px;
-                    margin-bottom: 16px;
+                    padding-bottom: 10px;
+                    margin-bottom: 12px;
+                }
+                .hotel-brand {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .brand-emblem {
+                    width: 44px;
+                    height: 44px;
+                    background: #4338ca;
+                    color: #fff;
+                    font-size: 24px;
+                    font-weight: 800;
+                    font-family: Georgia, serif;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
                 .hotel-title {
-                    font-size: 22px;
+                    font-size: 19px;
                     font-weight: 800;
                     color: #0f172a;
-                    letter-spacing: -0.5px;
+                    letter-spacing: -0.3px;
                 }
                 .hotel-subtitle {
-                    font-size: 11px;
+                    font-size: 10px;
                     color: #64748b;
-                    margin-top: 2px;
+                    margin-top: 1px;
                 }
                 .report-meta {
                     text-align: right;
-                    font-size: 11px;
+                    font-size: 10px;
                 }
-                .report-badge {
+                .classification-tag {
                     display: inline-block;
-                    background: #4338ca;
+                    background: #dc2626;
                     color: #fff;
-                    font-weight: bold;
-                    font-size: 11px;
+                    font-weight: 800;
+                    font-size: 9.5px;
                     padding: 3px 8px;
                     border-radius: 4px;
-                    margin-bottom: 4px;
+                    margin-bottom: 3px;
+                    letter-spacing: 0.5px;
                 }
                 .report-title-strip {
                     background: #f1f5f9;
-                    padding: 10px 14px;
+                    padding: 8px 12px;
                     border-radius: 6px;
                     font-weight: bold;
-                    font-size: 14px;
+                    font-size: 13px;
                     color: #0f172a;
-                    margin-bottom: 16px;
+                    margin-bottom: 12px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -1022,24 +1325,41 @@ function printHotelReport() {
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 20px;
+                    margin-bottom: 14px;
                 }
                 tr { page-break-inside: avoid; }
-                .sign-off-section {
-                    margin-top: 35px;
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 40px;
+                .sign-off-container {
+                    margin-top: 14px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 12px;
+                    background: #f8fafc;
                     page-break-inside: avoid;
                 }
+                .sign-off-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 30px;
+                    margin-top: 12px;
+                }
                 .signature-box {
-                    border-top: 1px solid #94a3b8;
+                    border-top: 1px solid #475569;
+                    padding-top: 5px;
+                    font-size: 10px;
+                }
+                .system-footer {
+                    margin-top: 14px;
+                    border-top: 1px dashed #cbd5e1;
                     padding-top: 6px;
-                    font-size: 11px;
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 9px;
+                    color: #64748b;
+                    page-break-inside: avoid;
                 }
                 .no-print {
-                    margin-bottom: 20px;
-                    padding: 12px;
+                    margin-bottom: 14px;
+                    padding: 10px 14px;
                     background: #f8fafc;
                     border: 1px solid #e2e8f0;
                     border-radius: 8px;
@@ -1048,13 +1368,14 @@ function printHotelReport() {
                     align-items: center;
                 }
                 .print-btn {
-                    background: #2563eb;
+                    background: #4338ca;
                     color: #fff;
                     border: none;
-                    padding: 8px 16px;
+                    padding: 7px 16px;
                     border-radius: 6px;
                     font-weight: bold;
                     cursor: pointer;
+                    font-size: 11px;
                 }
                 @media print {
                     .no-print { display: none !important; }
@@ -1065,35 +1386,38 @@ function printHotelReport() {
         <body>
             <div class="no-print">
                 <div>
-                    <strong>Print Preview</strong> - Ready for official hotel record archiving or PDF export.
+                    <strong>Official Hotel Audit Preview</strong> &bull; Conforms to 5 Key Structural Reporting Standards.
                 </div>
-                <button class="print-btn" onclick="window.print()">Print Document</button>
+                <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
             </div>
 
-            <!-- Hotel Branding Header -->
+            <!-- 1. DOCUMENT HEADER -->
             <div class="header-container">
-                <div>
-                    <div class="hotel-title">${hotelName}</div>
-                    <div class="hotel-subtitle">${hotelAddress}</div>
+                <div class="hotel-brand">
+                    <div class="brand-emblem">W</div>
+                    <div>
+                        <div class="hotel-title">${hotelName}</div>
+                        <div class="hotel-subtitle">${hotelAddress}</div>
+                    </div>
                 </div>
                 <div class="report-meta">
-                    <div class="report-badge">OFFICIAL REPORT</div>
-                    <div><strong>Ref #:</strong> ${reportRef}</div>
+                    <div class="classification-tag">CONFIDENTIAL // OFFICIAL PROPERTY AUDIT</div>
+                    <div><strong>Audit Ref #:</strong> <span style="font-family: monospace;">${reportRef}</span></div>
                     <div><strong>Generated:</strong> ${generatedDate}</div>
-                    <div><strong>Prepared By:</strong> Super Admin</div>
+                    <div><strong>System:</strong> W Island Hub PMS v2.4.0 (Enterprise)</div>
                 </div>
             </div>
 
-            <!-- Title Strip -->
+            <!-- Document Classification Title Strip -->
             <div class="report-title-strip">
                 <span>${reportTitle}</span>
-                <span style="font-size: 12px; color: #475569; font-weight: normal;">Period: <strong>${datePeriod}</strong></span>
+                <span style="font-size: 11px; color: #475569; font-weight: normal;">Reporting Cycle: <strong>${datePeriod}</strong></span>
             </div>
 
-            <!-- Summary KPI Grid -->
+            <!-- 2. OPERATIONAL SNAPSHOT (EXECUTIVE KPI BAR) -->
             ${kpiPrintHtml}
 
-            <!-- Data Table -->
+            <!-- 3. MAIN RESERVATION LEDGER (TABULAR DATA) -->
             <table>
                 <thead>
                     ${tableHeadersHtml}
@@ -1106,30 +1430,57 @@ function printHotelReport() {
                 </tfoot>
             </table>
 
-            <!-- Sign-Off & Verification Block -->
-            <div class="sign-off-section">
-                <div>
-                    <div style="height: 40px;"></div>
-                    <div class="signature-box">
-                        <strong>Prepared By:</strong> Admin Staff / General Reception<br>
-                        <span>W Island Hub Backpackers Inn Operations</span>
+            <!-- 4. VERIFICATION AND SIGN-OFF BLOCK -->
+            <div class="sign-off-container">
+                <div style="font-size: 11px; font-weight: bold; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    4. Verification and Sign-Off Block &bull; Special Remarks & Accountability Signatures
+                </div>
+
+                <!-- Special Remarks -->
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
+                    <div style="font-size: 9.5px; font-weight: bold; text-transform: uppercase; color: #64748b; margin-bottom: 4px;">
+                        Special Remarks & Operational Handover Notes:
+                    </div>
+                    ${remarksListHtml}
+                    <div style="margin-top: 6px; font-size: 9.5px; color: #1e293b; background: #f8fafc; padding: 5px 8px; border-left: 3px solid #4338ca; border-radius: 2px;">
+                        <strong>Front-Desk Handover Log:</strong> ${handoverText}
                     </div>
                 </div>
-                <div>
-                    <div style="height: 40px;"></div>
-                    <div class="signature-box">
-                        <strong>Verified & Approved By:</strong> Hotel Manager / Owner<br>
-                        <span>Date & Official Stamp</span>
+
+                <!-- Accountability Signatures -->
+                <div class="sign-off-grid">
+                    <div>
+                        <div style="font-size: 9.5px; color: #475569; font-style: italic; margin-bottom: 24px; min-height: 28px;">
+                            "I hereby certify that all room inventory counts, arrivals/departures movements, and key handovers for this operational cycle have been personally verified and matched against physical room status."
+                        </div>
+                        <div class="signature-box">
+                            <strong>Front-Office Supervisor on Duty</strong> &bull; Operations Lead<br>
+                            <span>Printed Name & Signature &bull; Shift: [  ] AM [  ] PM [  ] Night &bull; Date: _________________</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 9.5px; color: #475569; font-style: italic; margin-bottom: 24px; min-height: 28px;">
+                            "I have audited and balanced the reservation folio ledger, end-of-day revenue transactions, payment channel reconciliations, and confirmed outstanding folio balances for hotel administration."
+                        </div>
+                        <div class="signature-box">
+                            <strong>Night Auditor / General Manager</strong> &bull; Executive Sign-Off<br>
+                            <span>Printed Name & Signature &bull; Official Property Seal &bull; Date: _________________</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 25px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-                CONFIDENTIAL • Generated for internal administration of W Island Hub Backpackers Inn.
+            <!-- 5. SYSTEM FOOTER -->
+            <div class="system-footer">
+                <div>
+                    <strong>W Island Hub PMS v2.4.0 (Enterprise Reservation Engine)</strong> &bull; DB Instance: <code>w_island_hub</code> &bull; Ref: ${reportRef}
+                </div>
+                <div>
+                    CONFIDENTIAL &bull; Official Hotel Audit Record &bull; Generated: ${generatedDate}
+                </div>
             </div>
 
             <script>
-                // Auto trigger print dialog on load
                 window.onload = function() {
                     setTimeout(function() { window.print(); }, 500);
                 };
@@ -1144,7 +1495,7 @@ function printHotelReport() {
 }
 
 /**
- * Export Current Report Data to CSV format
+ * Export Current Report Data to CSV format adhering to structural fields
  */
 function exportReportCSV() {
     if (!currentReportData) {
@@ -1153,87 +1504,90 @@ function exportReportCSV() {
     }
 
     const d = currentReportData;
-    const type = d.report_type || 'financial';
+    const type = d.report_type || 'daily_summary';
+    const ops = d.operational_snapshot || {};
+    const s = d.summary || {};
     let csvRows = [];
 
-    // Header Meta
-    csvRows.push([`"W Island Hub Backpackers Inn - Official Report"`]);
-    csvRows.push([`"Report Type"`, `"${type.toUpperCase()}"`]);
+    // 1. Header Meta & Classification
+    csvRows.push([`"W Island Hub Backpackers Inn - Official Property Management System"`]);
+    csvRows.push([`"Sitio Duli, Barangay Bucana, El Nido, Palawan 5313, Philippines"`]);
+    csvRows.push([`"Report Title"`, `"${(d.report_title || 'DAILY RESERVATION SUMMARY & FRONT OFFICE NIGHT AUDIT').toUpperCase()}"`]);
+    csvRows.push([`"Classification"`, `"CONFIDENTIAL // OFFICIAL PROPERTY AUDIT"`]);
     csvRows.push([`"Reference #"`, `"${d.report_ref || ''}"`]);
-    csvRows.push([`"Period"`, `"${d.date_range_label || ''}"`]);
-    csvRows.push([`"Generated At"`, `"${d.generated_at || ''}"`]);
+    csvRows.push([`"Reporting Cycle"`, `"${d.date_range_label || ''}"`]);
+    csvRows.push([`"Generated At"`, `"${d.generated_at_formatted || d.generated_at || ''}"`]);
     csvRows.push([]); // Empty row
 
-    if (type === 'daily_manifest') {
-        csvRows.push([`"Activity"`, `"Ref ID"`, `"Guest Name"`, `"Email"`, `"Room"`, `"Type"`, `"Check-In"`, `"Check-Out"`, `"Nights"`, `"Payment"`, `"Total Price"`, `"Status"`]);
-        
-        const allManifest = [
-            ...(d.arrivals || []).map(x => ({ ...x, _act: 'Arrival' })),
-            ...(d.departures || []).map(x => ({ ...x, _act: 'Departure' })),
-            ...(d.in_house || []).map(x => ({ ...x, _act: 'In-House' }))
-        ];
+    // 2. Operational Snapshot Summary
+    csvRows.push([`"--- OPERATIONAL SNAPSHOT (EXECUTIVE KPI BAR) ---"`]);
+    csvRows.push([`"Occupancy Percentage"`, `"${ops.occupancy_percentage || 0}%"`]);
+    csvRows.push([`"Rooms Occupied"`, `"${ops.occupied_rooms || 0} / ${ops.rentable_rooms || 0} Rentable Rooms"`]);
+    csvRows.push([`"Total Property Inventory"`, `"${ops.total_inventory || 0} (Maintenance: ${ops.maintenance_rooms || 0})"`]);
+    csvRows.push([`"Expected Check-Ins"`, `"${ops.expected_check_ins || s.expected_arrivals || 0}"`]);
+    csvRows.push([`"Expected Check-Outs"`, `"${ops.expected_check_outs || s.expected_departures || 0}"`]);
+    csvRows.push([`"Stay-Overs (In-House)"`, `"${ops.stay_overs || s.in_house_guests || 0}"`]);
+    csvRows.push([`"Vacant Clean / Dirty"`, `"${ops.vacant_clean || 0} Clean / ${ops.vacant_dirty || 0} Hold"`]);
+    csvRows.push([`"Confirmed Room Sales"`, parseFloat(ops.room_sales || s.confirmed_revenue || 0).toFixed(2)]);
+    csvRows.push([`"Average Daily Rate (ADR)"`, parseFloat(ops.average_daily_rate || s.average_daily_rate || 0).toFixed(2)]);
+    csvRows.push([`"Total Pending Folio Balance"`, parseFloat(ops.total_pending_balance || s.pending_revenue || 0).toFixed(2)]);
+    csvRows.push([`"Total Deposits Collected"`, parseFloat(ops.total_deposits_collected || 0).toFixed(2)]);
+    csvRows.push([]); // Empty row
 
-        allManifest.forEach(b => {
-            csvRows.push([
-                `"${b._act}"`,
-                `"${b.ref_id}"`,
-                `"${b.final_guest_name}"`,
-                `"${b.guest_email || ''}"`,
-                `"${b.room_name}"`,
-                `"${b.room_type}"`,
-                `"${b.check_in}"`,
-                `"${b.check_out}"`,
-                b.nights,
-                `"${b.payment_method || 'Desk'}"`,
-                parseFloat(b.total_price).toFixed(2),
-                `"${b.status}"`
-            ]);
-        });
-    } else if (type === 'room_performance') {
-        csvRows.push([`"Room Name"`, `"Type"`, `"Base Price"`, `"Capacity"`, `"Total Bookings"`, `"Nights Sold"`, `"Occupancy Rate %"`, `"Revenue Generated"`, `"Status"`]);
-        (d.rooms_performance || []).forEach(r => {
-            csvRows.push([
-                `"${r.name}"`,
-                `"${r.type}"`,
-                parseFloat(r.price).toFixed(2),
-                r.capacity,
-                r.total_bookings,
-                r.nights_sold,
-                `${r.occupancy_rate}%`,
-                parseFloat(r.revenue_generated).toFixed(2),
-                `"${r.status}"`
-            ]);
-        });
-    } else {
-        csvRows.push([`"Ref ID"`, `"Guest Name"`, `"Email"`, `"Room Name"`, `"Room Type"`, `"Check-In"`, `"Check-Out"`, `"Nights"`, `"Payment Method"`, `"Total Price"`, `"Status"`, `"Booked Date"`]);
-        (d.rows || []).forEach(b => {
-            csvRows.push([
-                `"${b.ref_id}"`,
-                `"${b.final_guest_name}"`,
-                `"${b.guest_email || ''}"`,
-                `"${b.room_name || ''}"`,
-                `"${b.room_type || ''}"`,
-                `"${b.check_in}"`,
-                `"${b.check_out}"`,
-                b.nights || 1,
-                `"${b.payment_method || 'Desk'}"`,
-                parseFloat(b.total_price).toFixed(2),
-                `"${b.status}"`,
-                `"${b.created_at || ''}"`
-            ]);
-        });
-    }
+    // 3. Main Reservation Ledger Tabular Data
+    csvRows.push([`"--- MAIN RESERVATION LEDGER (TABULAR DATA) ---"`]);
+    csvRows.push([
+        `"Booking Ref ID"`,
+        `"Reservation Date"`,
+        `"Primary Guest Name"`,
+        `"Guest Email"`,
+        `"Guest Phone"`,
+        `"Occupants Pax"`,
+        `"Room Assigned"`,
+        `"Room Category/Tier"`,
+        `"Check-In Date"`,
+        `"Check-Out Date"`,
+        `"Total Nights"`,
+        `"Operational Status"`,
+        `"Total Room Charges (PHP)"`,
+        `"Payment Channel"`,
+        `"Deposit Paid (PHP)"`,
+        `"Folio Balance Due (PHP)"`,
+        `"Special Remarks"`
+    ]);
+
+    (d.rows || []).forEach(b => {
+        csvRows.push([
+            `"${b.ref_id}"`,
+            `"${b.created_at_formatted || b.created_at || ''}"`,
+            `"${b.final_guest_name}"`,
+            `"${b.guest_email || 'N/A'}"`,
+            `"${b.guest_phone || 'N/A'}"`,
+            `"${b.occupants_summary || (b.room_capacity + ' Pax')}"`,
+            `"${b.room_name || ('Room #' + b.room_id)}"`,
+            `"${b.room_type || 'Standard'}"`,
+            `"${b.check_in_formatted || b.check_in}"`,
+            `"${b.check_out_formatted || b.check_out}"`,
+            b.nights || 1,
+            `"${b.operational_status || b.status}"`,
+            parseFloat(b.total_charges !== undefined ? b.total_charges : (b.total_price || 0)).toFixed(2),
+            `"${b.payment_channel || b.payment_method || 'Desk'}"`,
+            parseFloat(b.paid_amount || 0).toFixed(2),
+            parseFloat(b.balance_due !== undefined ? b.balance_due : 0).toFixed(2),
+            `"${(b.special_requests || '').replace(/"/g, '""')}"`
+        ]);
+    });
 
     const csvContent = "\uFEFF" + csvRows.map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `hotel_report_${type}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `hotel_operational_audit_${type}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('CSV report downloaded successfully', 'success');
+    showToast('CSV audit report downloaded successfully', 'success');
 }
 
 /**

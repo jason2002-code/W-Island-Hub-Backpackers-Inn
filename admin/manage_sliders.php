@@ -3,7 +3,7 @@
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h3 class="text-2xl font-bold text-brand-dark">Carousel & Slider Management</h3>
-            <p class="text-gray-500 text-sm">Manage hero carousel and marquee gallery images</p>
+            <p class="text-gray-500 text-sm">Manage hero carousel and island gallery carousel images</p>
         </div>
         <button onclick="openSliderModal()" class="bg-brand-purple hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">
             <i class="fas fa-plus"></i> Add New Slider
@@ -41,13 +41,13 @@
         </div>
     </div>
 
-    <!-- Marquee Gallery Section -->
+    <!-- Gallery Carousel Section -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h4 class="text-lg font-bold text-brand-dark mb-4 flex items-center gap-2">
-            <i class="fas fa-film text-brand-purple"></i> Marquee Gallery
+            <i class="fas fa-photo-video text-brand-purple"></i> Island Gallery Carousel
         </h4>
         <div id="marquee-sliders-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <!-- Marquee sliders will be loaded here -->
+            <!-- Gallery carousel sliders will be loaded here -->
         </div>
     </div>
 </div>
@@ -88,7 +88,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                 <select id="slider-type" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-purple/20">
                     <option value="hero">Hero Carousel</option>
-                    <option value="marquee">Marquee Gallery</option>
+                    <option value="marquee">Island Gallery Carousel</option>
                 </select>
             </div>
             

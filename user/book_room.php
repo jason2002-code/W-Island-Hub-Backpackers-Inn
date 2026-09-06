@@ -169,13 +169,14 @@
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                                         <div class="text-center sm:text-left">
                                             <span class="text-[10px] uppercase font-bold text-gray-400 block">GCash Account Name</span>
-                                            <strong class="text-gray-800 text-sm block mb-2">W Island Hub Backpackers Inn</strong>
+                                            <strong class="text-gray-800 text-sm block mb-2">MA*K JA**N C. <span class="text-xs font-normal text-gray-500">(W Island Hub)</span></strong>
                                             
                                             <span class="text-[10px] uppercase font-bold text-gray-400 block">GCash Mobile Number</span>
                                             <div class="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                                                <strong class="font-mono text-base text-blue-600" id="gcash-number-display">0912-345-6789</strong>
-                                                <button type="button" onclick="copyGcashNumber()" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-0.5 bg-gray-100 rounded" title="Copy Number">
+                                                <strong class="font-mono text-base text-blue-600 font-bold" id="gcash-number-display">0975-361-4030</strong>
+                                                <button type="button" onclick="copyGcashNumber()" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded transition flex items-center gap-1" title="Copy Number">
                                                     <i class="far fa-copy"></i>
+                                                    <span>Copy</span>
                                                 </button>
                                             </div>
 
@@ -184,12 +185,12 @@
                                         </div>
 
                                         <div class="flex flex-col items-center justify-center border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-4">
-                                            <div class="p-2 bg-white rounded-xl border border-gray-200 shadow-inner">
-                                                <img id="gcash-qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=09123456789" alt="GCash QR Code" class="w-32 h-32 object-contain">
+                                            <div class="p-1.5 bg-white rounded-xl border border-gray-200 shadow-inner group cursor-pointer hover:border-blue-400 hover:shadow-md transition" onclick="openGcashQrModal()" title="Click to enlarge official GCash QR Code">
+                                                <img id="gcash-qr-image" src="assets/image/gcash_qr_card.jpg" onerror="this.src='../assets/image/gcash_qr_card.jpg'" alt="Official GCash QR Code" class="w-36 h-auto max-h-48 object-contain rounded-lg group-hover:scale-105 transition-transform duration-200">
                                             </div>
-                                            <span class="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
-                                                <i class="fas fa-camera"></i> Scan with GCash App
-                                            </span>
+                                            <button type="button" onclick="openGcashQrModal()" class="text-[11px] text-brand-blue font-semibold mt-1.5 flex items-center gap-1 hover:underline">
+                                                <i class="fas fa-search-plus"></i> View Full GCash QR
+                                            </button>
                                         </div>
                                     </div>
 
@@ -290,5 +291,45 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Official GCash QR Code Modal (Enlarged High-Res Preview) -->
+        <div id="gcash-qr-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-[200] hidden items-center justify-center p-4" onclick="closeGcashQrModal(event)">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 relative overflow-hidden text-center" onclick="event.stopPropagation()">
+                <button type="button" onclick="closeGcashQrModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="mb-3">
+                    <div class="inline-flex items-center gap-2 mb-1">
+                        <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">G</span>
+                        <h4 class="font-bold text-gray-800 text-base">Official GCash QR Code</h4>
+                    </div>
+                    <p class="text-xs text-gray-500">Scan using GCash, Maya, or any InstaPay app</p>
+                </div>
+                
+                <div class="p-2 bg-blue-50/50 rounded-2xl border border-blue-100 mb-3 inline-block">
+                    <img src="assets/image/gcash_qr.jpg" onerror="this.src='../assets/image/gcash_qr.jpg'" alt="Official GCash QR Code" class="max-h-[58vh] w-auto mx-auto rounded-xl shadow-md object-contain">
+                </div>
+                
+                <div class="bg-slate-50 rounded-2xl p-3 border border-gray-100 text-xs text-left space-y-1.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Account Name:</span>
+                        <strong class="text-gray-800">MA*K JA**N C.</strong>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Mobile Number:</span>
+                        <span class="flex items-center gap-1.5 font-mono font-bold text-blue-600">
+                            0975-361-4030
+                            <button type="button" onclick="copyGcashNumber()" class="text-gray-500 hover:text-blue-600 text-xs px-1.5 py-0.5 bg-white border border-gray-200 rounded transition" title="Copy Number">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </span>
+                    </div>
+                </div>
+
+                <button type="button" onclick="closeGcashQrModal()" class="w-full mt-4 bg-brand-blue hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl transition text-sm shadow">
+                    Done
+                </button>
             </div>
         </div>
