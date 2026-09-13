@@ -40,8 +40,11 @@ if ($pdo) {
             $stars = round($rating);
             $room_id = intval($room['id']);
         ?>
-            <?php $room_capacity = intval($room['capacity'] ?? 2); ?>
-            <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col" data-room-id="<?php echo $room_id; ?>" data-capacity="<?php echo $room_capacity; ?>">
+            <?php 
+                $room_capacity = intval($room['capacity'] ?? 2); 
+                $room_max_capacity = intval($room['max_capacity'] ?? $room_capacity);
+            ?>
+            <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col" data-room-id="<?php echo $room_id; ?>" data-capacity="<?php echo $room_capacity; ?>" data-max-capacity="<?php echo $room_max_capacity; ?>">
                 <div class="h-48 overflow-hidden relative cursor-pointer group" onclick="openRoomInfoModal(<?php echo $room_id; ?>)" title="Click to view full room information">
                     <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['name']); ?>" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
                     <div class="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -65,7 +68,7 @@ if ($pdo) {
                     <p class="text-gray-500 text-sm mb-4 line-clamp-2"><?php echo htmlspecialchars($room['description']); ?></p>
                     
                     <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to <?php echo $room_capacity; ?> Guest<?php echo $room_capacity > 1 ? 's' : ''; ?></span>
+                        <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to <?php echo $room_max_capacity; ?> Guest<?php echo $room_max_capacity > 1 ? 's' : ''; ?></span>
                         <?php foreach (array_slice($amenities, 0, 3) as $amenity): ?>
                             <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded"><?php echo htmlspecialchars($amenity); ?></span>
                         <?php endforeach; ?>

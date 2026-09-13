@@ -43,19 +43,30 @@ $bookings = $bookingStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Map DB columns to JS expected format
 $jsBookings = array_map(function($b) {
+    $total = (float)($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0));
+    $paid = (float)($b['paid_amount'] ?? 0);
+    $balance = (float)($b['balance_due'] ?? ($total - $paid));
+
     return [
-        'id' => $b['id'],
+        'id' => (int)$b['id'],
         'refId' => $b['ref_id'] ?? ('WIH-' . $b['id']),
+        'ref_id' => $b['ref_id'] ?? ('WIH-' . $b['id']),
         'roomName' => $b['room_name'] ?? 'Island Room',
         'roomId' => $b['room_id'] ?? null,
         'roomImage' => $b['room_image'] ?? 'assets/image/background.jpg',
-        'checkIn' => $b['check_in'] ?? '',
-        'checkOut' => $b['check_out'] ?? '',
+        'checkIn' => $b['check_in_date'] ?: ($b['check_in'] ?? ''),
+        'checkOut' => $b['check_out_date'] ?: ($b['check_out'] ?? ''),
         'nights' => (int)($b['nights'] ?? 1),
         'dateBooked' => $b['created_at'] ?? '',
-        'total' => (float)($b['total_price'] ?? 0),
+        'total' => $total,
+        'paidAmount' => $paid,
+        'balanceDue' => max(0, $balance),
         'status' => $b['status'] ?? 'Pending',
+        'bookingStatus' => $b['booking_status'] ?? 'pending_verification',
         'paymentMethod' => $b['payment_method'] ?? 'Full Payment',
+        'gcashRefNo' => $b['gcash_reference_no'] ?? null,
+        'paymongoSessionId' => $b['paymongo_session_id'] ?? null,
+        'paymongoPaymentId' => $b['paymongo_payment_id'] ?? null,
         'userId' => $b['user_id'],
         'guestName' => $b['guest_name'] ?? ''
     ];

@@ -1,7 +1,9 @@
 <?php
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
-header('Content-Type: application/json');
+if (!headers_sent()) {
+    header('Content-Type: application/json');
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -75,15 +77,24 @@ function addRoom() {
         $stmt = $pdo->query("DESCRIBE rooms");
         $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
         $hasStatus = in_array('status', $columns);
-        if ($hasStatus) {
-            $sql = "INSERT INTO rooms (name, type, price, description, image, capacity, amenities, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Available')";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$name, $type, $price, $description, $image, $capacity, $amenities]);
-        } else {
-            $sql = "INSERT INTO rooms (name, type, price, description, image, capacity, amenities) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$name, $type, $price, $description, $image, $capacity, $amenities]);
+        $hasMaxCap = in_array('max_capacity', $columns);
+        
+        $fields = ['name', 'type', 'price', 'description', 'image', 'capacity', 'amenities'];
+        $values = [$name, $type, $price, $description, $image, $capacity, $amenities];
+        
+        if ($hasMaxCap) {
+            $fields[] = 'max_capacity';
+            $values[] = $capacity;
         }
+        if ($hasStatus) {
+            $fields[] = 'status';
+            $values[] = 'Available';
+        }
+        
+        $placeholders = implode(', ', array_fill(0, count($fields), '?'));
+        $sql = "INSERT INTO rooms (" . implode(', ', $fields) . ") VALUES (" . $placeholders . ")";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($values);
         echo json_encode(['success' => true, 'message' => 'Room added', 'id' => $pdo->lastInsertId()]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'DB error']);
@@ -123,7 +134,12 @@ function updateRoom() {
         if (isset($data['price'])) { $updates[] = 'price = ?'; $params[] = $data['price']; }
         if (isset($data['description'])) { $updates[] = 'description = ?'; $params[] = $data['description']; }
         if (isset($data['image'])) { $updates[] = 'image = ?'; $params[] = $data['image']; }
-        if (isset($data['capacity'])) { $updates[] = 'capacity = ?'; $params[] = $data['capacity']; }
+        if (isset($data['capacity'])) { 
+            $updates[] = 'capacity = ?'; 
+            $params[] = $data['capacity']; 
+            $updates[] = 'max_capacity = ?'; 
+            $params[] = $data['capacity']; 
+        }
         if (isset($data['amenities'])) { $updates[] = 'amenities = ?'; $params[] = $data['amenities']; }
         if (isset($data['status'])) { $updates[] = 'status = ?'; $params[] = $data['status']; }
         if (empty($updates)) {
@@ -134,6 +150,22 @@ function updateRoom() {
         $sql = "UPDATE rooms SET " . implode(', ', $updates) . " WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+
+        // Recalculate dynamic available capacity for this room
+        $pdo->prepare("
+            UPDATE rooms r
+            SET r.capacity = GREATEST(0, COALESCE(r.max_capacity, r.capacity) - (
+                SELECT COUNT(*)
+                FROM bookings b
+                WHERE b.room_id = r.id
+                  AND b.status IN ('Pending', 'Confirmed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+                  AND CURRENT_DATE() >= COALESCE(b.check_in_date, b.check_in)
+                  AND CURRENT_DATE() < COALESCE(b.check_out_date, b.check_out)
+            ))
+            WHERE r.id = ?
+        ")->execute([$roomId]);
+
         echo json_encode(['success' => true, 'message' => 'Updated']);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'DB error']);

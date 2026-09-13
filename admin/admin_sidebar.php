@@ -18,12 +18,25 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <a href="manage_reservations.php" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl <?php echo $current_page == 'manage_reservations.php' ? 'active' : ''; ?>">
             <i class="fas fa-calendar-alt w-5"></i> Bookings
         </a>
-        <a href="manage_rooms.php" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl <?php echo $current_page == 'manage_rooms.php' ? 'active' : ''; ?>">
-            <i class="fas fa-door-open w-5"></i> Rooms
-        </a>
-        <a href="manage_prices.php" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl <?php echo $current_page == 'manage_prices.php' ? 'active' : ''; ?>">
-            <i class="fas fa-tags w-5"></i> Room Prices
-        </a>
+        <?php $is_rooms_open = in_array($current_page, ['manage_rooms.php', 'manage_prices.php']); ?>
+        <!-- Rooms Dropdown -->
+        <div class="space-y-1">
+            <button type="button" onclick="toggleSidebarRoomsDropdown()" class="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple text-gray-600 transition group cursor-pointer font-medium <?php echo $is_rooms_open ? 'text-brand-purple bg-blue-50/50' : ''; ?>">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-door-open w-5"></i>
+                    <span>Rooms</span>
+                </div>
+                <i id="sidebar-rooms-chevron" class="fas fa-chevron-down text-xs transition-transform duration-200 <?php echo $is_rooms_open ? 'rotate-180 text-brand-purple' : 'text-gray-400 group-hover:text-brand-purple'; ?>"></i>
+            </button>
+            <div id="sidebar-rooms-dropdown" class="<?php echo $is_rooms_open ? '' : 'hidden'; ?> pl-4 pr-1 space-y-1 border-l-2 border-gray-100 ml-6 my-1">
+                <a href="manage_rooms.php" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm <?php echo $current_page == 'manage_rooms.php' ? 'active' : ''; ?> hover:bg-blue-50 hover:text-brand-purple transition">
+                    <i class="fas fa-bed w-4 text-xs"></i> Manage Rooms
+                </a>
+                <a href="manage_prices.php" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm <?php echo $current_page == 'manage_prices.php' ? 'active' : ''; ?> hover:bg-blue-50 hover:text-brand-purple transition">
+                    <i class="fas fa-tags w-4 text-xs"></i> Room Prices
+                </a>
+            </div>
+        </div>
         
         <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Management</p>
         
@@ -41,3 +54,15 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
     </div>
 </div>
+<script>
+function toggleSidebarRoomsDropdown() {
+    const menu = document.getElementById('sidebar-rooms-dropdown');
+    const chevron = document.getElementById('sidebar-rooms-chevron');
+    if (menu) {
+        menu.classList.toggle('hidden');
+        if (chevron) {
+            chevron.classList.toggle('rotate-180');
+        }
+    }
+}
+</script>

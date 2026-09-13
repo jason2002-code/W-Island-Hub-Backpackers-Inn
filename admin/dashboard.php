@@ -93,12 +93,26 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                     <i class="fas fa-calendar-alt w-5"></i> Bookings
                     <span id="booking-count-badge" class="ml-auto bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
                 </a>
-                <a onclick="showAdminSection('manage-rooms'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
-                    <i class="fas fa-door-open w-5"></i> Rooms
-                </a>
-                <a onclick="showAdminSection('manage-prices'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
-                    <i class="fas fa-tags w-5"></i> Room Prices
-                </a>
+                <!-- Rooms Dropdown -->
+                <div class="space-y-1">
+                    <button type="button" onclick="toggleRoomsDropdown()" id="rooms-parent-btn" class="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple text-gray-600 transition group cursor-pointer font-medium select-none">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-door-open w-5"></i>
+                            <span>Rooms</span>
+                        </div>
+                        <i id="rooms-dropdown-chevron" class="fas fa-chevron-down text-xs text-gray-400 group-hover:text-brand-purple transition-transform duration-200"></i>
+                    </button>
+                    <div id="rooms-dropdown-menu" class="hidden pl-4 pr-1 space-y-1 border-l-2 border-gray-100 ml-6 my-1">
+                        <a onclick="showAdminSection('manage-rooms'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition" id="nav-rooms-inventory">
+                            <i class="fas fa-bed w-4 text-xs"></i>
+                            <span>Manage Rooms</span>
+                        </a>
+                        <a onclick="showAdminSection('manage-prices'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition" id="nav-rooms-prices">
+                            <i class="fas fa-tags w-4 text-xs"></i>
+                            <span>Room Prices</span>
+                        </a>
+                    </div>
+                </div>
                 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Management</p>
                 
@@ -180,6 +194,23 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
             initAdmin();
         }
         
+        function toggleRoomsDropdown(forceOpen = null) {
+            const menu = document.getElementById('rooms-dropdown-menu');
+            const chevron = document.getElementById('rooms-dropdown-chevron');
+            if (!menu) return;
+            
+            const isClosed = menu.classList.contains('hidden');
+            const shouldOpen = forceOpen !== null ? forceOpen : isClosed;
+            
+            if (shouldOpen) {
+                menu.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+            } else {
+                menu.classList.add('hidden');
+                if (chevron) chevron.classList.remove('rotate-180');
+            }
+        }
+
         function showAdminSection(sectionId) {
             // Hide all sections
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
@@ -199,6 +230,11 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 'manage-reviews': 'Reviews & Ratings',
             };
             document.getElementById('admin-page-title').innerText = titles[sectionId] || 'Admin Panel';
+
+            // Auto-expand and style rooms dropdown when navigating to rooms or room prices
+            if (sectionId === 'manage-rooms' || sectionId === 'manage-prices') {
+                toggleRoomsDropdown(true);
+            }
         }
 
         // Load booking counts for sidebar badge

@@ -111,8 +111,26 @@
                 link.classList.remove('bg-blue-50', 'text-brand-purple', 'font-medium');
                 link.classList.add('text-gray-600');
             });
-            element.classList.add('bg-blue-50', 'text-brand-purple', 'font-medium');
-            element.classList.remove('text-gray-600');
+            if (element) {
+                element.classList.add('bg-blue-50', 'text-brand-purple', 'font-medium');
+                element.classList.remove('text-gray-600');
+            }
+            
+            // Update parent Rooms button styling and dropdown open state
+            const roomsParent = document.getElementById('rooms-parent-btn');
+            const roomsDropdown = document.getElementById('rooms-dropdown-menu');
+            if (roomsParent && roomsDropdown) {
+                if (element && roomsDropdown.contains(element)) {
+                    roomsParent.classList.add('text-brand-purple', 'font-semibold', 'bg-blue-50/50');
+                    roomsParent.classList.remove('text-gray-600');
+                    if (typeof toggleRoomsDropdown === 'function') {
+                        toggleRoomsDropdown(true);
+                    }
+                } else {
+                    roomsParent.classList.remove('text-brand-purple', 'font-semibold', 'bg-blue-50/50');
+                    roomsParent.classList.add('text-gray-600');
+                }
+            }
             
             // Close sidebar on mobile after clicking
             if(window.innerWidth < 768) {

@@ -88,11 +88,11 @@ function submitReview() {
     error_log("DEBUG submitReview input: " . print_r($input, true));
     error_log("DEBUG SESSION user_id: " . ($_SESSION['user_id'] ?? 'NOT SET'));
     
-    if (!isset($_SESSION['user_id'])) {
+    $userId = !empty($input['user_id']) ? intval($input['user_id']) : ($_SESSION['user_id'] ?? null);
+    if (!$userId) {
         echo json_encode(['success' => false, 'message' => 'Please login to submit a review']);
         return;
     }
-    $userId = $_SESSION['user_id'];
     $rating = floatval($input['rating'] ?? 0);
     $comment = trim($input['comment'] ?? '');
     $roomId = intval($input['room_id'] ?? 0);

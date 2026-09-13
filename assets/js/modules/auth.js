@@ -288,6 +288,8 @@ function logout() {
     if (typeof window.saveState === 'function') {
         window.saveState(role);
     }
+    sessionStorage.removeItem('w_currentUser');
+    localStorage.removeItem('w_currentUser');
     sessionStorage.setItem('w_justLoggedOut', 'true');
     const basePath = (window.location.pathname.includes('/admin/') || window.location.pathname.includes('/user/')) ? '../' : '';
     window.location.href = basePath + 'logout.php?type=' + role;

@@ -17,17 +17,20 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
     modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4';
     
     const paymentMethodEl = document.querySelector('input[name="payment"]:checked');
-    const paymentMethodVal = paymentMethodEl ? paymentMethodEl.value : 'full_gcash';
+    const paymentMethodVal = apiResponse.payment_method || (paymentMethodEl ? paymentMethodEl.value : 'paymongo');
     const dateNow = new Date().toLocaleDateString();
 
-    let paymentLabel = 'Full Payment (GCash)';
-    let statusBadge = '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full font-bold text-xs">Pending Verification (2-Hr Hold)</span>';
+    let paymentLabel = 'Online Payment (PayMongo)';
+    let statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Confirmed (Instant Online)</span>';
     let paidAmount = apiResponse.paid_amount !== undefined ? apiResponse.paid_amount : bookingDetails.total;
     let balanceDue = apiResponse.balance_due !== undefined ? apiResponse.balance_due : 0;
 
-    if (paymentMethodVal === 'pay_at_hotel') {
+    if (paymentMethodVal === 'pay_at_hotel' || (typeof paymentMethodVal === 'string' && paymentMethodVal.toLowerCase().includes('hotel'))) {
         paymentLabel = 'Strict Pay at Hotel (Conditional)';
         statusBadge = '<span class="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full font-bold text-xs">Pending Arrival (Strict Hold)</span>';
+    } else {
+        paymentLabel = 'Online Payment (PayMongo)';
+        statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Confirmed (Instant Online)</span>';
     }
 
     modal.innerHTML = `
@@ -61,8 +64,9 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                 <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 grid grid-cols-2 gap-4 text-xs">
                     <div>
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Guest Information:</span>
-                        <strong class="text-gray-800 text-sm block">${document.getElementById('book-name')?.value || 'Guest'}</strong>
-                        <span class="text-gray-500 block">${document.getElementById('book-email')?.value || ''}</span>
+                        <strong class="text-gray-800 text-sm block">${document.getElementById('book-name')?.value || apiResponse.guest_name || bookingDetails.guestName || 'Guest'}</strong>
+                        <span class="text-gray-500 block">${document.getElementById('book-email')?.value || apiResponse.guest_email || bookingDetails.guestEmail || ''}</span>
+                        <div class="text-[11px] text-brand-blue font-semibold mt-1"><i class="fas fa-users mr-1"></i>${bookingDetails.guests || 1} Guests (${bookingDetails.adults || 1} Adult${(bookingDetails.adults || 1) > 1 ? 's' : ''}${bookingDetails.children > 0 ? `, ${bookingDetails.children} Child${bookingDetails.children > 1 ? 'ren' : ''}` : ''})</div>
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Payment Pathway:</span>
@@ -76,7 +80,8 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                     <div class="bg-white rounded-2xl p-4 border border-gray-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                         <div>
                             <span class="text-gray-400 block text-[10px]">Room</span>
-                            <strong class="text-gray-800">${bookingDetails.roomName}</strong>
+                            <strong class="text-gray-800">${bookingDetails.roomsCount > 1 ? `${bookingDetails.roomsCount}x ` : ''}${bookingDetails.roomName}</strong>
+                            ${bookingDetails.roomsCount > 1 ? `<span class="text-[10px] text-brand-blue block font-semibold">(${bookingDetails.roomsCount} Rooms)</span>` : ''}
                         </div>
                         <div>
                             <span class="text-gray-400 block text-[10px]">Duration</span>
@@ -104,9 +109,9 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                         <tr class="border-b border-gray-100">
                             <td class="py-3">
                                 <div class="font-bold text-gray-800">Room Accommodation Rate</div>
-                                <div class="text-[10px] text-gray-400">₱${bookingDetails.pricePerNight.toFixed(2)} x ${bookingDetails.nights} nights</div>
+                                <div class="text-[10px] text-gray-400">₱${bookingDetails.pricePerNight.toFixed(2)} x ${bookingDetails.nights} night(s)${bookingDetails.roomsCount > 1 ? ` x ${bookingDetails.roomsCount} rooms` : ''}</div>
                             </td>
-                            <td class="py-3 text-right font-semibold text-gray-700">₱${(bookingDetails.pricePerNight * bookingDetails.nights).toFixed(2)}</td>
+                            <td class="py-3 text-right font-semibold text-gray-700">₱${(bookingDetails.pricePerNight * bookingDetails.nights * (bookingDetails.roomsCount || 1)).toFixed(2)}</td>
                         </tr>
                         <tr class="border-b border-gray-100">
                             <td class="py-3">

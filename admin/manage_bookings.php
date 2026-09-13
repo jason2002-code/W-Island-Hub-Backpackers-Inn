@@ -5,7 +5,7 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
                 <h3 class="text-2xl sm:text-3xl font-serif font-bold text-gray-800">Booking Management</h3>
-                <p class="text-xs text-gray-500 mt-1">Multi-tier reservation engine: verify GCash proofs, manage deposit balances & check-ins.</p>
+                <p class="text-xs text-gray-500 mt-1">Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.</p>
             </div>
             
             <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -18,9 +18,9 @@
                 
                 <select id="status-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
                     <option value="">All Statuses</option>
-                    <option value="pending_verification">⏳ Pending Verification (GCash)</option>
+                    <option value="pending_verification">⏳ Pending Verification / Hold</option>
                     <option value="deposit_paid">🪙 Deposit Paid (Balance Due)</option>
-                    <option value="confirmed">✅ Confirmed (Full Paid)</option>
+                    <option value="confirmed">✅ Confirmed (PayMongo / Paid)</option>
                     <option value="pending_arrival">🏨 Pending Arrival (Pay at Hotel)</option>
                     <option value="completed">🎉 Completed / Checked-In</option>
                     <option value="cancelled_expired">❌ Cancelled / Expired Hold</option>
@@ -29,6 +29,7 @@
 
                 <select id="payment-method-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
                     <option value="">All Payment Types</option>
+                    <option value="paymongo">⚡ PayMongo Online</option>
                     <option value="full_gcash">Full GCash (100%)</option>
                     <option value="deposit_gcash">Deposit GCash (30%)</option>
                     <option value="pay_at_hotel">Pay at Hotel</option>
@@ -295,7 +296,9 @@ function filterBookings() {
             (b.gcashRefNo && b.gcashRefNo.toLowerCase().includes(search));
 
         const matchesStatus = !statusFilter || b.bookingStatus === statusFilter;
-        const matchesPayment = !paymentFilter || b.paymentMethodRaw === paymentFilter;
+        const matchesPayment = !paymentFilter || 
+            b.paymentMethodRaw === paymentFilter || 
+            (paymentFilter === 'paymongo' && (b.paymentMethodRaw || '').toLowerCase().includes('paymongo'));
 
         return matchesSearch && matchesStatus && matchesPayment;
     });
@@ -343,7 +346,9 @@ function renderBookings(bookings) {
 
         // Payment Method Badge
         let paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-700">${b.paymentMethod}</span>`;
-        if (b.paymentMethodRaw === 'full_gcash') {
+        if (b.paymentMethodRaw && b.paymentMethodRaw.toLowerCase().includes('paymongo')) {
+            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-fit"><i class="fas fa-bolt text-emerald-600"></i> ${b.paymentMethod}</span>`;
+        } else if (b.paymentMethodRaw === 'full_gcash') {
             paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 w-fit"><i class="fas fa-qrcode"></i> Full GCash</span>`;
         } else if (b.paymentMethodRaw === 'deposit_gcash') {
             paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit"><i class="fas fa-coins"></i> 30% Deposit</span>`;
@@ -364,18 +369,24 @@ function renderBookings(bookings) {
                     <div class="font-bold text-gray-800 text-xs">${b.guestName}</div>
                     <div class="text-[11px] text-gray-500">${b.guestEmail || '-'}</div>
                     <div class="text-[10px] text-gray-400 font-mono">${b.guestPhone || ''}</div>
+                    <div class="text-[10px] text-slate-500 font-medium mt-0.5"><i class="fas fa-users text-amber-500 mr-1"></i>${(b.adults || 1) + (b.children || 0)} Guests (${b.adults || 1}A, ${b.children || 0}C)</div>
                 </td>
 
                 <!-- Room & Stay -->
                 <td class="p-3.5">
-                    <div class="font-semibold text-gray-800">${b.roomName}</div>
+                    <div class="font-semibold text-gray-800 flex items-center gap-1.5">
+                        ${b.roomsCount > 1 ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-200">${b.roomsCount} Rooms</span>` : ''}
+                        <span>${b.roomName}</span>
+                    </div>
                     <div class="text-[11px] text-gray-500">${formatDate(b.checkIn)} &rarr; ${formatDate(b.checkOut)} (${b.nights}n)</div>
                 </td>
 
                 <!-- Payment Pathway -->
                 <td class="p-3.5 space-y-1">
                     ${paymentBadge}
-                    ${b.gcashRefNo ? `<div class="text-[10px] font-mono text-gray-500 truncate max-w-[140px]" title="GCash Ref: ${b.gcashRefNo}">Ref: ${b.gcashRefNo}</div>` : ''}
+                    ${b.gcashRefNo ? `<div class="text-[10px] font-mono text-gray-500 truncate max-w-[140px]" title="GCash Ref: ${b.gcashRefNo}">GCash: ${b.gcashRefNo}</div>` : ''}
+                    ${b.paymongoPaymentId ? `<div class="text-[10px] font-mono text-emerald-700 truncate max-w-[140px]" title="PayMongo: ${b.paymongoPaymentId}"><i class="fas fa-receipt mr-1"></i>${b.paymongoPaymentId}</div>` : ''}
+                    ${(!b.paymongoPaymentId && b.paymongoSessionId) ? `<div class="text-[9px] font-mono text-gray-400 truncate max-w-[140px]" title="Session: ${b.paymongoSessionId}">${b.paymongoSessionId}</div>` : ''}
                 </td>
 
                 <!-- Paid vs Balance -->
@@ -394,6 +405,12 @@ function renderBookings(bookings) {
                 <!-- Actions -->
                 <td class="p-3.5 text-right">
                     <div class="flex items-center justify-end gap-1.5">
+                        ${(b.paymongoSessionId && b.bookingStatus === 'pending_verification') ? `
+                            <button onclick="adminVerifyPaymongo('${b.paymongoSessionId}', '${b.ref_id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center gap-1" title="Check PayMongo Live Status">
+                                <i class="fas fa-sync-alt"></i> Verify PayMongo
+                            </button>
+                        ` : ''}
+
                         ${(b.receiptUrl || b.gcashRefNo) ? `
                             <button onclick="openReceiptModal(${b.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition flex items-center gap-1" title="Verify Proof of Payment">
                                 <i class="fas fa-search-dollar"></i> Review Proof
@@ -542,6 +559,28 @@ function approveBooking(bookingId) {
             showToast('Error approving booking', 'error');
         });
     });
+}
+
+function adminVerifyPaymongo(sessionId, refId) {
+    showToast('Checking PayMongo API status...', 'info');
+    fetch(`../actions/paymongo_action.php?action=verify_session&session_id=${encodeURIComponent(sessionId)}&ref_id=${encodeURIComponent(refId)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (data.is_paid) {
+                    showToast('Payment verified as PAID on PayMongo! Booking is Confirmed.', 'success');
+                    loadBookings();
+                } else {
+                    showToast(`PayMongo status: ${data.session_status || 'Awaiting Payment'}.`, 'warning');
+                }
+            } else {
+                showToast('PayMongo error: ' + (data.message || 'Verification failed'), 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Network error verifying PayMongo status', 'error');
+        });
 }
 
 function rejectBooking(bookingId) {

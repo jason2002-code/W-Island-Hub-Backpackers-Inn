@@ -18,15 +18,15 @@ function createDirectBooking($data) {
         exit;
     }
 
-    $userId = $data['user_id'] ?? null;
+    $userId = !empty($data['user_id']) ? intval($data['user_id']) : null;
     $roomId = $data['room_id'] ?? null;
     $checkIn = $data['check_in'] ?? $data['checkIn'] ?? null;
     $checkOut = $data['check_out'] ?? $data['checkOut'] ?? null;
-    $guestName = $data['guest_name'] ?? $data['guestName'] ?? null;
+    $guestName = $data['guest_name'] ?? $data['guestName'] ?? 'Guest';
     $paymentMethod = $data['payment_method'] ?? $data['paymentMethod'] ?? 'Pay at Hotel';
     
-    if (!$userId || !$roomId || !$checkIn || !$checkOut) {
-        echo json_encode(['success' => false, 'message' => 'Missing required booking details']);
+    if (!$roomId || !$checkIn || !$checkOut || empty($guestName)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required booking details (Room, Dates, or Guest Name)']);
         exit;
     }
 
@@ -41,6 +41,21 @@ function createDirectBooking($data) {
     }
 
     try {
+        // Check for overlapping active bookings
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM bookings 
+            WHERE room_id = ? 
+            AND status IN ('Pending', 'Confirmed')
+            AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+            AND COALESCE(check_in_date, check_in) < ?
+            AND COALESCE(check_out_date, check_out) > ?
+        ");
+        $stmt->execute([$roomId, $checkOut, $checkIn]);
+        if ((int)$stmt->fetchColumn() > 0) {
+            echo json_encode(['success' => false, 'message' => 'Room is already booked on the selected dates. Please choose another date or room.']);
+            exit;
+        }
+
         // Get room price
         $stmt = $pdo->prepare("SELECT price FROM rooms WHERE id = ?");
         $stmt->execute([$roomId]);
@@ -109,6 +124,7 @@ function checkAvailability($data) {
         echo json_encode([
             'success' => false,
             'available' => false,
+            'is_booked' => false,
             'message' => 'Check-in date cannot be in the past or outdated.'
         ]);
         exit;
@@ -118,46 +134,67 @@ function checkAvailability($data) {
         echo json_encode([
             'success' => false,
             'available' => false,
+            'is_booked' => false,
             'message' => 'Check-out date must be strictly after check-in date.'
         ]);
         exit;
     }
     
     try {
-        // Check for overlapping active bookings (excluding cancelled_expired and no_show)
+        // Check for overlapping active bookings (excluding cancelled_expired, no_show, and completed)
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as count FROM bookings 
             WHERE room_id = ? 
             AND status IN ('Pending', 'Confirmed')
-            AND booking_status NOT IN ('cancelled_expired', 'no_show')
-            AND (
-                (COALESCE(check_in_date, check_in) <= ? AND COALESCE(check_out_date, check_out) > ?) 
-                OR (COALESCE(check_in_date, check_in) < ? AND COALESCE(check_out_date, check_out) >= ?)
-                OR (COALESCE(check_in_date, check_in) >= ? AND COALESCE(check_out_date, check_out) <= ?)
-            )
+            AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+            AND COALESCE(check_in_date, check_in) < ?
+            AND COALESCE(check_out_date, check_out) > ?
         ");
-        $stmt->execute([$roomId, $checkIn, $checkIn, $checkOut, $checkOut, $checkIn, $checkOut]);
-        $overlapCount = $stmt->fetchColumn();
+        $stmt->execute([$roomId, $checkOut, $checkIn]);
+        $overlapCount = (int)$stmt->fetchColumn();
         
         // Get room details
         $stmt = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
         $stmt->execute([$roomId]);
         $room = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$room) {
+            echo json_encode([
+                'success' => false,
+                'available' => false,
+                'is_booked' => false,
+                'message' => 'Room not found'
+            ]);
+            exit;
+        }
         
-        $isAvailable = $overlapCount == 0 && $room;
+        $requestedGuests = max(1, intval($data['guests'] ?? 1));
+        $roomLimit = (int)($room['max_capacity'] ?? $room['capacity'] ?? 1);
         
-        if ($room && $room['status'] === 'Maintenance') {
-            $isAvailable = false;
+        $isBooked = ($overlapCount > 0);
+        $isMaintenance = ($room['status'] === 'Maintenance');
+        $isCapacityMatch = ($roomLimit >= $requestedGuests);
+
+        // A room is available ONLY IF it is not booked, not in maintenance, and fits requested guests
+        $isAvailable = (!$isBooked) && (!$isMaintenance) && $isCapacityMatch;
+        
+        if ($isMaintenance) {
             $message = 'Room is under maintenance';
+        } elseif ($isBooked) {
+            $message = 'Room is already booked for selected dates';
+        } elseif (!$isCapacityMatch) {
+            $message = 'Room capacity is insufficient for selected guests';
         } else {
-            $message = $isAvailable ? 'Room is available for selected dates' : 'Room not available - already booked on overlapping dates';
+            $message = 'Room is available for selected dates';
         }
 
         echo json_encode([
             'success' => true,
             'available' => $isAvailable,
+            'is_booked' => $isBooked,
             'room' => $room,
             'overlaps' => $overlapCount,
+            'remaining_capacity' => $isBooked ? 0 : $roomLimit,
             'message' => $message
         ]);
         

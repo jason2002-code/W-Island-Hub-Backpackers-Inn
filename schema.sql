@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS `rooms` (
   `type` varchar(50) NOT NULL,
   `price` decimal(10,2) NOT NULL,
   `capacity` int(11) NOT NULL,
+  `max_capacity` int(11) NOT NULL DEFAULT 2,
   `image` varchar(255) NOT NULL,
   `description` text,
   `amenities` json DEFAULT NULL,
@@ -82,11 +83,14 @@ INSERT INTO `rooms` (`id`, `name`, `type`, `price`, `capacity`, `image`, `descri
 CREATE TABLE IF NOT EXISTS `bookings` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `ref_id` varchar(20) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
   `room_id` int(11) NOT NULL,
   `guest_name` varchar(100) NOT NULL,
   `guest_email` varchar(100) DEFAULT NULL,
   `guest_phone` varchar(50) DEFAULT NULL,
+  `adults` int(11) NOT NULL DEFAULT 1,
+  `children` int(11) NOT NULL DEFAULT 0,
+  `rooms_count` int(11) NOT NULL DEFAULT 1,
   `check_in_date` date DEFAULT NULL,
   `check_out_date` date DEFAULT NULL,
   `check_in` date NOT NULL,
@@ -99,6 +103,8 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   `total_price` decimal(10,2) NOT NULL,
   `payment_method` varchar(50) NOT NULL DEFAULT 'full_gcash',
   `gcash_reference_no` varchar(100) DEFAULT NULL,
+  `paymongo_session_id` varchar(150) DEFAULT NULL,
+  `paymongo_payment_id` varchar(150) DEFAULT NULL,
   `receipt_url` varchar(255) DEFAULT NULL,
   `status` enum('Pending','Confirmed','Cancelled') DEFAULT 'Pending',
   `booking_status` enum('pending_verification','confirmed','deposit_paid','pending_arrival','completed','cancelled_expired','no_show') NOT NULL DEFAULT 'pending_verification',
@@ -112,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   KEY `room_id` (`room_id`),
   KEY `booking_status` (`booking_status`),
   KEY `expires_at` (`expires_at`),
-  CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -188,3 +194,86 @@ CREATE TABLE IF NOT EXISTS `reviews` (
   CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Dynamic Room Capacity Triggers
+-- --------------------------------------------------------
+
+DELIMITER $$
+
+CREATE TRIGGER `trg_rooms_before_insert`
+BEFORE INSERT ON `rooms`
+FOR EACH ROW
+BEGIN
+    IF NEW.max_capacity IS NULL OR NEW.max_capacity <= 0 THEN
+        SET NEW.max_capacity = GREATEST(1, COALESCE(NEW.capacity, 2));
+    END IF;
+END$$
+
+CREATE TRIGGER `trg_bookings_after_insert`
+AFTER INSERT ON `bookings`
+FOR EACH ROW
+BEGIN
+    UPDATE `rooms` r
+    SET r.capacity = GREATEST(0, r.max_capacity - (
+        SELECT COUNT(*)
+        FROM `bookings` b
+        WHERE b.room_id = r.id
+          AND b.status IN ('Pending', 'Confirmed')
+          AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+          AND CURRENT_DATE() >= COALESCE(b.check_in_date, b.check_in)
+          AND CURRENT_DATE() < COALESCE(b.check_out_date, b.check_out)
+    ))
+    WHERE r.id = NEW.room_id;
+END$$
+
+CREATE TRIGGER `trg_bookings_after_update`
+AFTER UPDATE ON `bookings`
+FOR EACH ROW
+BEGIN
+    UPDATE `rooms` r
+    SET r.capacity = GREATEST(0, r.max_capacity - (
+        SELECT COUNT(*)
+        FROM `bookings` b
+        WHERE b.room_id = r.id
+          AND b.status IN ('Pending', 'Confirmed')
+          AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+          AND CURRENT_DATE() >= COALESCE(b.check_in_date, b.check_in)
+          AND CURRENT_DATE() < COALESCE(b.check_out_date, b.check_out)
+    ))
+    WHERE r.id = NEW.room_id;
+
+    IF OLD.room_id != NEW.room_id THEN
+        UPDATE `rooms` r
+        SET r.capacity = GREATEST(0, r.max_capacity - (
+            SELECT COUNT(*)
+            FROM `bookings` b
+            WHERE b.room_id = r.id
+              AND b.status IN ('Pending', 'Confirmed')
+              AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+              AND CURRENT_DATE() >= COALESCE(b.check_in_date, b.check_in)
+              AND CURRENT_DATE() < COALESCE(b.check_out_date, b.check_out)
+        ))
+        WHERE r.id = OLD.room_id;
+    END IF;
+END$$
+
+CREATE TRIGGER `trg_bookings_after_delete`
+AFTER DELETE ON `bookings`
+FOR EACH ROW
+BEGIN
+    UPDATE `rooms` r
+    SET r.capacity = GREATEST(0, r.max_capacity - (
+        SELECT COUNT(*)
+        FROM `bookings` b
+        WHERE b.room_id = r.id
+          AND b.status IN ('Pending', 'Confirmed')
+          AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+          AND CURRENT_DATE() >= COALESCE(b.check_in_date, b.check_in)
+          AND CURRENT_DATE() < COALESCE(b.check_out_date, b.check_out)
+    ))
+    WHERE r.id = OLD.room_id;
+END$$
+
+DELIMITER ;
+

@@ -41,6 +41,44 @@ async function init() {
         window.router(hash);
     }
 
+    // Check for PayMongo return parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('paymongo_success')) {
+        const refId = urlParams.get('ref_id');
+        if (typeof window.showToast === 'function') {
+            window.showToast(`Payment Confirmed via PayMongo! Ref: ${refId || ''}`, 'success');
+        }
+        if (refId) {
+            fetch(`actions/bookings_action.php?action=get_single&ref_id=${encodeURIComponent(refId)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.booking && typeof window.showInvoiceModal === 'function') {
+                        const b = data.booking;
+                        window.showInvoiceModal(b.ref_id, {
+                            roomName: b.room_name || 'Room Stay',
+                            checkIn: b.check_in_date || b.check_in,
+                            checkOut: b.check_out_date || b.check_out,
+                            nights: parseInt(b.nights || 1),
+                            guests: (parseInt(b.adults || 1) + parseInt(b.children || 0)),
+                            adults: parseInt(b.adults || 1),
+                            children: parseInt(b.children || 0),
+                            roomsCount: parseInt(b.rooms_count || 1),
+                            total: parseFloat(b.total_amount || b.total_price)
+                        }, {
+                            paid_amount: parseFloat(b.paid_amount || b.total_amount),
+                            balance_due: 0
+                        });
+                    }
+                }).catch(err => console.error('Error opening voucher:', err));
+        }
+        window.history.replaceState({}, document.title, window.location.pathname + (window.location.hash || ''));
+    } else if (urlParams.has('paymongo_cancelled')) {
+        if (typeof window.showToast === 'function') {
+            window.showToast("PayMongo checkout was cancelled. You can complete your reservation anytime.", "info");
+        }
+        window.history.replaceState({}, document.title, window.location.pathname + (window.location.hash || ''));
+    }
+
     // Parallel fetch for visual carousel and marquee elements in the background
     Promise.all([
         typeof window.initHeroCarousel === 'function' ? window.initHeroCarousel() : Promise.resolve(),

@@ -51,10 +51,15 @@ var defaultRooms = [
     }
 ];
 
-// Helper to safely parse stored user session data without throwing on corrupted values
+// Helper to safely parse stored user session data without throwing on corrupted values.
+// Uses sessionStorage exclusively so each browser tab maintains its own independent session.
 function getInitialUser() {
     try {
-        const stored = sessionStorage.getItem('w_currentUser') || localStorage.getItem('w_currentUser');
+        // Clean up legacy cross-tab storage to ensure tabs remain independent
+        if (localStorage.getItem('w_currentUser')) {
+            localStorage.removeItem('w_currentUser');
+        }
+        const stored = sessionStorage.getItem('w_currentUser');
         return stored ? JSON.parse(stored) : null;
     } catch (e) {
         console.warn('Unable to parse stored user session:', e);
@@ -81,18 +86,19 @@ if (!appState.bookings) {
 }
 
 /**
- * Persists the current authenticated user state to browser storage (Session & Local).
+ * Persists the current authenticated user state to tab-isolated browser storage (sessionStorage).
+ * Does not write to localStorage to prevent cross-tab session leakage.
  * @param {string} [role='user'] - The role of the user, used during logout or role-specific storage.
  */
 function saveState(role) {
     try {
         if (appState && appState.currentUser) {
             sessionStorage.setItem('w_currentUser', JSON.stringify(appState.currentUser));
-            localStorage.setItem('w_currentUser', JSON.stringify(appState.currentUser));
         } else {
             sessionStorage.removeItem('w_currentUser');
-            localStorage.removeItem('w_currentUser');
         }
+        // Ensure legacy cross-tab key is removed
+        localStorage.removeItem('w_currentUser');
     } catch (err) {
         console.warn('Failed to persist state:', err);
     }

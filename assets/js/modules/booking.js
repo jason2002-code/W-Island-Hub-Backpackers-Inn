@@ -92,17 +92,32 @@ function setSuggestedDates(nextVacant) {
  * 
  * @param {number|string} roomId - The ID of the room to book.
  */
-async function initiateBooking(roomId) {
+async function initiateBooking(roomId, options = {}) {
     const currentUser = window.appState ? window.appState.currentUser : null;
-    if (!currentUser || currentUser.role === 'admin') {
-        window.showToast('Please log in as a guest to book a room.', 'warning');
-        window.router('login');
+    if (currentUser && currentUser.role === 'admin') {
+        window.showToast('Admins are not allowed to book rooms.', 'warning');
         return;
     }
 
     const room = (window.appState && window.appState.rooms)
         ? (window.appState.rooms.find(r => r.id == roomId) || { id: roomId, name: 'Room ' + roomId, price: 0, image: 'assets/image/background.jpg', type: '' })
         : { id: roomId, name: 'Room ' + roomId, price: 0, image: 'assets/image/background.jpg', type: '' };
+
+    // Determine adults, children, and total guests
+    const adults = options.adults !== undefined ? options.adults : (parseInt(document.getElementById('adults-count')?.value, 10) || parseInt(document.getElementById('home-adults-count')?.value, 10) || 1);
+    const children = options.children !== undefined ? options.children : (parseInt(document.getElementById('children-count')?.value, 10) || parseInt(document.getElementById('home-children-count')?.value, 10) || 0);
+    const totalGuests = options.guests !== undefined ? options.guests : (adults + children);
+    const roomsCount = Math.max(1, parseInt(options.roomsCount, 10) || 1);
+
+    const roomCap = parseInt(room.max_capacity || room.capacity, 10) || 2;
+
+    // Check if room capacity is 2 and party has 4 or more guests -> suggest recommendations!
+    if (!options.bypassRecommendation && roomCap <= 2 && totalGuests >= 4) {
+        if (typeof window.showRoomRecommendationModal === 'function') {
+            window.showRoomRecommendationModal(room, totalGuests, adults, children);
+            return;
+        }
+    }
 
     try {
         const todayStr = safeFormatDate(new Date());
@@ -163,16 +178,15 @@ async function initiateBooking(roomId) {
 
         // Construct pending booking context
         const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000));
-        const total = (room.price * nights) + 15; // Tax & service fees
-        const guestCountEl = document.getElementById('guest-count');
-        let guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
-        if (guests > 5) guests = 5;
-        if (guests < 1) guests = 1;
+        const total = (room.price * nights * roomsCount) + 15; // (Price * nights * rooms) + Tax & service fees
 
         pendingBooking = {
             roomId: parseInt(roomId),
             roomName: room.name,
-            guests,
+            roomsCount,
+            guests: totalGuests,
+            adults,
+            children,
             checkIn,
             checkOut,
             nights: Math.max(1, nights),
@@ -190,12 +204,22 @@ async function initiateBooking(roomId) {
         const summaryName = document.getElementById('summary-room-name');
         const summaryDesc = document.getElementById('summary-room-desc');
         const summaryPrice = document.getElementById('summary-price');
+        const summaryRoomsRow = document.getElementById('summary-rooms-count-row');
+        const summaryRoomsCount = document.getElementById('summary-rooms-count');
         const summaryNights = document.getElementById('summary-nights');
         const summaryTotal = document.getElementById('summary-total');
 
-        if (summaryName) summaryName.textContent = room.name;
+        if (summaryName) summaryName.textContent = (roomsCount > 1 ? `${roomsCount}x ` : '') + room.name;
         if (summaryDesc) summaryDesc.textContent = room.desc || room.type;
-        if (summaryPrice) summaryPrice.textContent = '₱' + room.price.toFixed(2);
+        if (summaryPrice) summaryPrice.textContent = '₱' + room.price.toFixed(2) + (roomsCount > 1 ? ` (x${roomsCount} rooms)` : '');
+        if (summaryRoomsRow && summaryRoomsCount) {
+            if (roomsCount > 1) {
+                summaryRoomsRow.classList.remove('hidden');
+                summaryRoomsCount.textContent = `${roomsCount} Rooms`;
+            } else {
+                summaryRoomsRow.classList.add('hidden');
+            }
+        }
         if (summaryNights) summaryNights.textContent = pendingBooking.nights + (pendingBooking.nights > 1 ? ' Nights' : ' Night');
         if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
 
@@ -205,8 +229,9 @@ async function initiateBooking(roomId) {
                 <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2 text-xs">
                     <div class="flex justify-between"><span>Check-in Date:</span> <strong class="text-gray-800">${checkIn} (2:00 PM)</strong></div>
                     <div class="flex justify-between"><span>Check-out Date:</span> <strong class="text-gray-800">${checkOut} (12:00 PM)</strong></div>
-                    <div class="flex justify-between"><span>Guests:</span> <strong>${guests} ${guests === 1 ? 'Guest' : 'Guests'}</strong></div>
-                    <div class="flex justify-between"><span>Accommodation:</span> <strong>${room.name} (${room.type})</strong></div>
+                    <div class="flex justify-between"><span>Guests:</span> <strong>${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''})</strong></div>
+                    <div class="flex justify-between items-center"><span>Accommodation:</span> <strong>${roomsCount > 1 ? `${roomsCount}x ` : ''}${room.name} (${room.type})</strong></div>
+                    ${roomsCount > 1 ? `<div class="flex justify-between text-blue-700 font-semibold pt-1 border-t border-emerald-200/60"><span>Multi-Room Booking:</span> <span>${roomsCount} Rooms &times; ₱${room.price.toFixed(2)}/night</span></div>` : ''}
                     <div class="flex justify-between text-emerald-700 font-bold mt-2 pt-2 border-t border-emerald-200">
                         <span>Real-Time Availability</span><span class="flex items-center gap-1"><i class="fas fa-check-circle text-emerald-500"></i> Locked & Available</span>
                     </div>
@@ -214,13 +239,27 @@ async function initiateBooking(roomId) {
             `;
         }
 
-        // Fill guest details from session
+        // Fill guest details from session if logged in; otherwise keep inputs clear for guest entry
         const nameInput = document.getElementById('book-name');
         const emailInput = document.getElementById('book-email');
         const phoneInput = document.getElementById('book-phone');
-        if (nameInput) nameInput.value = currentUser.name || '';
-        if (emailInput) emailInput.value = currentUser.email || '';
-        if (phoneInput) phoneInput.value = currentUser.phone || '';
+        const guestBookingNotice = document.getElementById('guest-booking-notice');
+
+        if (currentUser) {
+            if (nameInput) nameInput.value = currentUser.name || '';
+            if (emailInput) emailInput.value = currentUser.email || '';
+            if (phoneInput) phoneInput.value = currentUser.phone || '';
+            if (guestBookingNotice) {
+                guestBookingNotice.innerHTML = `<span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200"><i class="fas fa-user-check text-emerald-500"></i> Logged in as ${currentUser.name || 'User'}</span>`;
+            }
+        } else {
+            if (nameInput && !nameInput.value) nameInput.value = '';
+            if (emailInput && !emailInput.value) emailInput.value = '';
+            if (phoneInput && !phoneInput.value) phoneInput.value = '';
+            if (guestBookingNotice) {
+                guestBookingNotice.innerHTML = `<span class="inline-flex items-center gap-1 text-xs text-brand-blue font-semibold bg-blue-50 px-3 py-1 rounded-full border border-blue-200"><i class="fas fa-bolt text-amber-500"></i> Guest Checkout (No account needed) &bull; <a href="javascript:void(0)" onclick="router('login')" class="underline hover:text-brand-dark font-bold ml-1">Log in</a></span>`;
+            }
+        }
 
         // Enforce 24-hour rule for Pay at Hotel
         const checkInDateObj = new Date(checkIn + 'T14:00:00');
@@ -242,17 +281,12 @@ async function initiateBooking(roomId) {
             if (hotelRadio) hotelRadio.disabled = true;
         }
 
-        // Default selection to Option A: Full Payment (GCash)
-        const fullRadio = document.querySelector('input[name="payment"][value="full_gcash"]');
-        if (fullRadio) fullRadio.checked = true;
-        handlePaymentMethodChange('full_gcash');
-
-        // Reset file upload previews
-        if (typeof removeReceiptFile === 'function') {
-            removeReceiptFile({ stopPropagation: () => {} });
+        // Default selection to Option 1: PayMongo Online
+        const paymongoRadio = document.querySelector('input[name="payment"][value="paymongo"]');
+        if (paymongoRadio) {
+            paymongoRadio.checked = true;
+            handlePaymentMethodChange('paymongo');
         }
-        const gcashRefInput = document.getElementById('book-gcash-ref');
-        if (gcashRefInput) gcashRefInput.value = '';
 
         window.router('booking-summary');
     } catch (error) {
@@ -262,19 +296,19 @@ async function initiateBooking(roomId) {
 }
 
 /**
- * Handles switching between active payment pathways (Full GCash vs Pay at Hotel).
+ * Handles switching between active payment pathways (PayMongo Online vs Pay at Hotel).
  * Updates price breakdowns, form inputs, and required verification sections.
  * 
- * @param {'full_gcash'|'pay_at_hotel'} method - Selected payment method identifier.
+ * @param {'paymongo'|'pay_at_hotel'} method - Selected payment method identifier.
  */
 function handlePaymentMethodChange(method) {
-    const fullCard = document.getElementById('label-payment-full');
+    const paymongoCard = document.getElementById('label-payment-paymongo');
     const hotelCard = document.getElementById('label-payment-hotel');
-    const gcashSection = document.getElementById('gcash-payment-section');
+    const paymongoSection = document.getElementById('paymongo-payment-section');
     const arrivalSection = document.getElementById('arrival-time-section');
     const upfrontEl = document.getElementById('summary-upfront-amount');
     const balanceEl = document.getElementById('summary-balance-amount');
-    const gcashAmountEl = document.getElementById('gcash-amount-to-send');
+    const paymongoAmountEl = document.getElementById('paymongo-amount-display');
     const timerHintEl = document.getElementById('summary-timer-hint');
     const btnText = document.getElementById('btn-confirm-text');
 
@@ -284,34 +318,19 @@ function handlePaymentMethodChange(method) {
     const total = activeBooking.total;
 
     // Reset card highlight styles
-    [fullCard, hotelCard].forEach(card => {
+    [paymongoCard, hotelCard].forEach(card => {
         if (card) {
             card.classList.remove('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
             card.classList.add('border-gray-200', 'bg-white');
         }
     });
 
-    if (method === 'full_gcash') {
-        if (fullCard) {
-            fullCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
-            fullCard.classList.remove('border-gray-200', 'bg-white');
-        }
-        if (gcashSection) gcashSection.classList.remove('hidden');
-        if (arrivalSection) arrivalSection.classList.add('hidden');
-
-        const upfront = total;
-        const balance = 0.00;
-        if (upfrontEl) upfrontEl.textContent = '₱' + upfront.toFixed(2);
-        if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
-        if (gcashAmountEl) gcashAmountEl.textContent = '₱' + upfront.toFixed(2);
-        if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-stopwatch text-amber-500"></i> <span>2-Hour hold while payment proof is verified.</span>';
-        if (btnText) btnText.textContent = 'Submit Receipt & Confirm (Full Payment)';
-    } else if (method === 'pay_at_hotel') {
+    if (method === 'pay_at_hotel') {
         if (hotelCard) {
             hotelCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
             hotelCard.classList.remove('border-gray-200', 'bg-white');
         }
-        if (gcashSection) gcashSection.classList.add('hidden');
+        if (paymongoSection) paymongoSection.classList.add('hidden');
         if (arrivalSection) arrivalSection.classList.remove('hidden');
 
         const upfront = 0.00;
@@ -319,7 +338,23 @@ function handlePaymentMethodChange(method) {
         if (upfrontEl) upfrontEl.textContent = '₱0.00';
         if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
         if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-clock text-purple-600"></i> <span>Held strictly until expected arrival time + 1 hour.</span>';
-        if (btnText) btnText.textContent = 'Lock Room Hold (Pay at Hotel)';
+        if (btnText) btnText.innerHTML = '<i class="fas fa-store mr-1"></i> Lock Room Hold (Pay at Hotel)';
+    } else {
+        // Default to PayMongo instant checkout
+        if (paymongoCard) {
+            paymongoCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
+            paymongoCard.classList.remove('border-gray-200', 'bg-white');
+        }
+        if (paymongoSection) paymongoSection.classList.remove('hidden');
+        if (arrivalSection) arrivalSection.classList.add('hidden');
+
+        const upfront = total;
+        const balance = 0.00;
+        if (upfrontEl) upfrontEl.textContent = '₱' + upfront.toFixed(2);
+        if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
+        if (paymongoAmountEl) paymongoAmountEl.textContent = '₱' + upfront.toFixed(2);
+        if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-bolt text-emerald-500"></i> <span>Automated online payment & instant confirmation.</span>';
+        if (btnText) btnText.innerHTML = '<i class="fas fa-bolt mr-1"></i> Proceed to PayMongo Checkout &rarr;';
     }
 }
 
@@ -418,12 +453,7 @@ function initBookingForm() {
         e.preventDefault();
         
         const currentUser = window.appState ? window.appState.currentUser : null;
-        if (!currentUser) {
-            window.showToast("Please login to continue.", 'warning');
-            return;
-        }
-
-        if (currentUser.role === 'admin') {
+        if (currentUser && currentUser.role === 'admin') {
             window.showToast("Admins are not allowed to book rooms.", 'error');
             return;
         }
@@ -448,16 +478,44 @@ function initBookingForm() {
         }
 
         const paymentMethodEl = document.querySelector('input[name="payment"]:checked');
-        const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'full_gcash';
-        const guestName = document.getElementById('book-name').value.trim();
-        const guestEmail = document.getElementById('book-email').value.trim();
+        const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'paymongo';
+        const guestName = document.getElementById('book-name') ? document.getElementById('book-name').value.trim() : '';
+        const guestEmail = document.getElementById('book-email') ? document.getElementById('book-email').value.trim() : '';
         const guestPhone = document.getElementById('book-phone') ? document.getElementById('book-phone').value.trim() : '';
         const requests = document.getElementById('book-requests') ? document.getElementById('book-requests').value.trim() : '';
 
+        // Validation for Guest Information (allows non-logged in customers)
+        if (!guestName) {
+            window.showToast("Please enter your full name.", 'warning');
+            document.getElementById('book-name')?.focus();
+            return;
+        }
+        if (!guestEmail) {
+            window.showToast("Please enter your email address for your reservation confirmation.", 'warning');
+            document.getElementById('book-email')?.focus();
+            return;
+        }
+        if (!guestPhone) {
+            window.showToast("Please enter your mobile/phone number.", 'warning');
+            document.getElementById('book-phone')?.focus();
+            return;
+        }
+
+        // Store guest details on pendingBooking for instant invoice rendering
+        activeBooking.guestName = guestName;
+        activeBooking.guestEmail = guestEmail;
+        activeBooking.guestPhone = guestPhone;
+
         const formData = new FormData();
         formData.append('action', 'create');
-        formData.append('user_id', currentUser.id);
+        if (currentUser && currentUser.id) {
+            formData.append('user_id', currentUser.id);
+        }
         formData.append('room_id', activeBooking.roomId);
+        formData.append('rooms_count', activeBooking.roomsCount || 1);
+        formData.append('guests', activeBooking.guests || 1);
+        formData.append('adults', activeBooking.adults || 1);
+        formData.append('children', activeBooking.children || 0);
         formData.append('check_in', activeBooking.checkIn);
         formData.append('check_out', activeBooking.checkOut);
         formData.append('nights', activeBooking.nights);
@@ -469,24 +527,7 @@ function initBookingForm() {
         formData.append('payment_method', paymentMethod);
 
         // Pathway-specific validations
-        if (paymentMethod === 'full_gcash') {
-            const gcashRef = document.getElementById('book-gcash-ref') ? document.getElementById('book-gcash-ref').value.trim() : '';
-            const receiptFileInput = document.getElementById('book-receipt-file');
-
-            if (!gcashRef || gcashRef.length < 6) {
-                window.showToast("Please enter a valid GCash Reference Number from your transaction receipt.", 'error');
-                document.getElementById('book-gcash-ref').focus();
-                return;
-            }
-
-            if (!receiptFileInput || !receiptFileInput.files || receiptFileInput.files.length === 0) {
-                window.showToast("Please upload a screenshot/image of your GCash receipt proof.", 'error');
-                return;
-            }
-
-            formData.append('gcash_reference_no', gcashRef);
-            formData.append('receipt_image', receiptFileInput.files[0]);
-        } else if (paymentMethod === 'pay_at_hotel') {
+        if (paymentMethod === 'pay_at_hotel') {
             const arrivalTime = document.getElementById('book-arrival-time') ? document.getElementById('book-arrival-time').value : '';
             if (!arrivalTime) {
                 window.showToast("Please select your expected arrival time.", 'error');
@@ -499,7 +540,9 @@ function initBookingForm() {
         const confirmBtn = document.getElementById('btn-confirm-booking');
         if (confirmBtn) {
             confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing Reservation...';
+            confirmBtn.innerHTML = paymentMethod === 'paymongo' 
+                ? '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing PayMongo Checkout...' 
+                : '<i class="fas fa-spinner fa-spin mr-2"></i> Processing Reservation...';
         }
 
         try {
@@ -510,6 +553,14 @@ function initBookingForm() {
             const data = await response.json();
 
             if (data.success) {
+                if (data.checkout_url) {
+                    window.showToast(`Reservation Created! Ref: ${data.ref_id}. Redirecting to PayMongo Checkout...`, 'success');
+                    setTimeout(() => {
+                        window.location.href = data.checkout_url;
+                    }, 700);
+                    return;
+                }
+
                 window.showToast(`Reservation Created! Ref: ${data.ref_id}`, 'success');
                 if (typeof window.showInvoiceModal === 'function') {
                     window.showInvoiceModal(data.ref_id, activeBooking, data);
@@ -523,7 +574,9 @@ function initBookingForm() {
         } finally {
             if (confirmBtn) {
                 confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '<i class="fas fa-lock mr-2"></i> <span id="btn-confirm-text">Confirm Reservation</span>';
+                confirmBtn.innerHTML = paymentMethod === 'paymongo'
+                    ? '<i class="fas fa-bolt mr-2"></i> <span id="btn-confirm-text">Proceed to PayMongo Checkout &rarr;</span>'
+                    : '<i class="fas fa-lock mr-2"></i> <span id="btn-confirm-text">Confirm Reservation</span>';
             }
         }
     });

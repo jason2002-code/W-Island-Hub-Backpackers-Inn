@@ -10,7 +10,13 @@
  * 
  * @param {string} pageId - Target section ID (e.g. 'home', 'rooms', 'about', 'contact', 'login', 'register', 'rules', 'booking-summary').
  */
-function router(pageId) {
+function router(pageId, anchorId) {
+    // If pageId is 'discovery-bohol', route to 'home' and scroll to the section
+    if (pageId === 'discovery-bohol') {
+        pageId = 'home';
+        anchorId = 'discovery-bohol';
+    }
+
     // Close mobile menu if currently open
     const menu = document.getElementById('mobile-menu');
     if (menu && !menu.classList.contains('hidden')) {
@@ -28,6 +34,22 @@ function router(pageId) {
         return;
     }
 
+    // Prevent authenticated users from accessing login or registration forms
+    if (pageId === 'login' || pageId === 'register' || pageId === 'forgot-password') {
+        const currentUser = window.appState ? window.appState.currentUser : null;
+        if (currentUser) {
+            if (currentUser.role === 'admin') {
+                window.location.href = 'admin/dashboard.php';
+            } else {
+                router('home');
+                if (typeof window.showToast === 'function') {
+                    window.showToast(`You are already logged in as ${currentUser.name ? currentUser.name.split(' ')[0] : 'User'}.`, 'info');
+                }
+            }
+            return;
+        }
+    }
+
     // Hide all page sections (explicit display:none to override layout conflicts)
     document.querySelectorAll('.page-section').forEach(el => {
         el.classList.remove('active');
@@ -43,7 +65,16 @@ function router(pageId) {
     if (target) {
         target.classList.add('active');
         target.style.display = 'block';
-        window.scrollTo(0, 0);
+        if (anchorId) {
+            setTimeout(() => {
+                const el = document.getElementById(anchorId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        } else {
+            window.scrollTo(0, 0);
+        }
     }
 
     // Lifecycle: Synchronize date pickers when opening rooms or booking summary

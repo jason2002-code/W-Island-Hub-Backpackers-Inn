@@ -329,6 +329,7 @@ function renderBookingsList() {
                         <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 mt-1">
                             <span>Ref: <strong class="font-mono text-gray-600">${b.ref_id || b.refId || ('WIH-' + b.id)}</strong></span>
                             ${b.gcashRefNo ? `<span>• GCash Ref: <strong class="font-mono text-gray-600">${b.gcashRefNo}</strong></span>` : ''}
+                            ${b.paymongoPaymentId ? `<span>• PayMongo: <strong class="font-mono text-emerald-600">${b.paymongoPaymentId}</strong></span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -342,6 +343,11 @@ function renderBookingsList() {
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
+                        ${balance > 0 && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' ? `
+                            <button onclick="payBookingWithPayMongo(${b.id}, '${b.ref_id || b.refId}')" class="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center gap-1.5 shadow-xs" title="Pay balance now with Card, GCash, or Maya via PayMongo">
+                                <i class="fas fa-bolt text-emerald-600"></i> Pay Online
+                            </button>
+                        ` : ''}
                         <button onclick="openVoucherModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition flex items-center gap-1.5">
                             <i class="fas fa-ticket-alt text-brand-blue"></i> Voucher
                         </button>
@@ -1069,7 +1075,72 @@ function logout() {
         window.appState.currentUser = null;
     }
     sessionStorage.removeItem('w_currentUser');
+    localStorage.removeItem('w_currentUser');
     window.location.href = '../logout.php?type=' + role;
 }
+
+/**
+ * Pay remaining balance for a booking online via PayMongo
+ */
+async function payBookingWithPayMongo(bookingId, refId) {
+    if (typeof showToast === 'function') {
+        showToast('Initiating secure PayMongo checkout...', 'info');
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'create_checkout');
+        formData.append('booking_id', bookingId);
+        formData.append('ref_id', refId);
+
+        const res = await fetch('../actions/paymongo_action.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success && data.checkout_url) {
+            if (typeof showToast === 'function') {
+                showToast('Redirecting to PayMongo Checkout...', 'success');
+            }
+            setTimeout(() => {
+                window.location.href = data.checkout_url;
+            }, 600);
+        } else {
+            alert(data.message || 'Unable to open PayMongo checkout.');
+        }
+    } catch (e) {
+        console.error('PayMongo error:', e);
+        alert('Network connection error. Please try again.');
+    }
+}
+
+// Global window binding
+window.payBookingWithPayMongo = payBookingWithPayMongo;
+
+// Check for paymongo_success or payment_status in URL parameters
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('paymongo_success')) {
+        const refId = urlParams.get('ref_id');
+        if (typeof showToast === 'function') {
+            showToast(`Payment Confirmed via PayMongo! Reservation Ref: ${refId || ''}`, 'success');
+        }
+        if (typeof switchTab === 'function') {
+            switchTab('bookings');
+        }
+        // Auto-open voucher if booking found
+        if (refId && window.appState && window.appState.bookings) {
+            const b = window.appState.bookings.find(item => (item.ref_id === refId || item.refId === refId));
+            if (b) {
+                setTimeout(() => {
+                    openVoucherModal(b.id);
+                }, 400);
+            }
+        }
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
 
 

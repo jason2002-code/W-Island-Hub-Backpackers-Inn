@@ -5,6 +5,7 @@
  */
 
 require_once '../config/db.php';
+require_once '../config/paymongo.php';
 
 header('Content-Type: application/json');
 
@@ -14,12 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
 $action = $input['action'] ?? 'process';
 
 switch ($action) {
     case 'process':
         processPayment($input);
+        break;
+    case 'paymongo_checkout':
+        createPaymongoCheckout($input);
         break;
     case 'verify':
         verifyPayment($input);
@@ -90,6 +94,59 @@ function processPayment($data) {
 }
 
 /**
+ * Create a PayMongo checkout session from payment_action
+ */
+function createPaymongoCheckout($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $bookingId = $data['booking_id'] ?? null;
+    $refId = $data['ref_id'] ?? null;
+
+    if (!$bookingId && !$refId) {
+        echo json_encode(['success' => false, 'message' => 'Booking ID or Ref ID is required']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT b.*, r.name as room_name FROM bookings b LEFT JOIN rooms r ON b.room_id = r.id WHERE b.id = ? OR b.ref_id = ?");
+    $stmt->execute([$bookingId, $refId]);
+    $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$booking) {
+        echo json_encode(['success' => false, 'message' => 'Booking not found']);
+        exit;
+    }
+
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443 ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+    $rootDir = dirname($scriptDir);
+    $rootDir = str_replace('\\', '/', $rootDir);
+    $baseUrl = rtrim($protocol . $host . ($rootDir === '/' ? '' : $rootDir), '/');
+
+    $successUrl = $baseUrl . '/actions/paymongo_action.php?action=success&session_id={CHECKOUT_SESSION_ID}&ref_id=' . urlencode($booking['ref_id']);
+    $cancelUrl  = $baseUrl . '/actions/paymongo_action.php?action=cancel&ref_id=' . urlencode($booking['ref_id']);
+
+    $res = PayMongoService::createCheckoutSession($booking, $successUrl, $cancelUrl);
+    if (!$res['success']) {
+        echo json_encode(['success' => false, 'message' => $res['error']]);
+        exit;
+    }
+
+    $upd = $pdo->prepare("UPDATE bookings SET paymongo_session_id = ? WHERE id = ?");
+    $upd->execute([$res['session_id'], $booking['id']]);
+
+    echo json_encode([
+        'success' => true,
+        'checkout_url' => $res['checkout_url'],
+        'session_id' => $res['session_id']
+    ]);
+}
+
+/**
  * Verify a payment transaction
  */
 function verifyPayment($data) {
@@ -106,9 +163,26 @@ function verifyPayment($data) {
         echo json_encode(['success' => false, 'message' => 'Transaction ID is required']);
         exit;
     }
+
+    // If PayMongo Checkout Session ID
+    if (strpos($transactionId, 'cs_') === 0) {
+        $pmRes = PayMongoService::getCheckoutSession($transactionId);
+        if ($pmRes['success']) {
+            $status = $pmRes['data']['attributes']['status'] ?? 'unknown';
+            $isPaid = ($status === 'paid');
+            if ($isPaid) {
+                $pdo->prepare("UPDATE bookings SET status = 'Confirmed', booking_status = 'confirmed', balance_due = 0 WHERE paymongo_session_id = ?")->execute([$transactionId]);
+            }
+            echo json_encode([
+                'success' => true,
+                'verified' => $isPaid,
+                'status' => $status,
+                'message' => $isPaid ? 'Payment verified as paid on PayMongo' : 'Payment session still pending'
+            ]);
+            return;
+        }
+    }
     
-    // In a real app, you'd verify with payment gateway
-    // For demo purposes, we'll just return success
     echo json_encode([
         'success' => true,
         'verified' => true,

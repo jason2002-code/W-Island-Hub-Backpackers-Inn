@@ -1,3 +1,16 @@
+<?php
+if (!isset($pdo) || !$pdo) {
+    require_once 'config/db.php';
+    $pdo = getDB();
+}
+$system_max_capacity = 8;
+if ($pdo) {
+    try {
+        $m = $pdo->query("SELECT MAX(GREATEST(COALESCE(capacity, 1), COALESCE(max_capacity, 1))) FROM rooms")->fetchColumn();
+        if ($m && intval($m) > 0) $system_max_capacity = intval($m);
+    } catch(Exception $e) {}
+}
+?>
   <!-- ================= ROOMS PAGE ================= -->
         <div id="rooms" class="page-section">
             <div class="bg-brand-dark text-white py-16 text-center">
@@ -17,10 +30,80 @@
                             <label class="block text-sm font-bold text-gray-700 mb-1">Check-Out</label>
                             <input type="date" id="check-out-date" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" value="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-brand-blue outline-none">
                         </div>
-                        <div>
-                            <label for="guest-count" class="block text-sm font-bold text-gray-700 mb-1">Guests (Max 5)</label>
-                            <input type="number" id="guest-count" name="guest_count" min="1" max="5" value="1" placeholder="1-5" 
-                                   class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-brand-blue outline-none text-gray-700">
+                        <!-- Guests Selector (Adults & Children in the same box) -->
+                        <div class="relative" id="rooms-guest-box-container">
+                            <label class="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                                <i class="fas fa-users text-brand-blue"></i> Guests
+                            </label>
+                            <div id="rooms-guest-trigger" onclick="toggleGuestDropdown('rooms')" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-brand-blue outline-none text-gray-700 bg-white hover:bg-slate-50 cursor-pointer flex items-center justify-between select-none transition">
+                                <div class="flex items-center gap-2 truncate">
+                                    <span id="rooms-guest-summary-text" class="truncate font-semibold text-gray-800 text-sm">1 Guest (1 Adult)</span>
+                                </div>
+                                <i id="rooms-guest-chevron" class="fas fa-chevron-down text-gray-400 text-xs transition-transform duration-200"></i>
+                            </div>
+
+                            <!-- Hidden Inputs for Form Submission / Logic -->
+                            <input type="hidden" id="guest-count" name="guest_count" value="1">
+                            <input type="hidden" id="adults-count" name="adults" value="1">
+                            <input type="hidden" id="children-count" name="children" value="0">
+
+                            <!-- Dropdown Popover (Same Box) -->
+                            <div id="rooms-guest-dropdown" class="hidden absolute left-0 right-0 sm:right-auto sm:w-80 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50 space-y-4">
+                                <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                                    <div>
+                                        <h4 class="text-xs font-bold uppercase text-gray-700 tracking-wider">Select Guests</h4>
+                                        <p class="text-[11px] text-gray-400">No maximum limit</p>
+                                    </div>
+                                    <button type="button" onclick="closeGuestDropdown('rooms')" class="text-gray-400 hover:text-gray-600 text-xs p-1 rounded-lg">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Adults: 18+ -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-bold text-gray-800 text-sm">Adults</div>
+                                        <div class="text-[11px] text-gray-400 font-medium">Ages 18 and above</div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="updateGuestStepper('rooms', 'adults', -1)" class="w-8 h-8 rounded-full border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold transition disabled:opacity-30 disabled:cursor-not-allowed" id="rooms-adults-minus" disabled>
+                                            <i class="fas fa-minus text-xs"></i>
+                                        </button>
+                                        <span id="rooms-adults-display" class="w-8 text-center font-bold text-gray-800 text-sm">1</span>
+                                        <button type="button" onclick="updateGuestStepper('rooms', 'adults', 1)" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-blue bg-gray-50 hover:bg-blue-50 flex items-center justify-center text-gray-700 hover:text-brand-blue font-bold transition">
+                                            <i class="fas fa-plus text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Children: 17 & below -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-bold text-gray-800 text-sm">Children</div>
+                                        <div class="text-[11px] text-gray-400 font-medium">Ages 17 &amp; below</div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="updateGuestStepper('rooms', 'children', -1)" class="w-8 h-8 rounded-full border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold transition disabled:opacity-30 disabled:cursor-not-allowed" id="rooms-children-minus" disabled>
+                                            <i class="fas fa-minus text-xs"></i>
+                                        </button>
+                                        <span id="rooms-children-display" class="w-8 text-center font-bold text-gray-800 text-sm">0</span>
+                                        <button type="button" onclick="updateGuestStepper('rooms', 'children', 1)" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-blue bg-gray-50 hover:bg-blue-50 flex items-center justify-center text-gray-700 hover:text-brand-blue font-bold transition">
+                                            <i class="fas fa-plus text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Age Guidance Badge -->
+                                <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-2">
+                                    <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
+                                    <span>Age 18+ counts as Adult. Age 17 and below counts as Child.</span>
+                                </div>
+
+                                <!-- Apply Button -->
+                                <button type="button" onclick="closeGuestDropdown('rooms')" class="w-full bg-brand-blue hover:bg-sky-600 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
+                                    Done (<span id="rooms-total-guest-badge">1 Guest</span>)
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" class="bg-brand-blue hover:bg-sky-600 text-white font-bold py-3 rounded-lg transition shadow-md">
                             Check Availability
@@ -65,9 +148,16 @@
                             <!-- Guest Information Form -->
                             <form id="booking-form" class="space-y-6">
                                 <div>
-                                    <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                        <i class="fas fa-user-circle text-brand-blue"></i> Guest Information
-                                    </h3>
+                                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                        <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                                            <i class="fas fa-user-circle text-brand-blue"></i> Guest Information
+                                        </h3>
+                                        <div id="guest-booking-notice">
+                                            <span class="inline-flex items-center gap-1 text-xs text-brand-blue font-semibold bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                                                <i class="fas fa-bolt text-amber-500"></i> Guest Checkout (No login required) &bull; <a href="javascript:void(0)" onclick="router('login')" class="underline hover:text-brand-dark font-bold ml-1">Log in</a>
+                                            </span>
+                                        </div>
+                                    </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Full Name <span class="text-rose-500">*</span></label>
@@ -100,28 +190,47 @@
                                     </div>
 
                                     <div class="space-y-3" id="payment-options-container">
-                                        <!-- Option A: Full Payment (GCash) -->
-                                        <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-brand-blue bg-blue-50/40 cursor-pointer hover:border-brand-blue transition shadow-sm" id="label-payment-full">
-                                            <input type="radio" name="payment" value="full_gcash" checked onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
+                                        <!-- Option 1: Instant Online Payment (PayMongo - Recommended) -->
+                                        <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-brand-blue bg-blue-50/40 cursor-pointer hover:border-brand-blue transition shadow-sm" id="label-payment-paymongo">
+                                            <input type="radio" name="payment" value="paymongo" checked onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
                                             <div class="flex-1">
-                                                <div class="flex items-center justify-between">
+                                                <div class="flex items-center justify-between flex-wrap gap-1">
                                                     <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                                        <i class="fas fa-qrcode text-blue-600 text-base"></i> Option A: Full Payment (GCash)
+                                                        <i class="fas fa-bolt text-amber-500 text-base"></i> Online Payment (PayMongo)
                                                     </span>
-                                                    <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">100% Upfront</span>
+                                                    <span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                        <i class="fas fa-check-circle text-[10px]"></i> Instant Confirmation
+                                                    </span>
                                                 </div>
-                                                <p class="text-xs text-gray-500 mt-1">Pay full amount via GCash for instant booking priority. Room is verified and confirmed with zero front desk balance.</p>
+                                                <p class="text-xs text-gray-500 mt-1">Pay instantly via Credit/Debit Cards, GCash, Maya, or GrabPay. 100% automated &mdash; no receipt upload needed.</p>
+                                                <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-blue-100/70 text-[11px] text-gray-600 flex-wrap">
+                                                    <span class="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold text-blue-700">
+                                                        <i class="fab fa-cc-visa text-sm"></i> Visa
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold text-rose-500">
+                                                        <i class="fab fa-cc-mastercard text-sm"></i> Mastercard
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold text-blue-600">
+                                                        <span class="w-3.5 h-3.5 rounded-full bg-blue-600 text-white font-bold text-[9px] inline-flex items-center justify-center">G</span> GCash
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold text-emerald-600">
+                                                        <i class="fas fa-wallet text-emerald-500 text-xs"></i> Maya
+                                                    </span>
+                                                    <span class="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold text-green-700">
+                                                        GrabPay
+                                                    </span>
+                                                </div>
                                             </div>
                                         </label>
 
-                                        <!-- Option B: Strict "Pay at Hotel" (Conditional) -->
+                                        <!-- Option 2: Strict "Pay at Hotel" (Conditional) -->
                                         <div id="option-c-wrapper">
                                             <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-200 bg-white cursor-pointer hover:border-brand-blue transition" id="label-payment-hotel">
                                                 <input type="radio" name="payment" value="pay_at_hotel" id="input-payment-hotel" onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
                                                 <div class="flex-1">
                                                     <div class="flex items-center justify-between">
                                                         <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                                            <i class="fas fa-store text-purple-600 text-base"></i> Option B: Strict "Pay at Hotel"
+                                                            <i class="fas fa-store text-purple-600 text-base"></i> Option 2: Strict "Pay at Hotel"
                                                         </span>
                                                         <span class="text-xs font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Same-Day / &le;24h Only</span>
                                                     </div>
@@ -132,9 +241,49 @@
                                             <!-- Notice shown when Pay at Hotel is unavailable due to >24hr rule -->
                                             <div id="pay-at-hotel-locked-notice" class="hidden p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-500 flex items-center gap-2 mt-1">
                                                 <i class="fas fa-lock text-gray-400"></i>
-                                                <span><strong>Pay at Hotel</strong> is locked because your check-in date is more than 24 hours away. Please select Option A (Full Payment via GCash).</span>
+                                                <span><strong>Pay at Hotel</strong> is locked because your check-in date is more than 24 hours away. Please proceed with PayMongo Online.</span>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- PayMongo Information Section (Active by default) -->
+                                <div id="paymongo-payment-section" class="bg-gradient-to-br from-slate-50 to-blue-50/60 p-6 rounded-2xl border border-blue-200/80 space-y-4 shadow-sm">
+                                    <div class="flex items-center justify-between border-b border-blue-100 pb-3">
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-blue to-teal-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                                                <i class="fas fa-lock"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-gray-800 text-sm">PayMongo Secure Checkout</h4>
+                                                <p class="text-[11px] text-gray-500">PCI-DSS Encrypted &bull; 3D Secure / OTP Protected</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                            <i class="fas fa-bolt"></i> Instant Hold
+                                        </span>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div class="p-3 bg-white rounded-xl border border-gray-100 flex items-start gap-2 shadow-xs">
+                                            <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                            <div>
+                                                <strong class="text-gray-800 block">Zero Receipt Uploads</strong>
+                                                <span class="text-gray-500 text-[11px]">System automatically verifies your transaction within seconds.</span>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 bg-white rounded-xl border border-gray-100 flex items-start gap-2 shadow-xs">
+                                            <i class="fas fa-shield-alt text-brand-blue mt-0.5"></i>
+                                            <div>
+                                                <strong class="text-gray-800 block">Bank-Grade Protection</strong>
+                                                <span class="text-gray-500 text-[11px]">Direct encrypted payment powered by official PayMongo API.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-3 bg-blue-50/70 rounded-xl text-xs text-brand-dark border border-blue-100 flex items-center justify-between">
+                                        <span class="text-gray-600">Amount to pay via PayMongo:</span>
+                                        <strong class="text-base font-bold text-brand-blue" id="paymongo-amount-display">₱0.00</strong>
                                     </div>
                                 </div>
 
@@ -153,84 +302,7 @@
                                     </div>
                                 </div>
 
-                                <!-- GCash Proof of Payment Section (Required for Option A: Full Payment) -->
-                                <div id="gcash-payment-section" class="bg-slate-50 p-6 rounded-2xl border border-blue-100 space-y-5">
-                                    <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-                                        <div class="flex items-center gap-2">
-                                            <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">G</div>
-                                            <h4 class="font-bold text-gray-800 text-sm">GCash Payment & Proof Submission</h4>
-                                        </div>
-                                        <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                            <i class="fas fa-stopwatch"></i> 2-Hour Temporary Hold
-                                        </span>
-                                    </div>
 
-                                    <!-- QR & Details Grid -->
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                        <div class="text-center sm:text-left">
-                                            <span class="text-[10px] uppercase font-bold text-gray-400 block">GCash Account Name</span>
-                                            <strong class="text-gray-800 text-sm block mb-2">MA*K JA**N C. <span class="text-xs font-normal text-gray-500">(W Island Hub)</span></strong>
-                                            
-                                            <span class="text-[10px] uppercase font-bold text-gray-400 block">GCash Mobile Number</span>
-                                            <div class="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                                                <strong class="font-mono text-base text-blue-600 font-bold" id="gcash-number-display">0975-361-4030</strong>
-                                                <button type="button" onclick="copyGcashNumber()" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded transition flex items-center gap-1" title="Copy Number">
-                                                    <i class="far fa-copy"></i>
-                                                    <span>Copy</span>
-                                                </button>
-                                            </div>
-
-                                            <span class="text-[10px] uppercase font-bold text-gray-400 block">Amount to Send Now</span>
-                                            <strong class="text-xl font-bold text-brand-blue" id="gcash-amount-to-send">₱0.00</strong>
-                                        </div>
-
-                                        <div class="flex flex-col items-center justify-center border-t sm:border-t-0 sm:border-l border-gray-100 pt-3 sm:pt-0 sm:pl-4">
-                                            <div class="p-1.5 bg-white rounded-xl border border-gray-200 shadow-inner group cursor-pointer hover:border-blue-400 hover:shadow-md transition" onclick="openGcashQrModal()" title="Click to enlarge official GCash QR Code">
-                                                <img id="gcash-qr-image" src="assets/image/gcash_qr_card.jpg" onerror="this.src='../assets/image/gcash_qr_card.jpg'" alt="Official GCash QR Code" class="w-36 h-auto max-h-48 object-contain rounded-lg group-hover:scale-105 transition-transform duration-200">
-                                            </div>
-                                            <button type="button" onclick="openGcashQrModal()" class="text-[11px] text-brand-blue font-semibold mt-1.5 flex items-center gap-1 hover:underline">
-                                                <i class="fas fa-search-plus"></i> View Full GCash QR
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Inputs: Reference Number & Receipt Upload -->
-                                    <div class="space-y-4">
-                                        <div>
-                                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">
-                                                GCash Reference Number <span class="text-rose-500">*</span>
-                                            </label>
-                                            <input type="text" id="book-gcash-ref" maxlength="40" placeholder="e.g., 901234567890" class="w-full border border-gray-300 bg-white rounded-xl p-3 text-sm font-mono uppercase focus:ring-2 focus:ring-brand-blue outline-none transition">
-                                            <p class="text-[11px] text-gray-400 mt-1">Enter the exact 10-15 character reference number from your GCash SMS/receipt.</p>
-                                        </div>
-
-                                        <div>
-                                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">
-                                                Upload Receipt Screenshot / Proof <span class="text-rose-500">*</span>
-                                            </label>
-                                            <div class="border-2 border-dashed border-gray-300 hover:border-brand-blue bg-white p-4 rounded-xl text-center cursor-pointer transition relative" id="receipt-dropzone" onclick="document.getElementById('book-receipt-file').click()">
-                                                <input type="file" id="book-receipt-file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handleReceiptPreview(event)">
-                                                <div id="receipt-preview-container" class="hidden mb-2">
-                                                    <img id="receipt-preview-img" src="" alt="Receipt Preview" class="max-h-40 mx-auto rounded-lg shadow-md object-contain">
-                                                    <button type="button" onclick="removeReceiptFile(event)" class="mt-2 text-xs text-rose-600 hover:underline font-bold">
-                                                        <i class="fas fa-trash-alt mr-1"></i> Remove / Choose another
-                                                    </button>
-                                                </div>
-                                                <div id="receipt-upload-placeholder">
-                                                    <i class="fas fa-cloud-upload-alt text-2xl text-brand-blue mb-1"></i>
-                                                    <p class="text-xs font-bold text-gray-700">Click or drag receipt image here</p>
-                                                    <p class="text-[10px] text-gray-400 mt-0.5">Supports JPG, PNG, WEBP (Max 5MB)</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Hold Expiry Notice -->
-                                    <div class="p-3 bg-amber-50 rounded-xl text-xs text-amber-800 border border-amber-200 flex items-start gap-2">
-                                        <i class="fas fa-hourglass-half text-amber-600 mt-0.5"></i>
-                                        <span><strong>Inventory Hold Policy:</strong> Upon submission, your room is temporarily locked with a <strong>2-hour countdown timer</strong> while our front desk verifies your payment proof.</span>
-                                    </div>
-                                </div>
 
                                 <button type="submit" id="btn-confirm-booking" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-xl hover:shadow-2xl transition flex items-center justify-center gap-2 text-base">
                                     <i class="fas fa-lock"></i>
@@ -256,6 +328,10 @@
                                     <div class="flex justify-between text-gray-600">
                                         <span>Price per night</span>
                                         <span id="summary-price" class="font-semibold text-gray-800">₱0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-gray-600 hidden" id="summary-rooms-count-row">
+                                        <span>Rooms Reserved</span>
+                                        <span id="summary-rooms-count" class="font-semibold text-brand-blue">1 Room</span>
                                     </div>
                                     <div class="flex justify-between text-gray-600">
                                         <span>Stay Duration</span>
@@ -294,42 +370,44 @@
             </div>
         </div>
 
-        <!-- Official GCash QR Code Modal (Enlarged High-Res Preview) -->
-        <div id="gcash-qr-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-[200] hidden items-center justify-center p-4" onclick="closeGcashQrModal(event)">
-            <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 relative overflow-hidden text-center" onclick="event.stopPropagation()">
-                <button type="button" onclick="closeGcashQrModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition" title="Close">
-                    <i class="fas fa-times"></i>
+
+
+        <!-- ================= ROOM RECOMMENDATION MODAL ================= -->
+        <!-- Shown when user party size (e.g. 4+) exceeds a 2-capacity room -->
+        <div id="room-recommendation-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-[200] hidden items-center justify-center p-4 transition-opacity duration-300" onclick="closeRoomRecommendationModal(event)">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-7 relative overflow-hidden border border-gray-100 max-h-[92vh] flex flex-col" onclick="event.stopPropagation()">
+                <button type="button" onclick="closeRoomRecommendationModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition" title="Close">
+                    <i class="fas fa-times text-sm"></i>
                 </button>
-                <div class="mb-3">
-                    <div class="inline-flex items-center gap-2 mb-1">
-                        <span class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">G</span>
-                        <h4 class="font-bold text-gray-800 text-base">Official GCash QR Code</h4>
+
+                <div class="flex items-center gap-3 mb-4 flex-shrink-0">
+                    <div class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl flex-shrink-0 shadow-inner">
+                        <i class="fas fa-lightbulb"></i>
                     </div>
-                    <p class="text-xs text-gray-500">Scan using GCash, Maya, or any InstaPay app</p>
-                </div>
-                
-                <div class="p-2 bg-blue-50/50 rounded-2xl border border-blue-100 mb-3 inline-block">
-                    <img src="assets/image/gcash_qr.jpg" onerror="this.src='../assets/image/gcash_qr.jpg'" alt="Official GCash QR Code" class="max-h-[58vh] w-auto mx-auto rounded-xl shadow-md object-contain">
-                </div>
-                
-                <div class="bg-slate-50 rounded-2xl p-3 border border-gray-100 text-xs text-left space-y-1.5">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500">Account Name:</span>
-                        <strong class="text-gray-800">MA*K JA**N C.</strong>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500">Mobile Number:</span>
-                        <span class="flex items-center gap-1.5 font-mono font-bold text-blue-600">
-                            0975-361-4030
-                            <button type="button" onclick="copyGcashNumber()" class="text-gray-500 hover:text-blue-600 text-xs px-1.5 py-0.5 bg-white border border-gray-200 rounded transition" title="Copy Number">
-                                <i class="far fa-copy"></i>
-                            </button>
-                        </span>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-amber-600">Smart Recommendation</span>
+                        <h3 class="text-lg sm:text-xl font-serif font-bold text-gray-800 leading-tight">Need More Space for Your Group?</h3>
                     </div>
                 </div>
 
-                <button type="button" onclick="closeGcashQrModal()" class="w-full mt-4 bg-brand-blue hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl transition text-sm shadow">
-                    Done
-                </button>
+                <!-- Explanation Banner -->
+                <div class="p-3.5 bg-amber-50/90 rounded-2xl border border-amber-200 text-xs text-amber-900 mb-4 leading-relaxed flex-shrink-0" id="rec-explanation-banner">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- Recommendations Container (Scrollable) -->
+                <div class="space-y-4 overflow-y-auto flex-1 pr-1" id="rec-options-container">
+                    <!-- Populated dynamically by JS (Add Multiple Rooms & Switch to Larger Room) -->
+                </div>
+
+                <!-- Footer Alternative Actions -->
+                <div class="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-shrink-0 text-xs">
+                    <button type="button" onclick="closeRoomRecommendationModal()" class="text-gray-500 hover:text-gray-800 font-semibold px-3 py-2 rounded-xl transition">
+                        Change Guests
+                    </button>
+                    <button type="button" id="rec-proceed-single-btn" onclick="proceedSingleRoomAnyway()" class="text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl font-medium transition">
+                        Continue with 1 Room (2 Guests Max)
+                    </button>
+                </div>
             </div>
         </div>

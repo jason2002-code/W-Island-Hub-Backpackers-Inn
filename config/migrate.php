@@ -24,7 +24,9 @@ function runMigrations() {
             'paid_amount' => "DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `total_amount`",
             'balance_due' => "DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `paid_amount`",
             'gcash_reference_no' => "VARCHAR(100) NULL AFTER `payment_method`",
-            'receipt_url' => "VARCHAR(255) NULL AFTER `gcash_reference_no`",
+            'paymongo_session_id' => "VARCHAR(150) NULL AFTER `gcash_reference_no`",
+            'paymongo_payment_id' => "VARCHAR(150) NULL AFTER `paymongo_session_id`",
+            'receipt_url' => "VARCHAR(255) NULL AFTER `paymongo_payment_id`",
             'booking_status' => "ENUM('pending_verification','confirmed','deposit_paid','pending_arrival','completed','cancelled_expired','no_show') NOT NULL DEFAULT 'pending_verification' AFTER `status`",
             'expires_at' => "DATETIME NULL AFTER `booking_status`",
             'special_requests' => "TEXT NULL AFTER `expires_at`",
@@ -42,6 +44,9 @@ function runMigrations() {
                 $added[] = $colName;
             }
         }
+
+        // Ensure user_id is nullable for guest reservations
+        $pdo->exec("ALTER TABLE `bookings` MODIFY COLUMN `user_id` INT(11) NULL");
 
         // Sync check_in_date and total_amount for existing records
         $pdo->exec("UPDATE `bookings` SET `check_in_date` = `check_in` WHERE (`check_in_date` IS NULL OR `check_in_date` = '0000-00-00') AND `check_in` IS NOT NULL");

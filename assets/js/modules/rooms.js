@@ -21,6 +21,117 @@ function getLocalDateString(d) {
 }
 
 /**
+ * Toggles the guest dropdown popover open/closed for a given scope ('home' or 'rooms').
+ * @param {'home'|'rooms'} scope
+ */
+function toggleGuestDropdown(scope) {
+    const dropdown = document.getElementById(`${scope}-guest-dropdown`);
+    const chevron = document.getElementById(`${scope}-guest-chevron`);
+    if (!dropdown) return;
+
+    // Close the other scope if open
+    const otherScope = scope === 'home' ? 'rooms' : 'home';
+    closeGuestDropdown(otherScope);
+
+    const isHidden = dropdown.classList.contains('hidden');
+    if (isHidden) {
+        dropdown.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+    } else {
+        dropdown.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+    }
+}
+
+/**
+ * Closes the guest dropdown popover for a given scope ('home' or 'rooms').
+ * @param {'home'|'rooms'} scope
+ */
+function closeGuestDropdown(scope) {
+    const dropdown = document.getElementById(`${scope}-guest-dropdown`);
+    const chevron = document.getElementById(`${scope}-guest-chevron`);
+    if (dropdown) dropdown.classList.add('hidden');
+    if (chevron) chevron.classList.remove('rotate-180');
+}
+
+/**
+ * Updates adult or child count via stepper buttons and synchronizes values and summaries.
+ * @param {'home'|'rooms'} scope
+ * @param {'adults'|'children'} type
+ * @param {number} delta - (+1 or -1)
+ */
+function updateGuestStepper(scope, type, delta) {
+    const prefix = scope === 'home' ? 'home-' : '';
+    const otherScope = scope === 'home' ? 'rooms' : 'home';
+
+    let adultsInput = document.getElementById(prefix ? `${prefix}adults-count` : 'adults-count');
+    let childrenInput = document.getElementById(prefix ? `${prefix}children-count` : 'children-count');
+
+    let adults = parseInt(adultsInput?.value || '1', 10);
+    let children = parseInt(childrenInput?.value || '0', 10);
+
+    if (isNaN(adults) || adults < 1) adults = 1;
+    if (isNaN(children) || children < 0) children = 0;
+
+    if (type === 'adults') {
+        adults = Math.max(1, adults + delta);
+    } else if (type === 'children') {
+        children = Math.max(0, children + delta);
+    }
+
+    const totalGuests = adults + children;
+
+    // Apply to current scope
+    applyGuestValuesToScope(scope, adults, children, totalGuests);
+    // Sync to other scope so search states stay identical
+    applyGuestValuesToScope(otherScope, adults, children, totalGuests);
+}
+
+/**
+ * Applies adult, child, and total guest values to UI elements for a scope.
+ */
+function applyGuestValuesToScope(scope, adults, children, totalGuests) {
+    const prefix = scope === 'home' ? 'home-' : '';
+
+    const adultsInput = document.getElementById(prefix ? `${prefix}adults-count` : 'adults-count');
+    const childrenInput = document.getElementById(prefix ? `${prefix}children-count` : 'children-count');
+    const guestInput = document.getElementById(prefix ? `${prefix}guest-count` : 'guest-count');
+
+    if (adultsInput) adultsInput.value = adults;
+    if (childrenInput) childrenInput.value = children;
+    if (guestInput) guestInput.value = totalGuests;
+
+    // Stepper displays
+    const adultsDisplay = document.getElementById(`${scope}-adults-display`);
+    const childrenDisplay = document.getElementById(`${scope}-children-display`);
+    if (adultsDisplay) adultsDisplay.textContent = adults;
+    if (childrenDisplay) childrenDisplay.textContent = children;
+
+    // Minus button states
+    const adultsMinus = document.getElementById(`${scope}-adults-minus`);
+    const childrenMinus = document.getElementById(`${scope}-children-minus`);
+    if (adultsMinus) adultsMinus.disabled = adults <= 1;
+    if (childrenMinus) childrenMinus.disabled = children <= 0;
+
+    // Summary text
+    const summaryText = document.getElementById(`${scope}-guest-summary-text`);
+    const totalBadge = document.getElementById(`${scope}-total-guest-badge`);
+    
+    let summaryStr = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}`;
+    if (children > 0) {
+        summaryStr += `, ${children} Child${children > 1 ? 'ren' : ''}`;
+    }
+    summaryStr += ')';
+
+    if (summaryText) summaryText.textContent = summaryStr;
+    if (totalBadge) totalBadge.textContent = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'}`;
+}
+
+function syncGuestSelectorLimits() {
+    // Guest limit removed per user request. Guests can be any party size.
+}
+
+/**
  * Fetches active room catalog from backend database and updates state.
  * Re-renders rooms upon successful retrieval.
  */
@@ -35,7 +146,8 @@ function fetchRooms() {
                     name: room.name,
                     type: room.type,
                     price: parseFloat(room.price) || 0,
-                    capacity: parseInt(room.capacity) || 1,
+                    capacity: parseInt(room.capacity) !== undefined ? parseInt(room.capacity) : 1,
+                    max_capacity: parseInt(room.max_capacity) || parseInt(room.capacity) || 1,
                     image: room.image || 'assets/image/background.jpg',
                     desc: room.description || room.desc || '',
                     amenities: (() => {
@@ -52,6 +164,7 @@ function fetchRooms() {
                     status: room.status || 'Available'
                 }));
                 
+                syncGuestSelectorLimits();
                 renderRooms();
             }
         })
@@ -84,7 +197,7 @@ function renderRooms(filterDate = null) {
         
         const formattedPrice = room.price.toFixed ? room.price.toFixed(2) : parseFloat(room.price).toFixed(2);
         return `
-        <div class="room-card bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 flex flex-col" data-room-id="${room.id}" data-capacity="${room.capacity || 2}">
+        <div class="room-card bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 flex flex-col" data-room-id="${room.id}" data-capacity="${room.capacity}" data-max-capacity="${room.max_capacity || room.capacity}">
             <div class="h-48 overflow-hidden relative cursor-pointer group" onclick="openRoomInfoModal(${room.id})" title="Click to view full room information">
                  <img src="${room.image}" alt="${room.name}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
                  <div class="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -109,7 +222,7 @@ function renderRooms(filterDate = null) {
                 <p class="text-gray-500 text-sm mb-4 line-clamp-2">${room.desc}</p>
                 
                 <div class="flex flex-wrap gap-2 mb-4">
-                    <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${room.capacity || 2} Guest${(room.capacity || 2) > 1 ? 's' : ''}</span>
+                    <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${room.max_capacity || room.capacity || 2} Guest${(room.max_capacity || room.capacity || 2) > 1 ? 's' : ''}</span>
                     ${room.amenities.slice(0,3).map(a => `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${a}</span>`).join('')}
                 </div>
                 
@@ -242,36 +355,17 @@ function initDateConstraints() {
 }
 
 /**
- * Initializes and restricts guest count selectors (minimum 1, maximum 5 guests).
+ * Initializes outside-click listener for the unified guest selectors.
  */
 function initGuestSelector() {
-    ['guest-count', 'home-guest-count'].forEach(id => {
-        const input = document.getElementById(id);
-        if (!input) return;
-
-        input.addEventListener('input', (e) => {
-            let val = parseInt(e.target.value, 10);
-            if (val > 5) {
-                e.target.value = 5;
-                window.showToast('Maximum 5 guests allowed', 'info');
-            }
-        });
-
-        input.addEventListener('blur', (e) => {
-            let val = parseInt(e.target.value, 10);
-            if (isNaN(val) || val < 1) {
-                e.target.value = 1;
-            } else if (val > 5) {
-                e.target.value = 5;
-            }
-        });
-
-        input.addEventListener('change', (e) => {
-            let val = parseInt(e.target.value, 10);
-            if (isNaN(val) || val < 1) {
-                e.target.value = 1;
-            } else if (val > 5) {
-                e.target.value = 5;
+    document.addEventListener('click', (e) => {
+        ['home', 'rooms'].forEach(scope => {
+            const container = document.getElementById(scope === 'home' ? 'home-guest-box-container' : 'rooms-guest-box-container');
+            const dropdown = document.getElementById(`${scope}-guest-dropdown`);
+            if (container && dropdown && !dropdown.classList.contains('hidden')) {
+                if (!container.contains(e.target)) {
+                    closeGuestDropdown(scope);
+                }
             }
         });
     });
@@ -288,7 +382,9 @@ function searchFromHome(e) {
     
     const homeCheckIn = document.getElementById('home-check-in-date')?.value;
     const homeCheckOut = document.getElementById('home-check-out-date')?.value;
-    const homeGuests = document.getElementById('home-guest-count')?.value;
+    const homeAdults = parseInt(document.getElementById('home-adults-count')?.value || '1', 10) || 1;
+    const homeChildren = parseInt(document.getElementById('home-children-count')?.value || '0', 10) || 0;
+    const homeGuests = homeAdults + homeChildren;
 
     if (homeCheckIn && document.getElementById('check-in-date')) {
         document.getElementById('check-in-date').value = homeCheckIn;
@@ -296,9 +392,9 @@ function searchFromHome(e) {
     if (homeCheckOut && document.getElementById('check-out-date')) {
         document.getElementById('check-out-date').value = homeCheckOut;
     }
-    if (homeGuests && document.getElementById('guest-count')) {
-        document.getElementById('guest-count').value = homeGuests;
-    }
+    
+    // Sync guest counters into rooms scope
+    applyGuestValuesToScope('rooms', homeAdults, homeChildren, homeGuests);
 
     window.router('rooms');
 
@@ -323,12 +419,7 @@ function initAvailabilityForm() {
         let checkOut = document.getElementById('check-out-date').value;
         const guestCountEl = document.getElementById('guest-count');
         let guests = parseInt(guestCountEl ? guestCountEl.value : 1, 10) || 1;
-        
-        if (guests > 5) {
-            guests = 5;
-            if (guestCountEl) guestCountEl.value = 5;
-            window.showToast('Maximum 5 guests allowed', 'warning');
-        } else if (guests < 1) {
+        if (guests < 1) {
             guests = 1;
             if (guestCountEl) guestCountEl.value = 1;
         }
@@ -348,82 +439,152 @@ function initAvailabilityForm() {
             return;
         }
 
-        const roomsContainer = document.getElementById('rooms-container');
-        let allRoomEls = Array.from(document.querySelectorAll('.room-card[data-room-id]'));
+        const submitBtn = availabilityForm.querySelector('button[type="submit"]');
+        const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking Availability...';
+        }
 
-        // Fallback if data-room-id or .room-card class is missing in PHP-rendered rooms
-        if (allRoomEls.length === 0 && roomsContainer) {
-            const buttons = roomsContainer.querySelectorAll('button[onclick^="initiateBooking"]');
-            buttons.forEach(btn => {
-                const match = btn.getAttribute('onclick').match(/initiateBooking\((\d+)\)/);
-                if (match && match[1]) {
-                    const card = btn.closest('.room-card') || btn.closest('[class*="col-"]') || btn.parentElement.parentElement;
-                    if (card) {
-                        card.dataset.roomId = match[1];
-                        if (!allRoomEls.includes(card)) {
-                            allRoomEls.push(card);
+        try {
+            const roomsContainer = document.getElementById('rooms-container');
+            let allRoomEls = Array.from(document.querySelectorAll('.room-card[data-room-id]'));
+
+            // Fallback if data-room-id or .room-card class is missing in PHP-rendered rooms
+            if (allRoomEls.length === 0 && roomsContainer) {
+                const buttons = roomsContainer.querySelectorAll('button[onclick^="initiateBooking"]');
+                buttons.forEach(btn => {
+                    const match = btn.getAttribute('onclick').match(/initiateBooking\((\d+)\)/);
+                    if (match && match[1]) {
+                        const card = btn.closest('.room-card') || btn.closest('[class*="col-"]') || btn.parentElement.parentElement;
+                        if (card) {
+                            card.dataset.roomId = match[1];
+                            if (!allRoomEls.includes(card)) {
+                                allRoomEls.push(card);
+                            }
                         }
                     }
-                }
-            });
-        }
-
-        allRoomEls.forEach(el => {
-            el.style.display = '';
-        });
-
-        const results = await Promise.all(allRoomEls.map(async (roomEl) => {
-            const roomId = roomEl.dataset.roomId;
-            const roomCapacity = parseInt(roomEl.dataset.capacity, 10) || 
-                                 (window.appState.rooms.find(r => r.id == roomId)?.capacity) || 2;
-
-            if (roomCapacity < guests) {
-                roomEl.style.display = 'none';
-                return { roomId, available: false, capacityMatch: false };
-            }
-
-            try {
-                const response = await fetch('actions/book_action.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        action: 'check_availability',
-                        room_id: roomId,
-                        check_in: checkIn,
-                        check_out: checkOut
-                    })
                 });
-                const data = await response.json();
-                const available = data.available;
+            }
 
-                if (!available) {
+            allRoomEls.forEach(el => {
+                el.style.display = '';
+            });
+
+            const results = await Promise.all(allRoomEls.map(async (roomEl) => {
+                const roomId = roomEl.dataset.roomId;
+                const roomCapacity = parseInt(roomEl.dataset.capacity, 10) || 
+                                     (window.appState?.rooms?.find(r => r.id == roomId)?.capacity) || 2;
+                const roomMaxCapacity = parseInt(roomEl.dataset.maxCapacity, 10) || 
+                                        parseInt(roomEl.dataset.capacity, 10) || 
+                                        (window.appState?.rooms?.find(r => r.id == roomId)?.max_capacity) || 
+                                        roomCapacity;
+
+                const isSmallForGroup = roomMaxCapacity < guests;
+                const isTwoCapRecommendation = (guests >= 4 && roomMaxCapacity <= 2);
+
+                if (isSmallForGroup && !isTwoCapRecommendation) {
                     roomEl.style.display = 'none';
-                } else {
-                    roomEl.style.display = '';
-                    const statusBadge = roomEl.querySelector('.room-status-badge');
-                    if (statusBadge && statusBadge.textContent.trim().toLowerCase() === 'available') {
-                        statusBadge.remove();
-                    }
+                    return { roomId, available: false, capacityMatch: false, isBooked: false };
                 }
 
-                return { roomId, available, capacityMatch: true };
-            } catch (err) {
-                console.error(err);
-                return { roomId, available: false, capacityMatch: true };
-            }
-        }));
+                try {
+                    // If checking a 2-capacity room for 4+ guests recommendation, check base room availability
+                    const guestsParam = isTwoCapRecommendation ? 1 : guests;
+                    const response = await fetch('actions/book_action.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            action: 'check_availability',
+                            room_id: roomId,
+                            check_in: checkIn,
+                            check_out: checkOut,
+                            guests: guestsParam
+                        })
+                    });
+                    const data = await response.json();
+                    const available = !!(data && data.success && data.available);
+                    const isBooked = !!(data && data.is_booked);
 
-        const anyAvailable = results.some(r => r.available && r.capacityMatch);
-        let noAvailEl = document.getElementById('no-available-rooms');
-        if (!noAvailEl && roomsContainer) {
-            noAvailEl = document.createElement('div');
-            noAvailEl.id = 'no-available-rooms';
-            noAvailEl.className = 'col-span-full text-center text-gray-500 py-8';
-            roomsContainer.appendChild(noAvailEl);
-        }
-        if (noAvailEl) {
-            noAvailEl.innerHTML = `<p class="text-gray-500"><i class="fas fa-info-circle mr-1"></i> No rooms available for ${guests} ${guests === 1 ? 'guest' : 'guests'} on selected dates.</p>`;
-            noAvailEl.style.display = anyAvailable ? 'none' : '';
+                    if (!available) {
+                        // Filter out already booked or unavailable room
+                        roomEl.style.display = 'none';
+                        return { roomId, available: false, capacityMatch: false, isBooked };
+                    } else {
+                        roomEl.style.display = '';
+                        const statusBadge = roomEl.querySelector('.room-status-badge');
+                        if (statusBadge && statusBadge.textContent.trim().toLowerCase() === 'available') {
+                            statusBadge.remove();
+                        }
+
+                        // Remove any previous recommendation or fit badges
+                        const existingBadge = roomEl.querySelector('.room-rec-card-badge');
+                        if (existingBadge) existingBadge.remove();
+
+                        // Add dynamic badge: Recommended multi-room or Direct Fit
+                        const descEl = roomEl.querySelector('p.line-clamp-2') || roomEl.querySelector('.room-card > div.p-6');
+                        if (descEl && descEl.parentNode) {
+                            const badgeDiv = document.createElement('div');
+                            badgeDiv.className = 'room-rec-card-badge mt-2 mb-2 p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5';
+                            if (isTwoCapRecommendation) {
+                                const needed = Math.ceil(guests / roomMaxCapacity);
+                                badgeDiv.className += ' bg-amber-50 border border-amber-200 text-amber-900';
+                                badgeDiv.innerHTML = `<i class="fas fa-lightbulb text-amber-500"></i><span>Capacity: 2 &bull; <strong>Recommended: Book ${needed} Rooms</strong> to fit your ${guests} guests</span>`;
+                            } else {
+                                badgeDiv.className += ' bg-emerald-50 border border-emerald-200 text-emerald-800';
+                                badgeDiv.innerHTML = `<i class="fas fa-check-circle text-emerald-500"></i><span><strong>Fits Entire Group:</strong> Up to ${roomMaxCapacity} Guests</span>`;
+                            }
+                            descEl.parentNode.insertBefore(badgeDiv, descEl.nextSibling);
+                        }
+
+                        return { roomId, available: true, capacityMatch: true, isBooked: false };
+                    }
+                } catch (err) {
+                    console.error('Availability check failed for room ' + roomId, err);
+                    roomEl.style.display = 'none';
+                    return { roomId, available: false, capacityMatch: true, isBooked: false };
+                }
+            }));
+
+            const availableRooms = results.filter(r => r.available && r.capacityMatch);
+            const anyAvailable = availableRooms.length > 0;
+            const bookedCount = results.filter(r => r.isBooked).length;
+
+            let noAvailEl = document.getElementById('no-available-rooms');
+            if (!noAvailEl && roomsContainer) {
+                noAvailEl = document.createElement('div');
+                noAvailEl.id = 'no-available-rooms';
+                noAvailEl.className = 'col-span-full text-center text-gray-500 py-12';
+                roomsContainer.appendChild(noAvailEl);
+            }
+            if (noAvailEl) {
+                noAvailEl.innerHTML = `
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-8 max-w-md mx-auto text-center">
+                        <i class="fas fa-calendar-times text-rose-500 text-4xl mb-3"></i>
+                        <h4 class="text-lg font-bold text-slate-800 mb-1">No Rooms Available</h4>
+                        <p class="text-xs text-slate-500 mb-4">All rooms are booked or unavailable for ${guests} ${guests === 1 ? 'guest' : 'guests'} from <strong class="text-slate-700">${checkIn}</strong> to <strong class="text-slate-700">${checkOut}</strong>.</p>
+                        <p class="text-xs text-brand-blue font-semibold">Try choosing different check-in / check-out dates above.</p>
+                    </div>
+                `;
+                noAvailEl.style.display = anyAvailable ? 'none' : '';
+            }
+
+            if (typeof window.showToast === 'function') {
+                if (anyAvailable) {
+                    if (bookedCount > 0) {
+                        window.showToast(`Showing ${availableRooms.length} available room${availableRooms.length > 1 ? 's' : ''}. (${bookedCount} already booked room${bookedCount > 1 ? 's' : ''} filtered out)`, 'info');
+                    } else {
+                        window.showToast(`All ${availableRooms.length} rooms are available for your selected dates!`, 'success');
+                    }
+                } else {
+                    window.showToast(`No rooms available for ${checkIn} to ${checkOut}. Please try other dates.`, 'warning');
+                }
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origBtnHtml;
+            }
         }
     });
 }
@@ -657,7 +818,7 @@ function populateAndShowRoomModal(room) {
     if (ratingEl) ratingEl.textContent = ratingVal.toFixed(1);
 
     // Capacity
-    const capacityVal = parseInt(room.capacity, 10) || 2;
+    const capacityVal = parseInt(room.max_capacity || room.capacity, 10) || 2;
     const capText = `Up to ${capacityVal} Guest${capacityVal > 1 ? 's' : ''}`;
     const capEl = document.getElementById('modal-room-capacity');
     if (capEl) capEl.textContent = capText;
@@ -846,20 +1007,210 @@ async function openRoomInfoModal(roomId) {
     populateAndShowRoomModal(room);
 }
 
-// Global keydown listener for Escape key to close modal
+// Global keydown listener for Escape key to close modals
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const modal = document.getElementById('room-info-modal');
         if (modal && !modal.classList.contains('hidden')) {
             closeRoomInfoModal();
         }
+        const recModal = document.getElementById('room-recommendation-modal');
+        if (recModal && !recModal.classList.contains('hidden')) {
+            closeRoomRecommendationModal();
+        }
     }
 });
+
+let recommendationContext = null;
+
+/**
+ * Displays the Room Recommendation Modal when group size (e.g. 4+) exceeds a 2-capacity room.
+ * @param {Object} chosenRoom - The room object.
+ * @param {number} totalGuests - Total number of guests.
+ * @param {number} adults - Adults count.
+ * @param {number} children - Children count.
+ */
+function showRoomRecommendationModal(chosenRoom, totalGuests, adults, children) {
+    const modal = document.getElementById('room-recommendation-modal');
+    if (!modal) return;
+
+    const chosenCap = parseInt(chosenRoom.max_capacity || chosenRoom.capacity, 10) || 2;
+    const neededRooms = Math.ceil(totalGuests / chosenCap);
+    const roomPrice = parseFloat(chosenRoom.price) || 0;
+    const multiRoomNightPrice = roomPrice * neededRooms;
+
+    recommendationContext = {
+        chosenRoom,
+        totalGuests,
+        adults,
+        children,
+        neededRooms
+    };
+
+    // Populate explanation banner
+    const banner = document.getElementById('rec-explanation-banner');
+    if (banner) {
+        banner.innerHTML = `
+            <div class="flex items-start gap-2">
+                <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5 text-sm flex-shrink-0"></i>
+                <div>
+                    <strong>Group Size Exceeds Room Capacity:</strong> You selected <strong>${chosenRoom.name}</strong> (${chosenRoom.type || 'Standard'}), which accommodates up to <strong>${chosenCap} guests</strong>. Your party has <strong>${totalGuests} guests</strong> (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}).
+                </div>
+            </div>
+        `;
+    }
+
+    // Find larger alternative rooms from state that can accommodate the whole group
+    const allRooms = (window.appState && Array.isArray(window.appState.rooms)) 
+        ? window.appState.rooms 
+        : (Object.values(window.serverRoomsData || {}));
+    
+    const largerRooms = allRooms.filter(r => {
+        const cap = parseInt(r.max_capacity || r.capacity, 10) || 0;
+        return r.id != chosenRoom.id && cap >= totalGuests && r.status !== 'Maintenance';
+    });
+
+    const container = document.getElementById('rec-options-container');
+    if (container) {
+        let html = '';
+
+        // Option 1: Add Multiple Rooms (e.g. 2x Standard Double)
+        html += `
+            <div class="p-4 rounded-2xl border-2 border-brand-blue/30 bg-blue-50/40 hover:border-brand-blue transition shadow-xs">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-brand-blue flex items-center gap-1.5">
+                        <i class="fas fa-layer-group"></i> Option 1: Add More Rooms (${neededRooms} Rooms Needed)
+                    </span>
+                    <span class="text-[11px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                        Recommended
+                    </span>
+                </div>
+                <h4 class="text-base font-bold text-gray-800 mb-1">Book ${neededRooms}x ${chosenRoom.name}</h4>
+                <p class="text-xs text-gray-500 mb-3">
+                    Reserve <strong>${neededRooms} rooms</strong> of this accommodation to fit all ${totalGuests} guests (${neededRooms} rooms &times; ${chosenCap} capacity = ${neededRooms * chosenCap} total capacity).
+                </p>
+                <div class="flex items-center justify-between pt-2 border-t border-blue-100/80">
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Combined Rate</span>
+                        <strong class="text-sm font-bold text-brand-dark">₱${multiRoomNightPrice.toFixed(2)}</strong>
+                        <span class="text-[11px] text-gray-500">/ night (${neededRooms} rooms)</span>
+                    </div>
+                    <button type="button" onclick="proceedMultiRoomBooking(${chosenRoom.id}, ${neededRooms})" class="bg-brand-blue hover:bg-sky-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-check"></i> Book ${neededRooms} Rooms
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Option 2: Recommended Larger Rooms (e.g. Family Suite / Dorm)
+        if (largerRooms.length > 0) {
+            html += `
+                <div class="space-y-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5 pt-1">
+                        <i class="fas fa-star text-amber-500"></i> Option 2: Switch to a Room that Fits Your Whole Group
+                    </span>
+            `;
+            largerRooms.forEach(lr => {
+                const lrCap = parseInt(lr.max_capacity || lr.capacity, 10) || 0;
+                const lrPrice = parseFloat(lr.price) || 0;
+                html += `
+                    <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/30 hover:border-emerald-400 transition shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <img src="${lr.image}" alt="${lr.name}" class="w-16 h-16 rounded-xl object-cover border border-gray-200 flex-shrink-0">
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h4 class="font-bold text-gray-800 text-sm">${lr.name}</h4>
+                                    <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-white text-emerald-800 border border-emerald-200">${lr.type}</span>
+                                </div>
+                                <p class="text-xs text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+                                    <i class="fas fa-user-friends text-[10px]"></i> Accommodates up to ${lrCap} Guests
+                                </p>
+                                <span class="text-xs font-bold text-gray-900 mt-1 block">₱${lrPrice.toFixed(2)} <span class="text-[10px] text-gray-500 font-normal">/ night</span></span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="proceedSwitchRoomBooking(${lr.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex-shrink-0 w-full sm:w-auto flex items-center justify-center gap-1.5 cursor-pointer">
+                            Switch &amp; Book
+                        </button>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeRoomRecommendationModal(e) {
+    if (e && e.target && e.target.id !== 'room-recommendation-modal') {
+        return;
+    }
+    const modal = document.getElementById('room-recommendation-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function proceedMultiRoomBooking(roomId, roomsCount) {
+    closeRoomRecommendationModal();
+    const ctx = recommendationContext;
+    if (typeof window.initiateBooking === 'function') {
+        window.initiateBooking(roomId, {
+            roomsCount: roomsCount,
+            guests: ctx ? ctx.totalGuests : 4,
+            adults: ctx ? ctx.adults : 2,
+            children: ctx ? ctx.children : 2,
+            bypassRecommendation: true
+        });
+    }
+}
+
+function proceedSwitchRoomBooking(newRoomId) {
+    closeRoomRecommendationModal();
+    const ctx = recommendationContext;
+    if (typeof window.initiateBooking === 'function') {
+        window.initiateBooking(newRoomId, {
+            roomsCount: 1,
+            guests: ctx ? ctx.totalGuests : 4,
+            adults: ctx ? ctx.adults : 2,
+            children: ctx ? ctx.children : 2,
+            bypassRecommendation: true
+        });
+    }
+}
+
+function proceedSingleRoomAnyway() {
+    closeRoomRecommendationModal();
+    const ctx = recommendationContext;
+    if (!ctx) return;
+    if (typeof window.initiateBooking === 'function') {
+        window.initiateBooking(ctx.chosenRoom.id, {
+            roomsCount: 1,
+            guests: 2,
+            adults: 2,
+            children: 0,
+            bypassRecommendation: true
+        });
+    }
+}
 
 // Window function bindings for inline HTML and cross-module access
 window.openRoomInfoModal = openRoomInfoModal;
 window.closeRoomInfoModal = closeRoomInfoModal;
 window.openRoomModal = openRoomInfoModal;
 window.closeRoomModal = closeRoomInfoModal;
+window.toggleGuestDropdown = toggleGuestDropdown;
+window.closeGuestDropdown = closeGuestDropdown;
+window.updateGuestStepper = updateGuestStepper;
+window.applyGuestValuesToScope = applyGuestValuesToScope;
+window.showRoomRecommendationModal = showRoomRecommendationModal;
+window.closeRoomRecommendationModal = closeRoomRecommendationModal;
+window.proceedMultiRoomBooking = proceedMultiRoomBooking;
+window.proceedSwitchRoomBooking = proceedSwitchRoomBooking;
+window.proceedSingleRoomAnyway = proceedSingleRoomAnyway;
 
 

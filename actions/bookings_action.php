@@ -6,6 +6,7 @@
  */
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/paymongo.php';
 require_once __DIR__ . '/cron_expiry_action.php';
 
 /**
@@ -45,7 +46,9 @@ function getBookings() {
             // Normalize payment method for display
             $paymentMethodRaw = $b['payment_method'] ?? 'full_gcash';
             $paymentMethodLabel = 'Full Payment (GCash)';
-            if ($paymentMethodRaw === 'deposit_gcash' || stripos($paymentMethodRaw, 'deposit') !== false) {
+            if (stripos($paymentMethodRaw, 'paymongo') !== false) {
+                $paymentMethodLabel = $paymentMethodRaw;
+            } elseif ($paymentMethodRaw === 'deposit_gcash' || stripos($paymentMethodRaw, 'deposit') !== false) {
                 $paymentMethodLabel = 'Deposit (30% GCash)';
             } elseif ($paymentMethodRaw === 'pay_at_hotel' || stripos($paymentMethodRaw, 'hotel') !== false) {
                 $paymentMethodLabel = 'Pay at Hotel';
@@ -71,6 +74,8 @@ function getBookings() {
                 'paymentMethod' => $paymentMethodLabel,
                 'paymentMethodRaw' => $paymentMethodRaw,
                 'gcashRefNo' => $b['gcash_reference_no'] ?? null,
+                'paymongoSessionId' => $b['paymongo_session_id'] ?? null,
+                'paymongoPaymentId' => $b['paymongo_payment_id'] ?? null,
                 'receiptUrl' => $b['receipt_url'] ?? null,
                 'bookingStatus' => $b['booking_status'] ?? 'pending_verification',
                 'status' => $b['status'] ?? 'Pending',
@@ -78,7 +83,10 @@ function getBookings() {
                 'specialRequests' => $b['special_requests'] ?? '',
                 'created_at' => $b['created_at'],
                 'updated_at' => $b['updated_at'] ?? $b['created_at'],
-                'room_price' => (float)($b['room_price'] ?? 0)
+                'room_price' => (float)($b['room_price'] ?? 0),
+                'adults' => (int)($b['adults'] ?? 1),
+                'children' => (int)($b['children'] ?? 0),
+                'roomsCount' => (int)($b['rooms_count'] ?? 1)
             ];
         }, $bookings);
 
@@ -94,17 +102,27 @@ function getBookings() {
 function getSingleBooking($bookingId) {
     $pdo = getDB();
     if (!$pdo || !$bookingId) {
-        echo json_encode(['success' => false, 'message' => 'Booking ID required']);
+        echo json_encode(['success' => false, 'message' => 'Booking ID or Ref ID required']);
         exit;
     }
     try {
-        $stmt = $pdo->prepare("
-            SELECT b.*, r.name as room_name, r.type as room_type, r.price as room_price, r.image as room_image
-            FROM bookings b
-            LEFT JOIN rooms r ON b.room_id = r.id
-            WHERE b.id = ?
-        ");
-        $stmt->execute([$bookingId]);
+        if (is_numeric($bookingId)) {
+            $stmt = $pdo->prepare("
+                SELECT b.*, r.name as room_name, r.type as room_type, r.price as room_price, r.image as room_image
+                FROM bookings b
+                LEFT JOIN rooms r ON b.room_id = r.id
+                WHERE b.id = ?
+            ");
+            $stmt->execute([(int)$bookingId]);
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT b.*, r.name as room_name, r.type as room_type, r.price as room_price, r.image as room_image
+                FROM bookings b
+                LEFT JOIN rooms r ON b.room_id = r.id
+                WHERE b.ref_id = ?
+            ");
+            $stmt->execute([$bookingId]);
+        }
         $booking = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$booking) {
@@ -128,7 +146,7 @@ function createBooking($data) {
         exit;
     }
 
-    $userId = $data['user_id'] ?? null;
+    $userId = !empty($data['user_id']) ? intval($data['user_id']) : null;
     $roomId = $data['room_id'] ?? null;
     $checkIn = $data['check_in'] ?? $data['checkIn'] ?? null;
     $checkOut = $data['check_out'] ?? $data['checkOut'] ?? null;
@@ -140,18 +158,30 @@ function createBooking($data) {
     $expectedArrivalTime = $data['expected_arrival_time'] ?? $data['expectedArrivalTime'] ?? null;
     $gcashRefNo = trim($data['gcash_reference_no'] ?? $data['gcash_ref_no'] ?? $data['gcashRefNo'] ?? '');
 
-    // Basic Field Validations
-    if (!$userId || !$roomId || !$checkIn || !$checkOut || empty($guestName)) {
-        echo json_encode(['success' => false, 'message' => 'Please fill in all required guest and stay details.']);
+    // Basic Field Validations (Allows bookings without login; requires complete guest contact info)
+    if (!$roomId || !$checkIn || !$checkOut || empty($guestName) || empty($guestEmail) || empty($guestPhone)) {
+        echo json_encode(['success' => false, 'message' => 'Please fill in all required guest details (Full Name, Email Address, and Phone Number).']);
         exit;
     }
 
+    // If user is not logged in, but their email matches an existing registered user, associate user_id
+    if (!$userId && !empty($guestEmail)) {
+        $uStmt = $pdo->prepare("SELECT id, role FROM users WHERE email = ? LIMIT 1");
+        $uStmt->execute([$guestEmail]);
+        $matchedUser = $uStmt->fetch(PDO::FETCH_ASSOC);
+        if ($matchedUser && ($matchedUser['role'] ?? '') !== 'admin') {
+            $userId = intval($matchedUser['id']);
+        }
+    }
+
     // Role Validation: Admins cannot book
-    $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
-    $stmt->execute([$userId]);
-    if ($stmt->fetchColumn() === 'admin') {
-        echo json_encode(['success' => false, 'message' => 'Admins cannot create guest bookings.']);
-        exit;
+    if ($userId) {
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        if ($stmt->fetchColumn() === 'admin') {
+            echo json_encode(['success' => false, 'message' => 'Admins cannot create guest bookings.']);
+            exit;
+        }
     }
 
     // Room Validation
@@ -181,23 +211,29 @@ function createBooking($data) {
         exit;
     }
 
+    $adults = max(1, intval($data['adults'] ?? 1));
+    $children = max(0, intval($data['children'] ?? 0));
+    $roomsCount = max(1, intval($data['rooms_count'] ?? $data['roomsCount'] ?? 1));
+
     $nights = (int)$checkOutDate->diff($checkInDate)->days;
     if ($nights < 1) $nights = 1;
 
     $pricePerNight = (float)$room['price'];
-    $totalAmount = ($pricePerNight * $nights) + 15.00; // room subtotal + standard taxes/fees
+    $totalAmount = ($pricePerNight * $nights * $roomsCount) + 15.00; // room subtotal * rooms_count + standard taxes/fees
 
     // Check Room Overlap Availability (Active holds and confirmed stays)
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM bookings
         WHERE room_id = ?
+          AND status IN ('Pending', 'Confirmed')
           AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
-          AND check_in_date < ?
-          AND check_out_date > ?
+          AND COALESCE(check_in_date, check_in) < ?
+          AND COALESCE(check_out_date, check_out) > ?
     ");
     $stmt->execute([$roomId, $checkOut, $checkIn]);
-    if ($stmt->fetchColumn() > 0) {
-        echo json_encode(['success' => false, 'message' => 'Room is no longer available on the selected dates. Please choose another date or room.']);
+    $overlapCount = (int)$stmt->fetchColumn();
+    if ($overlapCount > 0) {
+        echo json_encode(['success' => false, 'message' => 'Room is already booked on the selected dates. Please choose another date or room.']);
         exit;
     }
 
@@ -210,35 +246,35 @@ function createBooking($data) {
     $receiptUrl = null;
 
     // Normalizing payment method identifier
-    if ($paymentMethod === 'GCash' || $paymentMethod === 'Full Payment' || $paymentMethod === 'full_gcash') {
-        $paymentMethod = 'full_gcash';
-    } elseif ($paymentMethod === 'Pay at Hotel' || $paymentMethod === 'pay_at_hotel') {
+    if ($paymentMethod === 'paymongo' || $paymentMethod === 'paymongo_checkout' || stripos($paymentMethod, 'paymongo') !== false) {
+        $paymentMethod = 'PayMongo (Online)';
+    } elseif ($paymentMethod === 'Pay at Hotel' || $paymentMethod === 'pay_at_hotel' || stripos($paymentMethod, 'hotel') !== false) {
         $paymentMethod = 'pay_at_hotel';
-    } elseif ($paymentMethod === 'Deposit' || $paymentMethod === 'deposit_gcash') {
-        echo json_encode(['success' => false, 'message' => 'Downpayment is no longer supported. Please select GCash Full Payment or Pay at Hotel.']);
+    } elseif ($paymentMethod === 'GCash' || $paymentMethod === 'Full Payment' || $paymentMethod === 'full_gcash') {
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Manual GCash receipt submission has been retired. Please select PayMongo Online to pay instantly with GCash, Cards, Maya, or GrabPay.'
+        ]);
         exit;
+    } elseif ($paymentMethod === 'Deposit' || $paymentMethod === 'deposit_gcash') {
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Downpayment is no longer supported. Please select PayMongo Online or Pay at Hotel.'
+        ]);
+        exit;
+    } else {
+        $paymentMethod = 'PayMongo (Online)';
     }
 
-    // 1. Option A: Full Payment (GCash)
-    if ($paymentMethod === 'full_gcash') {
-        if (empty($gcashRefNo)) {
-            echo json_encode(['success' => false, 'message' => 'GCash Reference Number is required for full payment.']);
-            exit;
-        }
-
-        $receiptUrl = handleReceiptUpload();
-        if (!$receiptUrl) {
-            echo json_encode(['success' => false, 'message' => 'Proof of payment receipt image is required (JPG, PNG, WebP up to 5MB).']);
-            exit;
-        }
-
-        $paidAmount = $totalAmount;
-        $balanceDue = 0.00;
+    // 1. Option 1: Instant Online Payment (PayMongo - Cards, GCash, Maya, GrabPay)
+    if ($paymentMethod === 'PayMongo (Online)') {
+        $paidAmount = 0.00;
+        $balanceDue = $totalAmount;
         $bookingStatus = 'pending_verification';
         $legacyStatus = 'Pending';
-        $expiresAt = (new DateTime())->modify('+2 hours')->format('Y-m-d H:i:s');
+        $expiresAt = (new DateTime())->modify('+1 hour')->format('Y-m-d H:i:s');
     }
-    // 2. Option B: Strict "Pay at Hotel" (Conditional: check-in <= 24 hrs)
+    // 2. Option 2: Strict "Pay at Hotel" (Conditional: check-in <= 24 hrs)
     elseif ($paymentMethod === 'pay_at_hotel') {
         // Enforce 24-hour rule: check-in must be within 24 hours from now
         $now = new DateTime();
@@ -249,7 +285,7 @@ function createBooking($data) {
         if ($diffHours > 30) {
             echo json_encode([
                 'success' => false, 
-                'message' => 'Strict "Pay at Hotel" is available only for reservations within 24 hours of check-in. Please select GCash Full Payment.'
+                'message' => 'Strict "Pay at Hotel" is available only for reservations within 24 hours of check-in. Please proceed with PayMongo Online.'
             ]);
             exit;
         }
@@ -278,12 +314,14 @@ function createBooking($data) {
         $stmt = $pdo->prepare("
             INSERT INTO bookings (
                 ref_id, user_id, room_id, guest_name, guest_email, guest_phone,
+                adults, children, rooms_count,
                 check_in_date, check_out_date, check_in, check_out, expected_arrival_time,
                 nights, total_amount, paid_amount, balance_due, total_price,
                 payment_method, gcash_reference_no, receipt_url,
                 status, booking_status, expires_at, special_requests, created_at, updated_at
             ) VALUES (
                 ?, ?, ?, ?, ?, ?,
+                ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?,
@@ -293,6 +331,7 @@ function createBooking($data) {
 
         $stmt->execute([
             $refId, $userId, $roomId, $guestName, $guestEmail, $guestPhone,
+            $adults, $children, $roomsCount,
             $checkIn, $checkOut, $checkIn, $checkOut, $expectedArrivalTime,
             $nights, $totalAmount, $paidAmount, $balanceDue, $totalAmount,
             $paymentMethod, $gcashRefNo, $receiptUrl,
@@ -301,6 +340,46 @@ function createBooking($data) {
 
         $bookingId = $pdo->lastInsertId();
 
+        $checkoutUrl = null;
+        $sessionId = null;
+
+        // If PayMongo, create hosted checkout session immediately
+        if ($paymentMethod === 'PayMongo (Online)' || stripos($paymentMethod, 'paymongo') !== false) {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443 ? "https://" : "http://";
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+            $rootDir = dirname($scriptDir);
+            $rootDir = str_replace('\\', '/', $rootDir);
+            $baseUrl = rtrim($protocol . $host . ($rootDir === '/' ? '' : $rootDir), '/');
+
+            $successUrl = $baseUrl . '/actions/paymongo_action.php?action=success&session_id={CHECKOUT_SESSION_ID}&ref_id=' . urlencode($refId);
+            $cancelUrl  = $baseUrl . '/actions/paymongo_action.php?action=cancel&ref_id=' . urlencode($refId);
+
+            $bookingPaymongoData = [
+                'id' => $bookingId,
+                'ref_id' => $refId,
+                'room_id' => $roomId,
+                'room_name' => $room['name'] ?? 'Room Stay',
+                'nights' => $nights,
+                'rooms_count' => $roomsCount,
+                'total_amount' => $totalAmount,
+                'guest_name' => $guestName,
+                'guest_email' => $guestEmail,
+                'guest_phone' => $guestPhone,
+                'check_in' => $checkIn,
+                'user_id' => $userId
+            ];
+
+            $pmRes = PayMongoService::createCheckoutSession($bookingPaymongoData, $successUrl, $cancelUrl);
+            if ($pmRes['success']) {
+                $sessionId = $pmRes['session_id'];
+                $checkoutUrl = $pmRes['checkout_url'];
+
+                $updPm = $pdo->prepare("UPDATE bookings SET paymongo_session_id = ? WHERE id = ?");
+                $updPm->execute([$sessionId, $bookingId]);
+            }
+        }
+
         echo json_encode([
             'success' => true,
             'message' => 'Reservation created successfully!',
@@ -308,11 +387,16 @@ function createBooking($data) {
             'ref_id' => $refId,
             'booking_status' => $bookingStatus,
             'payment_method' => $paymentMethod,
+            'guest_name' => $guestName,
+            'guest_email' => $guestEmail,
+            'guest_phone' => $guestPhone,
             'total_amount' => $totalAmount,
             'paid_amount' => $paidAmount,
             'balance_due' => $balanceDue,
             'expires_at' => $expiresAt,
-            'receipt_url' => $receiptUrl
+            'receipt_url' => $receiptUrl,
+            'checkout_url' => $checkoutUrl,
+            'session_id' => $sessionId
         ]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
@@ -693,8 +777,9 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
     if ($method === 'GET') {
         if (isset($_GET['action']) && $_GET['action'] === 'count') {
             getBookingCounts();
-        } elseif (isset($_GET['action']) && $_GET['action'] === 'get_one' && isset($_GET['id'])) {
-            getSingleBooking((int)$_GET['id']);
+        } elseif (isset($_GET['action']) && ($_GET['action'] === 'get_one' || $_GET['action'] === 'get_single')) {
+            $idOrRef = $_GET['id'] ?? $_GET['ref_id'] ?? null;
+            getSingleBooking($idOrRef);
         } else {
             getBookings();
         }
