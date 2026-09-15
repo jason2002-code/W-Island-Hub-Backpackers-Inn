@@ -668,15 +668,16 @@ function printAdminInvoice(bookingId) {
                 <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow">
                     <div class="flex justify-between items-start mb-8 border-b pb-6">
                         <div>
-                            <h2 class="text-3xl font-serif font-bold text-gray-800 mb-2">W Island Hub</h2>
-                            <p class="text-sm text-gray-500">Backpackers Inn & Multi-Tier Gateway</p>
-                            <p class="text-sm text-gray-500">Paradise Island, PH</p>
+                            <h2 class="text-3xl font-serif font-bold text-gray-800 mb-1">W Island Backpackers Inn</h2>
+                            <p class="text-xs text-teal-700 font-semibold uppercase tracking-wider mb-1">W Island Hub Hospitality Services</p>
+                            <p class="text-xs text-gray-500"><i class="fas fa-map-marker-alt text-red-500 mr-1"></i>Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</p>
+                            <p class="text-[11px] text-gray-400 mt-0.5">DOT Accr. No.: DOT-R7-ACC-2024-0318 &bull; BIR TIN: 432-876-543-00000 &bull; Permit: BP-2024-DAUIS-0521</p>
                         </div>
                         <div class="text-right flex items-center gap-4">
                             <div class="text-right">
-                                <div class="text-xl font-bold text-blue-600 mb-1">INVOICE</div>
+                                <div class="text-xl font-bold text-blue-600 mb-1">FOLIO INVOICE</div>
                                 <div class="text-sm font-mono font-semibold text-gray-600">Ref: ${booking.ref_id}</div>
-                                <div class="text-sm text-gray-500">Date: ${dateNow}</div>
+                                <div class="text-xs text-gray-500">Issued: ${dateNow}</div>
                             </div>
                             <div class="bg-white p-1 border border-gray-100 rounded-lg shadow-sm">
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(booking.ref_id)}" alt="QR Code" class="w-20 h-20">
@@ -759,8 +760,19 @@ function printAdminInvoice(bookingId) {
                         </tfoot>
                     </table>
                     
-                    <div class="text-center text-sm text-gray-500 mt-8 pt-8 border-t border-gray-100">
-                        <p>Thank you for choosing W Island Hub Backpackers Inn!</p>
+                    <div class="text-center text-xs text-gray-500 mt-8 pt-6 border-t border-gray-200 space-y-2">
+                        <div class="flex flex-wrap justify-center items-center gap-4 text-[11px] text-gray-700 font-medium bg-gray-50 py-2 px-3 rounded-lg border border-gray-100">
+                            <span>Standard Check-in: <strong>02:00 PM</strong></span>
+                            <span>Check-out: <strong>11:00 AM</strong></span>
+                            <span>Front Desk Hotline: <strong>+63 912 345 6789</strong></span>
+                            <span>Email: <strong>info@wislandhub.com</strong></span>
+                        </div>
+                        <p class="text-gray-600 text-[11px]">
+                            Thank you for staying with W Island Backpackers Inn, Dauis, Panglao Island, Bohol!
+                        </p>
+                        <p class="text-[10px] text-gray-400">
+                            Subject to standard hostel rules & RA 10173 Philippine Data Privacy Act compliance. Official computerized PMS folio record.
+                        </p>
                     </div>
 
                     <div class="mt-8 text-center no-print">

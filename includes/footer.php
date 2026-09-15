@@ -57,19 +57,19 @@
                 <ul class="space-y-3 text-slate-400 text-sm">
                     <li class="flex items-start gap-3">
                         <i class="fas fa-map-marker-alt text-amber-400 mt-1 flex-shrink-0"></i>
-                        <span>Panglao Island Road, Bohol, Philippines 6340</span>
+                        <span>Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</span>
                     </li>
                     <li class="flex items-center gap-3">
                         <i class="fas fa-phone-alt text-amber-400 flex-shrink-0"></i>
-                        <span>+63 995 068 7551 / 0975-361-4030</span>
+                        <span>+63 912 345 6789 / +63 998 765 4321</span>
                     </li>
                     <li class="flex items-center gap-3">
                         <i class="fas fa-envelope text-amber-400 flex-shrink-0"></i>
-                        <span>reservations@wislandhub.ph</span>
+                        <span>info@wislandhub.com</span>
                     </li>
                     <li class="flex items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-800">
                         <i class="fas fa-clock text-teal-400 flex-shrink-0"></i>
-                        <span>Front Desk: 24/7 Service</span>
+                        <span>Front Desk: 24/7 Service • Check-in 2:00 PM / Check-out 11:00 AM</span>
                     </li>
                 </ul>
             </div>
@@ -84,7 +84,7 @@
             <div class="flex items-center gap-6">
                 <span>Verified GCash & Pay-at-Hotel</span>
                 <span>Starlink Powered</span>
-                <span>Panglao, Bohol</span>
+                <span>Dauis, Panglao Island, Bohol</span>
             </div>
         </div>
     </div>

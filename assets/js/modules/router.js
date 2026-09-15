@@ -16,11 +16,21 @@ function router(pageId, anchorId) {
         pageId = 'home';
         anchorId = 'discovery-bohol';
     }
+    // If pageId is 'inn-amenities' or 'amenities', route to 'home' and scroll to the amenities section
+    if (pageId === 'inn-amenities' || pageId === 'amenities') {
+        pageId = 'home';
+        anchorId = 'inn-amenities';
+    }
 
     // Close mobile menu if currently open
     const menu = document.getElementById('mobile-menu');
     if (menu && !menu.classList.contains('hidden')) {
         menu.classList.add('hidden');
+    }
+
+    // Close user dropdown if open
+    if (typeof window.closeUserDropdown === 'function') {
+        window.closeUserDropdown();
     }
 
     // Security & Role-Based Route Guards

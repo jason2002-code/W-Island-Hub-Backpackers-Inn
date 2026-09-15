@@ -47,6 +47,10 @@
                         Rooms
                         <span class="absolute left-0 -bottom-1.5 w-0 h-0.5 bg-brand-cyan transition-all duration-300 ease-in-out group-hover:w-full rounded-full"></span>
                     </a>
+                    <a onclick="router('inn-amenities')" class="relative cursor-pointer text-gray-600 hover:text-brand-dark transition-colors font-semibold group text-sm tracking-wide">
+                        Amenities
+                        <span class="absolute left-0 -bottom-1.5 w-0 h-0.5 bg-brand-cyan transition-all duration-300 ease-in-out group-hover:w-full rounded-full"></span>
+                    </a>
                     <a onclick="router('discovery-bohol')" class="relative cursor-pointer text-gray-600 hover:text-brand-dark transition-colors font-semibold group text-sm tracking-wide flex items-center gap-1.5">
                         <i class="fas fa-compass text-amber-500 text-xs"></i>
                         <span>Discover Bohol</span>
@@ -88,6 +92,9 @@
                 </a>
                 <a onclick="router('rooms')" class="block py-3 px-6 text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan/10 rounded-xl transition-all font-medium flex items-center gap-3">
                     <i class="fas fa-bed w-5 text-center text-brand-cyan/70"></i> Rooms
+                </a>
+                <a onclick="router('inn-amenities')" class="block py-3 px-6 text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan/10 rounded-xl transition-all font-medium flex items-center gap-3">
+                    <i class="fas fa-concierge-bell w-5 text-center text-brand-cyan/70"></i> Amenities
                 </a>
                 <a onclick="router('discovery-bohol')" class="block py-3 px-6 text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan/10 rounded-xl transition-all font-medium flex items-center gap-3">
                     <i class="fas fa-compass w-5 text-center text-amber-500"></i> Discover Bohol

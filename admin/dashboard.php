@@ -122,9 +122,28 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 <a onclick="showAdminSection('manage-reports'); setActiveAdminLink(this); if (typeof generateHotelReportData === 'function') generateHotelReportData();" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-file-invoice-dollar w-5"></i> Reports & Analytics
                 </a>
-<a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
-                    <i class="fas fa-images w-5"></i> Carousel/Sliders
-                </a>
+
+                <!-- Carousel / Sliders & Amenities Dropdown -->
+                <div class="space-y-1">
+                    <button type="button" onclick="toggleSlidersDropdown()" id="sliders-parent-btn" class="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple text-gray-600 transition group cursor-pointer font-medium select-none">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-images w-5"></i>
+                            <span>Carousel/Sliders</span>
+                        </div>
+                        <i id="sliders-dropdown-chevron" class="fas fa-chevron-down text-xs text-gray-400 group-hover:text-brand-purple transition-transform duration-200"></i>
+                    </button>
+                    <div id="sliders-dropdown-menu" class="hidden pl-4 pr-1 space-y-1 border-l-2 border-gray-100 ml-6 my-1">
+                        <a onclick="showAdminSection('manage-sliders'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition" id="nav-sliders-manage">
+                            <i class="fas fa-photo-video w-4 text-xs"></i>
+                            <span>Manage Sliders</span>
+                        </a>
+                        <a onclick="showAdminSection('manage-amenities'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition" id="nav-amenities-manage">
+                            <i class="fas fa-concierge-bell w-4 text-xs"></i>
+                            <span>Amenities</span>
+                        </a>
+                    </div>
+                </div>
+
                 <a onclick="showAdminSection('manage-reviews'); setActiveAdminLink(this)" class="admin-link flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-brand-purple cursor-pointer transition">
                     <i class="fas fa-star w-5 text-yellow-400"></i> Reviews & Ratings
                 </a>
@@ -179,6 +198,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 <?php include 'manage_users.php'; ?>
                 <?php include 'reports.php'; ?>
                 <?php include 'manage_sliders.php'; ?>
+                <?php include 'manage_amenities.php'; ?>
                 <?php include 'manage_reviews.php'; ?>
             </div>
         </div>
@@ -211,6 +231,23 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
             }
         }
 
+        function toggleSlidersDropdown(forceOpen = null) {
+            const menu = document.getElementById('sliders-dropdown-menu');
+            const chevron = document.getElementById('sliders-dropdown-chevron');
+            if (!menu) return;
+            
+            const isClosed = menu.classList.contains('hidden');
+            const shouldOpen = forceOpen !== null ? forceOpen : isClosed;
+            
+            if (shouldOpen) {
+                menu.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+            } else {
+                menu.classList.add('hidden');
+                if (chevron) chevron.classList.remove('rotate-180');
+            }
+        }
+
         function showAdminSection(sectionId) {
             // Hide all sections
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
@@ -227,6 +264,7 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                 'manage-users': 'User Management',
                 'manage-reports': 'Hotel Reports & Analytics',
                 'manage-sliders': 'Carousel & Sliders',
+                'manage-amenities': 'Amenities Management',
                 'manage-reviews': 'Reviews & Ratings',
             };
             document.getElementById('admin-page-title').innerText = titles[sectionId] || 'Admin Panel';
@@ -234,6 +272,13 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
             // Auto-expand and style rooms dropdown when navigating to rooms or room prices
             if (sectionId === 'manage-rooms' || sectionId === 'manage-prices') {
                 toggleRoomsDropdown(true);
+            }
+            // Auto-expand and style sliders dropdown when navigating to sliders or amenities
+            if (sectionId === 'manage-sliders' || sectionId === 'manage-amenities') {
+                toggleSlidersDropdown(true);
+                if (sectionId === 'manage-amenities' && typeof loadAmenities === 'function') {
+                    loadAmenities();
+                }
             }
         }
 

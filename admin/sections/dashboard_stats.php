@@ -88,7 +88,15 @@ try {
 <!-- Charts Section -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-50">
-        <h4 class="font-bold text-gray-700 mb-4">Revenue Analytics</h4>
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <div>
+                <h4 class="font-bold text-gray-700">Revenue Analytics</h4>
+                <p class="text-xs text-gray-400">Monthly breakdown & trend analysis</p>
+            </div>
+            <button onclick="showRevenueDetailsModal()" type="button" class="text-xs font-semibold text-brand-purple hover:text-indigo-700 bg-purple-50 hover:bg-purple-100 border border-purple-100 px-3.5 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-2xs cursor-pointer">
+                <i class="fas fa-calendar-alt text-brand-purple"></i> Custom Date & Trends
+            </button>
+        </div>
         <div class="h-64">
             <canvas id="revenueChart"></canvas>
         </div>

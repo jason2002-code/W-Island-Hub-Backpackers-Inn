@@ -19,39 +19,136 @@ function updateAuthUI() {
     const currentUser = window.appState ? window.appState.currentUser : null;
     
     let html = '';
+    let mobileHtml = '';
+
     if (currentUser) {            
-        const dashboardLink = currentUser.role === 'admin'
-            ? `<a href="${basePath}admin/dashboard.php" class="flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer text-white bg-brand-dark hover:bg-gray-800 transition-colors px-5 py-2 rounded-full shadow-md"><i class="fas fa-shield-alt"></i> Admin Panel</a>`
-            : `<a href="${basePath}user/profile.php" class="flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer text-brand-dark bg-white border border-gray-200 hover:border-brand-blue hover:text-brand-blue hover:shadow-md transition-all px-5 py-2 rounded-full shadow-sm"><i class="fas fa-user-circle"></i> My Profile</a>`;
-        
-        const firstName = currentUser.name ? currentUser.name.split(' ')[0] : 'Guest';
+        const firstName = currentUser.name ? currentUser.name.trim().split(' ')[0] : 'Guest';
+        const fullName = currentUser.name || firstName;
         const avatarHTML = currentUser.avatar 
             ? `<img src="${basePath}${currentUser.avatar}" alt="Avatar" class="w-full h-full object-cover">`
             : `${firstName.charAt(0).toUpperCase()}`;
 
+        // Desktop Dropdown
         html = `
-            <div class="flex flex-col md:flex-row md:items-center gap-3">
-                <div class="flex items-center gap-3 px-4 py-1.5 bg-gradient-to-r from-gray-50 to-white rounded-full border border-gray-100 shadow-sm justify-center md:justify-start">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-sm font-bold shadow-md overflow-hidden">
+            <div class="relative inline-block text-left" id="user-dropdown-wrapper">
+                <button type="button" 
+                        onclick="toggleUserDropdown(event)" 
+                        id="user-dropdown-trigger" 
+                        class="flex items-center gap-2.5 pl-1.5 pr-3.5 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-full shadow-xs hover:shadow transition-all duration-200 cursor-pointer select-none group focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                        aria-expanded="false" 
+                        aria-haspopup="true">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-xs font-bold shadow-xs overflow-hidden flex-shrink-0 ring-2 ring-white">
                         ${avatarHTML}
                     </div>
-                    <span class="text-sm font-semibold text-gray-800 tracking-wide pr-2">Hi, ${firstName}</span>
+                    <span class="text-sm font-semibold text-slate-800 tracking-wide group-hover:text-brand-blue transition-colors">Hi, ${firstName}</span>
+                    <i class="fas fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ml-0.5" id="user-dropdown-chevron"></i>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="user-dropdown-menu" 
+                     class="hidden absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 py-1.5 z-50 transition-all duration-150 transform origin-top-right">
+                    <div class="px-4 py-2.5 border-b border-slate-100 mb-1">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Signed in as</p>
+                        <p class="text-sm font-bold text-slate-800 truncate">${fullName}</p>
+                        ${currentUser.email ? `<p class="text-xs text-slate-400 truncate mt-0.5">${currentUser.email}</p>` : ''}
+                    </div>
+
+                    <div class="p-1.5 space-y-0.5">
+                        ${currentUser.role === 'admin' ? `
+                            <a href="${basePath}admin/dashboard.php" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group">
+                                <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <span>Admin Panel</span>
+                            </a>
+                            <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-brand-blue transition-colors group">
+                                <div class="w-7 h-7 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <span>My Profile</span>
+                            </a>
+                        ` : `
+                            <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-brand-blue transition-colors group">
+                                <div class="w-7 h-7 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <span>My Profile</span>
+                            </a>
+                        `}
+                    </div>
+
+                    <div class="border-t border-slate-100 my-1"></div>
+
+                    <div class="p-1.5">
+                        <button onclick="logout()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors text-left cursor-pointer group">
+                            <div class="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </div>
+                            <span>Logout</span>
+                        </button>
+                    </div>
                 </div>
-                ${dashboardLink}
-                <button onclick="logout()" class="flex items-center justify-center gap-2 text-sm font-semibold bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white px-5 py-2 rounded-full transition-all w-full md:w-auto shadow-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        `;
+
+        // Mobile Dropdown / Accordion
+        mobileHtml = `
+            <div class="w-full bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden" id="mobile-user-dropdown-wrapper">
+                <button type="button" 
+                        onclick="toggleMobileUserDropdown(event)" 
+                        class="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-gray-50 to-white hover:bg-gray-50 cursor-pointer select-none transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan text-white flex items-center justify-center text-sm font-bold shadow-xs overflow-hidden flex-shrink-0 ring-2 ring-white">
+                            ${avatarHTML}
+                        </div>
+                        <div class="text-left">
+                            <p class="text-xs font-medium text-gray-400">Signed in as</p>
+                            <p class="text-sm font-bold text-gray-800 tracking-wide">Hi, ${firstName}</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200" id="mobile-user-dropdown-chevron"></i>
+                </button>
+                <div id="mobile-user-dropdown-menu" class="hidden border-t border-gray-100 p-2 space-y-1 bg-white">
+                    ${currentUser.role === 'admin' ? `
+                        <a href="${basePath}admin/dashboard.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-shield-alt text-amber-500 w-5 text-center"></i>
+                            <span>Admin Panel</span>
+                        </a>
+                        <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-brand-blue transition-colors">
+                            <i class="fas fa-user-circle text-brand-blue w-5 text-center"></i>
+                            <span>My Profile</span>
+                        </a>
+                    ` : `
+                        <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-brand-blue transition-colors">
+                            <i class="fas fa-user-circle text-brand-blue w-5 text-center"></i>
+                            <span>My Profile</span>
+                        </a>
+                    `}
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button onclick="logout()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors text-left cursor-pointer">
+                        <i class="fas fa-sign-out-alt text-red-500 w-5 text-center"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
             </div>
         `;
     } else {  
         html = `
-            <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            <div class="flex items-center gap-3">
                 <a onclick="router('login')" class="text-gray-600 hover:text-brand-dark font-semibold cursor-pointer px-5 py-2.5 rounded-full hover:bg-gray-100 transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Login</a>
                 <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg hover:-translate-y-0.5 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-md cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus"></i> Sign Up</a>
+            </div>
+        `;
+        mobileHtml = `
+            <div class="flex flex-col gap-2.5">
+                <a onclick="router('login')" class="text-gray-700 bg-white hover:bg-gray-100 border border-gray-200 font-semibold cursor-pointer px-5 py-2.5 rounded-xl transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2 shadow-xs"><i class="fas fa-sign-in-alt"></i> Login</a>
+                <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus"></i> Sign Up</a>
             </div>
         `;
     }
     
     if (container) container.innerHTML = html;
-    if (mobileContainer) mobileContainer.innerHTML = html; 
+    if (mobileContainer) mobileContainer.innerHTML = mobileHtml; 
 
     // Re-render rooms if room list is loaded to update status badges
     if (window.appState && window.appState.rooms && window.appState.rooms.length > 0 && typeof window.renderRooms === 'function') {
@@ -295,6 +392,78 @@ function logout() {
     window.location.href = basePath + 'logout.php?type=' + role;
 }
 
+/**
+ * Toggles the desktop user profile & logout dropdown menu.
+ */
+function toggleUserDropdown(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('user-dropdown-menu');
+    const chevron = document.getElementById('user-dropdown-chevron');
+    const trigger = document.getElementById('user-dropdown-trigger');
+    if (!menu) return;
+
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+        if (trigger) trigger.setAttribute('aria-expanded', 'true');
+    } else {
+        menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+}
+
+/**
+ * Closes the desktop user dropdown menu.
+ */
+function closeUserDropdown() {
+    const menu = document.getElementById('user-dropdown-menu');
+    const chevron = document.getElementById('user-dropdown-chevron');
+    const trigger = document.getElementById('user-dropdown-trigger');
+    if (menu && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+}
+
+/**
+ * Toggles the mobile user profile & logout dropdown menu.
+ */
+function toggleMobileUserDropdown(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('mobile-user-dropdown-menu');
+    const chevron = document.getElementById('mobile-user-dropdown-chevron');
+    if (!menu) return;
+
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        if (chevron) chevron.classList.add('rotate-180');
+    } else {
+        menu.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+    }
+}
+
+// Close user dropdown on outside click or escape key
+if (!window._userDropdownListenerAttached) {
+    window._userDropdownListenerAttached = true;
+    document.addEventListener('click', (e) => {
+        const wrapper = document.getElementById('user-dropdown-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            closeUserDropdown();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeUserDropdown();
+        }
+    });
+}
+
 // Auto-bind form listeners on DOMContentLoaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAuthForms);
@@ -308,4 +477,7 @@ window.initAuthForms = initAuthForms;
 window.handleSocialLogin = handleSocialLogin;
 window.processSocialLogin = processSocialLogin;
 window.logout = logout;
+window.toggleUserDropdown = toggleUserDropdown;
+window.closeUserDropdown = closeUserDropdown;
+window.toggleMobileUserDropdown = toggleMobileUserDropdown;
 

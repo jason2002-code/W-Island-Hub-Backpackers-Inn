@@ -3,6 +3,7 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
+require_once __DIR__ . '/config/db.php';
 ?>
 <?php include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>

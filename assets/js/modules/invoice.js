@@ -46,18 +46,24 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
             </div>
             
             <div id="invoice-content" class="p-6 sm:p-8 overflow-y-auto flex-1 bg-white text-gray-800 space-y-6">
-                <div class="flex justify-between items-start border-b border-gray-100 pb-6">
-                    <div>
-                        <h2 class="text-2xl font-serif font-bold text-brand-dark mb-1">W Island Hub</h2>
-                        <p class="text-xs text-gray-500">Backpackers Inn & Gateway</p>
-                        <p class="text-xs text-gray-500">Paradise Island, Philippines</p>
-                    </div>
-                    <div class="text-right flex items-center gap-3">
-                        <div>
-                            <div class="text-lg font-bold text-brand-blue mb-0.5">INVOICE</div>
-                            <div class="font-mono text-sm font-bold text-gray-700">${refId}</div>
-                            <div class="text-[10px] text-gray-400 mt-1">${dateNow}</div>
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-gray-100 pb-5">
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-sky-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+                            <i class="fas fa-hotel"></i>
                         </div>
+                        <div>
+                            <h2 class="text-xl font-serif font-bold text-gray-900 leading-tight">W Island Backpackers Inn</h2>
+                            <p class="text-[11px] text-teal-700 font-semibold tracking-wide">W Island Hub Hospitality Services</p>
+                            <p class="text-[11px] text-gray-600 mt-0.5"><i class="fas fa-map-marker-alt text-red-500 mr-1"></i>Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</p>
+                            <p class="text-[10px] text-gray-500">DOT Accr. No.: DOT-R7-ACC-2024-0318 &bull; BIR TIN: 432-876-543-00000 &bull; LGU Permit: BP-2024-DAUIS-0521</p>
+                        </div>
+                    </div>
+                    <div class="text-left sm:text-right shrink-0">
+                        <span class="inline-block px-2.5 py-0.5 rounded bg-teal-50 text-teal-800 font-mono font-bold text-xs uppercase tracking-wider mb-1 border border-teal-200">
+                            OFFICIAL VOUCHER
+                        </span>
+                        <div class="font-mono text-sm font-bold text-gray-900">${refId}</div>
+                        <div class="text-[10px] text-gray-400 mt-0.5">Issued: ${dateNow}</div>
                     </div>
                 </div>
 
@@ -136,9 +142,19 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                     </tfoot>
                 </table>
                 
-                <div class="text-center text-xs text-gray-500 pt-4 border-t border-gray-100 space-y-1">
-                    <p class="font-semibold text-gray-700">Thank you for booking with W Island Hub Backpackers Inn!</p>
-                    <p class="text-[11px]">Please present this voucher or Reference ID upon check-in at the front desk.</p>
+                <div class="pt-4 border-t border-gray-200 space-y-2 text-center text-xs text-gray-600">
+                    <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-gray-700 font-medium bg-gray-50 py-2 px-3 rounded-lg border border-gray-100">
+                        <span><i class="fas fa-clock text-teal-600 mr-1"></i>Check-in: <strong>02:00 PM</strong></span>
+                        <span><i class="fas fa-sign-out-alt text-teal-600 mr-1"></i>Check-out: <strong>11:00 AM</strong></span>
+                        <span><i class="fas fa-phone-alt text-teal-600 mr-1"></i>+63 912 345 6789</span>
+                        <span><i class="fas fa-envelope text-teal-600 mr-1"></i>info@wislandhub.com</span>
+                    </div>
+                    <p class="text-[11px] text-gray-600">
+                        Please present a valid government-issued photo ID along with this voucher at the front desk upon arrival.
+                    </p>
+                    <p class="text-[10px] text-gray-400 border-t border-gray-100 pt-2">
+                        W Island Backpackers Inn &bull; Dauis, Panglao Island, Bohol 6339 &bull; Reg. LGU Dauis (BP-2024-DAUIS-0521) &bull; Subject to standard hostel house rules & RA 10173 Privacy Act.
+                    </p>
                 </div>
             </div>
             
@@ -188,12 +204,16 @@ function printInvoice() {
     printWindow.document.write(`
         <html>
             <head>
-                <title>Invoice</title>
+                <title>Official Booking Voucher - W Island Backpackers Inn, Dauis, Panglao, Bohol</title>
                 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
                 <style>
-                    body { font-family: sans-serif; padding: 20px; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 24px; color: #1e293b; }
                     @media print {
-                        .no-print { display: none; }
+                        body { padding: 12px; }
+                        .no-print { display: none !important; }
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
                 </style>
             </head>

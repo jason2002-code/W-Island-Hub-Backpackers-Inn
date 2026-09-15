@@ -41,6 +41,11 @@
                     <span>Explore Accommodations</span>
                     <i class="fas fa-arrow-right text-sm"></i>
                 </button>
+                <a href="#inn-amenities" class="w-full sm:w-auto bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 font-semibold py-4 px-8 rounded-full transition-all duration-300 flex items-center justify-center gap-2 text-base pointer-events-auto group">
+                    <i class="fas fa-concierge-bell text-amber-400 group-hover:rotate-12 transition-transform"></i>
+                    <span>Inn Amenities</span>
+                    <i class="fas fa-chevron-down text-xs ml-1 text-amber-300/80 group-hover:translate-y-0.5 transition-transform"></i>
+                </a>
                 <a href="#discovery-bohol" class="w-full sm:w-auto bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 font-semibold py-4 px-8 rounded-full transition-all duration-300 flex items-center justify-center gap-2 text-base pointer-events-auto">
                     <i class="fas fa-compass text-amber-400"></i>
                     <span>Discover Bohol</span>
@@ -80,6 +85,12 @@
         <div id="hero-dots" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex space-x-3">
             <!-- Dots injected via JS -->
         </div>
+
+        <!-- Dragdown Scroll Indicator to Amenities -->
+        <a href="#inn-amenities" aria-label="Scroll to Inn Amenities" class="absolute bottom-2 sm:bottom-3 right-6 sm:right-10 z-30 hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-slate-300 hover:text-amber-300 text-xs font-semibold tracking-wider transition-all duration-300 border border-white/15 shadow-lg group cursor-pointer">
+            <span>Amenities</span>
+            <i class="fas fa-chevron-down text-xs text-amber-400 animate-bounce"></i>
+        </a>
     </div>
 
     <!-- ================= FLOATING QUICK BOOKING SEARCH BAR ================= -->
@@ -319,6 +330,49 @@
     </div>
 
     <!-- ================= SIGNATURE INN AMENITIES & LIFESTYLE ================= -->
+    <?php
+    // Ensure DB connection is loaded
+    if (!isset($pdo) || !$pdo) {
+        if (file_exists(__DIR__ . '/../config/db.php')) {
+            require_once __DIR__ . '/../config/db.php';
+        }
+    }
+    if ((!isset($pdo) || !$pdo) && function_exists('getDB')) {
+        $pdo = getDB();
+    }
+
+    // Query active amenities from database (with fallback to default array)
+    $activeAmenitiesList = [];
+    if (isset($pdo) && $pdo) {
+        try {
+            $stmtAmen = $pdo->query("SELECT * FROM `amenities` WHERE `is_active` = 1 ORDER BY `sort_order` ASC, `id` ASC");
+            $activeAmenitiesList = $stmtAmen->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $activeAmenitiesList = [];
+        }
+    }
+    if (empty($activeAmenitiesList)) {
+        $activeAmenitiesList = [
+            ['title' => 'Beachfront & Coral Coast', 'icon' => 'fas fa-umbrella-beach', 'category' => 'Location', 'description' => 'Steps away from pristine white sands. Enjoy early morning ocean dips, snorkeling among reef life, and front-row seats to world-famous sunsets.', 'image_url' => 'assets/image/amenity_beachfront.jpg'],
+            ['title' => 'Nomad-Grade Starlink WiFi', 'icon' => 'fas fa-wifi', 'category' => 'Connectivity', 'description' => 'Lightning-fast, reliable satellite internet across all dorms, private rooms, and chill lounges. Seamless for remote work, video calls, and streaming.', 'image_url' => 'assets/image/amenity_starlink.jpg'],
+            ['title' => 'Sunset Social Lounge & Bar', 'icon' => 'fas fa-cocktail', 'category' => 'Social', 'description' => 'Vibrant open-air communal hub with board games, craft beers, refreshing tropical fruit shakes, and evening acoustic music jams.', 'image_url' => 'assets/image/amenity_lounge_bar.jpg'],
+            ['title' => 'Scooter Rentals & Island Tours', 'icon' => 'fas fa-motorcycle', 'category' => 'Adventures', 'description' => 'Rent scooters right from the front desk. Book hassle-free tours to Chocolate Hills, Tarsier Sanctuaries, and dolphin watching expeditions.', 'image_url' => 'assets/image/amenity_scooter_tour.jpg'],
+            ['title' => 'Keycard Security & Lockers', 'icon' => 'fas fa-key', 'category' => 'Security', 'description' => 'Travel with total peace of mind. Every dorm guest receives an oversized security locker, personal bedside power socket, and reading lamp.', 'image_url' => 'assets/image/amenity_lockers.jpg'],
+            ['title' => 'Free Coffee & Water Refills', 'icon' => 'fas fa-mug-hot', 'category' => 'Dining', 'description' => 'Complimentary fresh-brewed local island coffee every morning. Unlimited filtered cold drinking water stations to keep you energized and eco-friendly.', 'image_url' => 'assets/image/amenity_coffee_water.jpg']
+        ];
+    }
+
+    $amenityGradients = [
+        'Location' => 'from-amber-400 to-yellow-600 text-slate-950',
+        'Connectivity' => 'from-sky-400 to-blue-600 text-white',
+        'Social' => 'from-purple-400 to-indigo-600 text-white',
+        'Adventures' => 'from-teal-400 to-emerald-600 text-white',
+        'Security' => 'from-rose-400 to-red-600 text-white',
+        'Dining' => 'from-amber-500 to-orange-600 text-white',
+        'Comfort' => 'from-indigo-400 to-violet-600 text-white',
+        'Leisure' => 'from-cyan-400 to-blue-600 text-white'
+    ];
+    ?>
     <section id="inn-amenities" class="py-24 bg-slate-950 text-white px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         
         <!-- Ambient Glow Elements -->
@@ -327,91 +381,177 @@
 
         <div class="max-w-7xl mx-auto relative z-10">
             
-            <!-- Section Header -->
-            <div class="text-center max-w-3xl mx-auto mb-20">
-                <span class="text-xs font-bold uppercase tracking-widest text-amber-400 bg-white/10 px-4 py-1.5 rounded-full border border-white/15">
-                    The W Island Hub Experience
-                </span>
-                <h2 class="text-3xl sm:text-5xl font-serif font-bold text-white mt-4">
-                    Designed for Travelers & Nomads
-                </h2>
-                <p class="text-slate-300 text-base sm:text-lg mt-3 font-light">
-                    Every detail of our inn has been thoughtfully tailored to provide modern convenience, island relaxation, and effortless social connection.
-                </p>
+            <!-- Section Header with Carousel / Slider Controls -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-amber-400 bg-white/10 px-4 py-1.5 rounded-full border border-white/15 inline-flex items-center gap-2 shadow-xs">
+                        <i class="fas fa-concierge-bell text-amber-400"></i> The W Island Hub Experience
+                    </span>
+                    <h2 class="text-3xl sm:text-5xl font-serif font-bold text-white mt-4">
+                        Designed for Travelers &amp; Nomads
+                    </h2>
+                    <p class="text-slate-300 text-base sm:text-lg mt-3 font-light max-w-2xl">
+                        Every detail of our inn has been thoughtfully tailored to provide modern convenience, island relaxation, and effortless social connection.
+                    </p>
+                </div>
+
+                <!-- Slider Controls & CTA -->
+                <div class="flex items-center gap-3 self-start md:self-end">
+                    <button onclick="slideAmenitiesCarousel(-1)" aria-label="Previous Amenities" class="w-12 h-12 rounded-full border border-white/20 bg-white/10 hover:bg-amber-500 hover:border-amber-500 hover:text-slate-950 text-white flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm hover:shadow-lg group">
+                        <i class="fas fa-chevron-left text-sm group-hover:-translate-x-0.5 transition-transform"></i>
+                    </button>
+                    <button onclick="slideAmenitiesCarousel(1)" aria-label="Next Amenities" class="w-12 h-12 rounded-full border border-white/20 bg-white/10 hover:bg-amber-500 hover:border-amber-500 hover:text-slate-950 text-white flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm hover:shadow-lg group">
+                        <i class="fas fa-chevron-right text-sm group-hover:translate-x-0.5 transition-transform"></i>
+                    </button>
+                    <button onclick="router('rooms')" class="hidden sm:inline-flex items-center gap-2 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 px-5 py-3 rounded-full transition-all shadow-md ml-2 cursor-pointer">
+                        <span>Book Stay</span>
+                        <i class="fas fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
             </div>
 
-            <!-- Amenities Grid (6 Modern Cards) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                
-                <!-- Feature 1 -->
-                <div class="bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-slate-950 flex items-center justify-center text-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                        <i class="fas fa-umbrella-beach"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-2.5">Beachfront & Coral Coast</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Steps away from pristine white sands. Enjoy early morning ocean dips, snorkeling among reef life, and front-row seats to world-famous sunsets.
-                    </p>
-                </div>
+            <!-- Amenities Scrollable / Carousel Track -->
+            <div id="amenities-slider-container" class="relative overflow-x-auto pb-4 scroll-smooth no-scrollbar select-none" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <div id="amenities-slider-track" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 min-w-full">
+                    <?php 
+                    foreach ($activeAmenitiesList as $amenity): 
+                        $category = htmlspecialchars($amenity['category'] ?? 'General');
+                        $iconClass = htmlspecialchars($amenity['icon'] ?? 'fas fa-star');
+                        $title = htmlspecialchars($amenity['title'] ?? '');
+                        $desc = htmlspecialchars($amenity['description'] ?? '');
+                        $imgUrl = !empty($amenity['image_url']) ? htmlspecialchars($amenity['image_url']) : '';
+                        $gradClass = $amenityGradients[$category] ?? 'from-amber-400 to-yellow-600 text-slate-950';
+                    ?>
+                    <div class="amenity-card-item bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between shadow-xl overflow-hidden">
+                        <div>
+                            <!-- Card Image Banner -->
+                            <?php if ($imgUrl): ?>
+                            <div class="h-48 sm:h-52 w-full overflow-hidden relative bg-slate-900">
+                                <img src="<?php echo $imgUrl; ?>" alt="<?php echo $title; ?>" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out">
+                                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                                <span class="absolute top-4 left-4 text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
+                                    <?php echo $category; ?>
+                                </span>
+                            </div>
+                            <?php endif; ?>
 
-                <!-- Feature 2 -->
-                <div class="bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-sky-400/50 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 text-white flex items-center justify-center text-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                        <i class="fas fa-wifi"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-2.5">Nomad-Grade Starlink WiFi</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Lightning-fast, reliable satellite internet across all dorms, private rooms, and chill lounges. Seamless for remote work, video calls, and streaming.
-                    </p>
-                </div>
+                            <div class="p-6 sm:p-8">
+                                <div class="flex items-center justify-between mb-5">
+                                    <div class="w-13 h-13 rounded-2xl bg-gradient-to-br <?php echo $gradClass; ?> flex items-center justify-center text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                        <i class="<?php echo $iconClass; ?>"></i>
+                                    </div>
+                                    <?php if (!$imgUrl): ?>
+                                    <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-white/10 px-3 py-1 rounded-full border border-white/15">
+                                        <?php echo $category; ?>
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
 
-                <!-- Feature 3 -->
-                <div class="bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-400 to-indigo-600 text-white flex items-center justify-center text-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                        <i class="fas fa-cocktail"></i>
+                                <h3 class="text-xl font-bold text-white mb-2.5 group-hover:text-amber-300 transition-colors">
+                                    <?php echo $title; ?>
+                                </h3>
+                                <p class="text-slate-400 text-sm leading-relaxed">
+                                    <?php echo $desc; ?>
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-2.5">Sunset Social Lounge & Bar</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Vibrant open-air communal hub with board games, craft beers, refreshing tropical fruit shakes, and evening acoustic music jams.
-                    </p>
+                    <?php endforeach; ?>
                 </div>
-
-                <!-- Feature 4 -->
-                <div class="bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-teal-400/50 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-400 to-emerald-600 text-white flex items-center justify-center text-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                        <i class="fas fa-motorcycle"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-2.5">Scooter Rentals & Island Tours</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Rent scooters right from the front desk. Book hassle-free tours to Chocolate Hills, Tarsier Sanctuaries, and dolphin watching expeditions.
-                    </p>
-                </div>
-
-                <!-- Feature 5 -->
-                <div class="bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-rose-400/50 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-red-600 text-white flex items-center justify-center text-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                        <i class="fas fa-key"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-2.5">Keycard Security & Lockers</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Travel with total peace of mind. Every dorm guest receives an oversized security locker, personal bedside power socket, and reading lamp.
-                    </p>
-                </div>
-
-                <!-- Feature 6 -->
-                <div class="bg-white/5 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-white flex items-center justify-center text-2xl mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                        <i class="fas fa-mug-hot"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-2.5">Free Coffee & Water Refills</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed">
-                        Complimentary fresh-brewed local island coffee every morning. Unlimited filtered cold drinking water stations to keep you energized and eco-friendly.
-                    </p>
-                </div>
-
             </div>
+
         </div>
     </section>
+
+    <script>
+    // Horizontal carousel scroll for amenities section
+    function slideAmenitiesCarousel(direction) {
+        const container = document.getElementById('amenities-slider-container');
+        if (!container) return;
+        const scrollAmount = (container.clientWidth * 0.8) * direction;
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+
+    // Dynamic Live Hydration for Amenities (Auto-refreshes if admin updates image/text)
+    async function syncLandingAmenities() {
+        try {
+            const res = await fetch('actions/amenities_action.php?action=get_active&_t=' + Date.now());
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success || !Array.isArray(data.amenities) || data.amenities.length === 0) return;
+
+            const track = document.getElementById('amenities-slider-track');
+            if (!track) return;
+
+            const gradients = {
+                'Location': 'from-amber-400 to-yellow-600 text-slate-950',
+                'Connectivity': 'from-sky-400 to-blue-600 text-white',
+                'Social': 'from-purple-400 to-indigo-600 text-white',
+                'Adventures': 'from-teal-400 to-emerald-600 text-white',
+                'Security': 'from-rose-400 to-red-600 text-white',
+                'Dining': 'from-amber-500 to-orange-600 text-white',
+                'Comfort': 'from-indigo-400 to-violet-600 text-white',
+                'Leisure': 'from-cyan-400 to-blue-600 text-white'
+            };
+
+            const esc = (s) => {
+                const div = document.createElement('div');
+                div.textContent = s || '';
+                return div.innerHTML;
+            };
+
+            track.innerHTML = data.amenities.map(amenity => {
+                const cat = esc(amenity.category || 'General');
+                const iconClass = esc(amenity.icon || 'fas fa-star');
+                const title = esc(amenity.title || '');
+                const desc = esc(amenity.description || '');
+                const imgUrl = amenity.image_url ? esc(amenity.image_url) : '';
+                const gradClass = gradients[amenity.category] || 'from-amber-400 to-yellow-600 text-slate-950';
+
+                return `
+                <div class="amenity-card-item bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between shadow-xl overflow-hidden">
+                    <div>
+                        ${imgUrl ? `
+                        <div class="h-48 sm:h-52 w-full overflow-hidden relative bg-slate-900">
+                            <img src="${imgUrl}" alt="${title}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+                            <span class="absolute top-4 left-4 text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
+                                ${cat}
+                            </span>
+                        </div>` : ''}
+
+                        <div class="p-6 sm:p-8">
+                            <div class="flex items-center justify-between mb-5">
+                                <div class="w-13 h-13 rounded-2xl bg-gradient-to-br ${gradClass} flex items-center justify-center text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                ${!imgUrl ? `
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-white/10 px-3 py-1 rounded-full border border-white/15">
+                                    ${cat}
+                                </span>` : ''}
+                            </div>
+
+                            <h3 class="text-xl font-bold text-white mb-2.5 group-hover:text-amber-300 transition-colors">
+                                ${title}
+                            </h3>
+                            <p class="text-slate-400 text-sm leading-relaxed">
+                                ${desc}
+                            </p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            console.debug('Amenities live sync info:', e);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncLandingAmenities);
+    } else {
+        syncLandingAmenities();
+    }
+    </script>
 
     <!-- ================= DISCOVER BOHOL & PANGLAO (TOURIST ATTRACTIONS) ================= -->
     <section id="discovery-bohol" class="py-24 bg-gradient-to-b from-slate-50 via-white to-slate-50 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
