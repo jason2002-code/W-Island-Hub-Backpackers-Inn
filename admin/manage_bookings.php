@@ -764,8 +764,8 @@ function printAdminInvoice(bookingId) {
                         <div class="flex flex-wrap justify-center items-center gap-4 text-[11px] text-gray-700 font-medium bg-gray-50 py-2 px-3 rounded-lg border border-gray-100">
                             <span>Standard Check-in: <strong>02:00 PM</strong></span>
                             <span>Check-out: <strong>11:00 AM</strong></span>
-                            <span>Front Desk Hotline: <strong>+63 912 345 6789</strong></span>
-                            <span>Email: <strong>info@wislandhub.com</strong></span>
+                            <span>Front Desk Hotline: <strong>+63 945 688 2266</strong></span>
+                            <span>Email: <strong>wislandhub2025@gmail.com</strong></span>
                         </div>
                         <p class="text-gray-600 text-[11px]">
                             Thank you for staying with W Island Backpackers Inn, Dauis, Panglao Island, Bohol!

@@ -364,7 +364,7 @@
                         <div class="space-y-3 text-xs">
                             <div class="flex justify-between items-center py-1.5 border-b border-white/10">
                                 <span class="text-slate-400">Front Desk & Reception:</span>
-                                <strong class="font-mono text-teal-300 font-bold text-sm">+63 995 068 7551</strong>
+                                <strong class="font-mono text-teal-300 font-bold text-sm">+63 945 688 2266</strong>
                             </div>
                             <div class="flex justify-between items-center py-1.5 border-b border-white/10">
                                 <span class="text-slate-400">GCash Billing Hotline:</span>
@@ -372,7 +372,7 @@
                             </div>
                             <div class="flex justify-between items-center py-1.5 border-b border-white/10">
                                 <span class="text-slate-400">Official Inquiries Email:</span>
-                                <strong class="text-slate-200">reservations@wislandhub.ph</strong>
+                                <strong class="text-slate-200">wislandhub2025@gmail.com</strong>
                             </div>
                             <div class="flex justify-between items-center py-1.5 border-b border-white/10">
                                 <span class="text-slate-400">First Aid & Medicine:</span>

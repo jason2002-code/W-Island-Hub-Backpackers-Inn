@@ -213,7 +213,19 @@ function createBooking($data) {
 
     $adults = max(1, intval($data['adults'] ?? 1));
     $children = max(0, intval($data['children'] ?? 0));
+    $totalGuests = max(1, intval($data['guests'] ?? ($adults + $children)));
     $roomsCount = max(1, intval($data['rooms_count'] ?? $data['roomsCount'] ?? 1));
+
+    $roomMaxCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 2));
+    $totalAllowedCapacity = $roomMaxCap * $roomsCount;
+
+    if ($totalGuests > $totalAllowedCapacity) {
+        echo json_encode([
+            'success' => false,
+            'message' => "The hotel does not accommodate {$totalGuests} guests for this reservation. The room is limited to {$totalAllowedCapacity} guests."
+        ]);
+        exit;
+    }
 
     $nights = (int)$checkOutDate->diff($checkInDate)->days;
     if ($nights < 1) $nights = 1;

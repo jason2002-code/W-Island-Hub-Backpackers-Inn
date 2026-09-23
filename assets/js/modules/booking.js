@@ -110,11 +110,15 @@ async function initiateBooking(roomId, options = {}) {
     const roomsCount = Math.max(1, parseInt(options.roomsCount, 10) || 1);
 
     const roomCap = parseInt(room.max_capacity || room.capacity, 10) || 2;
+    const totalAllowedCap = roomCap * roomsCount;
 
-    // Check if room capacity is 2 and party has 4 or more guests -> suggest recommendations!
-    if (!options.bypassRecommendation && roomCap <= 2 && totalGuests >= 4) {
-        if (typeof window.showRoomRecommendationModal === 'function') {
+    // Check if group size exceeds accommodated capacity for this reservation
+    if (totalGuests > totalAllowedCap) {
+        if (!options.bypassRecommendation && typeof window.showRoomRecommendationModal === 'function') {
             window.showRoomRecommendationModal(room, totalGuests, adults, children);
+            return;
+        } else {
+            window.showToast(`The hotel does not accommodate ${totalGuests} guests for this room. The room capacity is limited to ${totalAllowedCap} guests.`, 'warning');
             return;
         }
     }
@@ -223,17 +227,57 @@ async function initiateBooking(roomId, options = {}) {
         if (summaryNights) summaryNights.textContent = pendingBooking.nights + (pendingBooking.nights > 1 ? ' Nights' : ' Night');
         if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
 
+        // Populate stay date inputs in Review & Confirm section
+        const summaryCheckIn = document.getElementById('summary-check-in-date');
+        const summaryCheckOut = document.getElementById('summary-check-out-date');
+        const summaryStayNightsText = document.getElementById('summary-stay-nights-text');
+        const summaryDatesBadge = document.getElementById('summary-dates-badge');
+        const summaryDatesBadgeText = document.getElementById('summary-dates-badge-text');
+        const summaryDateStatusMsg = document.getElementById('summary-date-status-msg');
+        const confirmBtn = document.getElementById('btn-confirm-booking');
+
+        if (summaryCheckIn) {
+            summaryCheckIn.min = todayStr;
+            summaryCheckIn.value = checkIn;
+        }
+        if (summaryCheckOut) {
+            summaryCheckOut.min = minCheckOutStr;
+            summaryCheckOut.value = checkOut;
+        }
+        if (summaryStayNightsText) {
+            summaryStayNightsText.textContent = pendingBooking.nights + (pendingBooking.nights > 1 ? ' Nights' : ' Night');
+        }
+        if (summaryDatesBadge) {
+            summaryDatesBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+        }
+        if (summaryDatesBadgeText) {
+            summaryDatesBadgeText.textContent = 'Locked & Available';
+        }
+        if (summaryDateStatusMsg) {
+            summaryDateStatusMsg.innerHTML = '<i class="fas fa-check text-emerald-500"></i> Pricing and availability auto-update';
+            summaryDateStatusMsg.className = 'text-[11px] text-emerald-600 font-medium flex items-center gap-1';
+        }
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
         const detailsContent = document.getElementById('booking-details-content');
         if (detailsContent) {
             detailsContent.innerHTML = `
-                <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2 text-xs">
-                    <div class="flex justify-between"><span>Check-in Date:</span> <strong class="text-gray-800">${checkIn} (2:00 PM)</strong></div>
-                    <div class="flex justify-between"><span>Check-out Date:</span> <strong class="text-gray-800">${checkOut} (12:00 PM)</strong></div>
-                    <div class="flex justify-between"><span>Guests:</span> <strong>${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''})</strong></div>
-                    <div class="flex justify-between items-center"><span>Accommodation:</span> <strong>${roomsCount > 1 ? `${roomsCount}x ` : ''}${room.name} (${room.type})</strong></div>
-                    ${roomsCount > 1 ? `<div class="flex justify-between text-blue-700 font-semibold pt-1 border-t border-emerald-200/60"><span>Multi-Room Booking:</span> <span>${roomsCount} Rooms &times; ₱${room.price.toFixed(2)}/night</span></div>` : ''}
-                    <div class="flex justify-between text-emerald-700 font-bold mt-2 pt-2 border-t border-emerald-200">
-                        <span>Real-Time Availability</span><span class="flex items-center gap-1"><i class="fas fa-check-circle text-emerald-500"></i> Locked & Available</span>
+                <div class="p-4 bg-white border border-gray-200 rounded-2xl space-y-2.5 text-xs shadow-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Accommodation:</span>
+                        <strong class="text-gray-900 font-semibold">${roomsCount > 1 ? `${roomsCount}x ` : ''}${room.name} (${room.type})</strong>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Guests:</span>
+                        <strong class="text-gray-900 font-semibold">${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''})</strong>
+                    </div>
+                    ${roomsCount > 1 ? `<div class="flex justify-between text-blue-700 font-semibold pt-1 border-t border-gray-100"><span>Multi-Room Booking:</span> <span>${roomsCount} Rooms &times; ₱${room.price.toFixed(2)}/night</span></div>` : ''}
+                    <div class="flex justify-between text-emerald-700 font-bold mt-2 pt-2 border-t border-gray-100">
+                        <span>Inventory Status:</span>
+                        <span class="flex items-center gap-1"><i class="fas fa-shield-alt text-emerald-500"></i> Real-Time Available</span>
                     </div>
                 </div>
             `;
@@ -292,6 +336,211 @@ async function initiateBooking(roomId, options = {}) {
     } catch (error) {
         console.error('Booking init error:', error);
         window.showToast('Unable to verify availability. Please try again.', 'error');
+    }
+}
+
+/**
+ * Handles user date modifications directly from the Review & Confirm Reservation screen.
+ * Validates check-in/out bounds, queries real-time room availability from the server,
+ * updates nights and pricing breakdown, re-evaluates payment pathways, and gives instant feedback.
+ */
+async function handleSummaryDateChange() {
+    const checkInInput = document.getElementById('summary-check-in-date');
+    const checkOutInput = document.getElementById('summary-check-out-date');
+    if (!checkInInput || !checkOutInput) return;
+
+    const todayStr = safeFormatDate(new Date());
+    let newCheckIn = checkInInput.value;
+    let newCheckOut = checkOutInput.value;
+
+    // Validate Check-in not in past
+    if (!newCheckIn || newCheckIn < todayStr) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Check-in date cannot be in the past or outdated.', 'warning');
+        }
+        newCheckIn = todayStr;
+        checkInInput.value = todayStr;
+    }
+
+    // Compute minimum check-out date (Check-in + 1 day)
+    const cinDate = new Date(newCheckIn + 'T00:00:00');
+    const minCheckOutDate = new Date(cinDate);
+    minCheckOutDate.setDate(minCheckOutDate.getDate() + 1);
+    const minCheckOutStr = safeFormatDate(minCheckOutDate);
+
+    checkOutInput.min = minCheckOutStr;
+
+    // If Check-out is missing or on/before Check-in, auto-adjust to check-in + 1
+    if (!newCheckOut || newCheckOut <= newCheckIn) {
+        newCheckOut = minCheckOutStr;
+        checkOutInput.value = minCheckOutStr;
+    }
+
+    const activeBooking = window.pendingBooking || pendingBooking;
+    if (!activeBooking || !activeBooking.roomId) return;
+
+    const statusBadge = document.getElementById('summary-dates-badge');
+    const statusBadgeText = document.getElementById('summary-dates-badge-text');
+    const statusMsg = document.getElementById('summary-date-status-msg');
+    const confirmBtn = document.getElementById('btn-confirm-booking');
+
+    if (statusMsg) {
+        statusMsg.innerHTML = '<i class="fas fa-spinner fa-spin text-brand-blue"></i> Checking room availability for new dates...';
+        statusMsg.className = 'text-[11px] text-brand-blue font-medium flex items-center gap-1';
+    }
+
+    try {
+        const availRes = await fetch('actions/book_action.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                action: 'get_room_availability', 
+                room_id: activeBooking.roomId,
+                check_in: newCheckIn,
+                check_out: newCheckOut
+            })
+        });
+        const availData = await availRes.json();
+
+        if (availData.room && availData.room.status === 'Maintenance') {
+            if (statusBadge) {
+                statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
+            }
+            if (statusBadgeText) {
+                statusBadgeText.textContent = 'Under Maintenance';
+            }
+            if (statusMsg) {
+                statusMsg.innerHTML = '<i class="fas fa-exclamation-triangle text-rose-500"></i> Room is under maintenance on these dates.';
+                statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
+            }
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (typeof window.showToast === 'function') {
+                window.showToast('This room is under maintenance on the selected dates.', 'error');
+            }
+            return;
+        }
+
+        if (!availData.is_currently_available) {
+            if (statusBadge) {
+                statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
+            }
+            if (statusBadgeText) {
+                statusBadgeText.textContent = 'Unavailable';
+            }
+            if (statusMsg) {
+                statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> Occupied on selected dates. Please choose another date.';
+                statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
+            }
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (typeof window.showToast === 'function') {
+                window.showToast('Room is occupied on these dates. Please adjust your stay dates.', 'error');
+            }
+            return;
+        }
+
+        // Room is available! Re-enable confirm button
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Update room price if returned from server
+        if (availData.room && availData.room.price) {
+            activeBooking.pricePerNight = parseFloat(availData.room.price);
+        }
+
+        // Recalculate duration & new total
+        const nights = Math.max(1, Math.ceil((new Date(newCheckOut) - new Date(newCheckIn)) / (24*60*60*1000)));
+        const total = (activeBooking.pricePerNight * nights * (activeBooking.roomsCount || 1)) + 15;
+
+        // Update active booking context
+        activeBooking.checkIn = newCheckIn;
+        activeBooking.checkOut = newCheckOut;
+        activeBooking.nights = nights;
+        activeBooking.total = total;
+        pendingBooking = activeBooking;
+        window.pendingBooking = activeBooking;
+
+        // Update summary cards
+        const nightsLabel = nights + (nights > 1 ? ' Nights' : ' Night');
+        const summaryNights = document.getElementById('summary-nights');
+        const summaryStayNightsText = document.getElementById('summary-stay-nights-text');
+        const summaryTotal = document.getElementById('summary-total');
+
+        if (summaryNights) summaryNights.textContent = nightsLabel;
+        if (summaryStayNightsText) summaryStayNightsText.textContent = nightsLabel;
+        if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
+
+        // Update badges
+        if (statusBadge) {
+            statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+        }
+        if (statusBadgeText) {
+            statusBadgeText.textContent = 'Locked & Available';
+        }
+        if (statusMsg) {
+            statusMsg.innerHTML = '<i class="fas fa-check-circle text-emerald-500"></i> Dates updated successfully (' + nightsLabel + ')';
+            statusMsg.className = 'text-[11px] text-emerald-600 font-medium flex items-center gap-1';
+        }
+
+        // Re-evaluate 24-hour rule for Pay at Hotel
+        const checkInDateObj = new Date(newCheckIn + 'T14:00:00');
+        const now = new Date();
+        const diffHours = (checkInDateObj.getTime() - now.getTime()) / (1000 * 60 * 60);
+        const isWithin24Hours = (diffHours <= 30);
+
+        const hotelCard = document.getElementById('label-payment-hotel');
+        const lockedNotice = document.getElementById('pay-at-hotel-locked-notice');
+        const hotelRadio = document.getElementById('input-payment-hotel');
+
+        if (isWithin24Hours) {
+            if (hotelCard) hotelCard.classList.remove('hidden');
+            if (lockedNotice) lockedNotice.classList.add('hidden');
+            if (hotelRadio) hotelRadio.disabled = false;
+        } else {
+            if (hotelCard) hotelCard.classList.add('hidden');
+            if (lockedNotice) lockedNotice.classList.remove('hidden');
+            if (hotelRadio) hotelRadio.disabled = true;
+
+            const currentPayment = document.querySelector('input[name="payment"]:checked')?.value;
+            if (currentPayment === 'pay_at_hotel') {
+                const paymongoRadio = document.querySelector('input[name="payment"][value="paymongo"]');
+                if (paymongoRadio) {
+                    paymongoRadio.checked = true;
+                }
+            }
+        }
+
+        // Re-apply payment amounts (updates upfront and balance)
+        const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'paymongo';
+        handlePaymentMethodChange(selectedPayment);
+
+        // Synchronize main search date pickers
+        const mainCheckIn = document.getElementById('check-in-date');
+        const mainCheckOut = document.getElementById('check-out-date');
+        if (mainCheckIn) mainCheckIn.value = newCheckIn;
+        if (mainCheckOut) mainCheckOut.value = newCheckOut;
+
+        const homeCheckIn = document.getElementById('home-check-in-date');
+        const homeCheckOut = document.getElementById('home-check-out-date');
+        if (homeCheckIn) homeCheckIn.value = newCheckIn;
+        if (homeCheckOut) homeCheckOut.value = newCheckOut;
+
+        if (typeof window.showToast === 'function') {
+            window.showToast(`Reservation dates updated: ${newCheckIn} to ${newCheckOut} (${nightsLabel})`, 'success');
+        }
+    } catch (error) {
+        console.error('Error updating dates:', error);
+        if (statusMsg) {
+            statusMsg.innerHTML = '<i class="fas fa-exclamation-circle text-rose-500"></i> Error checking date availability.';
+            statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
+        }
     }
 }
 
@@ -506,6 +755,18 @@ function initBookingForm() {
         activeBooking.guestEmail = guestEmail;
         activeBooking.guestPhone = guestPhone;
 
+        // Verify total guests against room capacity limits
+        const roomObj = (window.appState && Array.isArray(window.appState.rooms))
+            ? window.appState.rooms.find(r => r.id == activeBooking.roomId)
+            : null;
+        const roomMaxCap = roomObj ? (parseInt(roomObj.max_capacity || roomObj.capacity, 10) || 2) : 2;
+        const totalCapAllowed = roomMaxCap * (activeBooking.roomsCount || 1);
+
+        if ((activeBooking.guests || 1) > totalCapAllowed) {
+            window.showToast(`The hotel does not accommodate ${activeBooking.guests} guests for this reservation as room capacity is limited to ${totalCapAllowed} guests.`, 'error');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('action', 'create');
         if (currentUser && currentUser.id) {
@@ -601,4 +862,5 @@ window.closeGcashQrModal = closeGcashQrModal;
 window.handleReceiptPreview = handleReceiptPreview;
 window.removeReceiptFile = removeReceiptFile;
 window.initBookingForm = initBookingForm;
+window.handleSummaryDateChange = handleSummaryDateChange;
 

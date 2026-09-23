@@ -63,8 +63,8 @@
                     <span><strong>Starlink</strong> Fast WiFi</span>
                 </div>
                 <div class="flex items-center justify-center gap-2">
-                    <i class="fas fa-water text-teal-400"></i>
-                    <span><strong>2 Mins</strong> to Shoreline</span>
+                    <i class="fas fa-map-marker-alt text-teal-400"></i>
+                    <span><strong>Dao, Dauis</strong> Bohol Gateway</span>
                 </div>
                 <div class="flex items-center justify-center gap-2">
                     <i class="fas fa-shield-alt text-emerald-400"></i>
@@ -187,6 +187,12 @@
                         <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-2">
                             <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
                             <span>Age 18+ counts as Adult. Age 17 and below counts as Child.</span>
+                        </div>
+
+                        <!-- Capacity Overlimit Warning in Dropdown -->
+                        <div id="home-stepper-capacity-warning" class="hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-2">
+                            <i class="fas fa-exclamation-triangle text-rose-500 mt-0.5 flex-shrink-0"></i>
+                            <span id="home-stepper-capacity-warning-text">The hotel does not accommodate this party size as room capacity is limited.</span>
                         </div>
 
                         <!-- Apply Button -->
@@ -587,7 +593,7 @@
                             Beach &amp; Nightlife
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-motorcycle text-amber-400"></i> 5 Mins from Inn (1.8 km)
+                            <i class="fas fa-motorcycle text-amber-400"></i> 15-20 Mins from Inn (13 km)
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -600,7 +606,7 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Rent an automatic scooter at front desk or catch a ₱50 quick local tricycle ride.</span>
+                                <span><strong>Inn Perk:</strong> Rent an automatic scooter at our front desk or take a scenic tricycle ride to Panglao nightlife.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
                                 <span>Book Stay Near Alona</span>
@@ -619,7 +625,7 @@
                             Tranquil White Sand
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-map-marker-alt text-teal-400"></i> 7 Mins from Inn (3.5 km)
+                            <i class="fas fa-map-marker-alt text-teal-400"></i> 12-15 Mins from Inn (8.5 km)
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -683,7 +689,7 @@
                             Limestone Cenote
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-compass text-purple-400"></i> 15 Mins from Inn (9 km)
+                            <i class="fas fa-compass text-purple-400"></i> 6-8 Mins from Inn (3.7 km in Dauis)
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -696,7 +702,7 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-purple-800 bg-purple-50 p-2.5 rounded-xl border border-purple-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-purple-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> A must-visit stop along the popular Panglao scooter coastal road circuit.</span>
+                                <span><strong>Inn Perk:</strong> Located right here in Dauis! Quick and easy 6-minute scooter ride or tricycle from our inn.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
                                 <span>Reserve Your Stay</span>
@@ -863,8 +869,8 @@
                             <span>Check Available Rooms</span>
                             <i class="fas fa-arrow-right text-xs"></i>
                         </button>
-                        <a href="tel:+639123456789" class="text-xs text-slate-400 hover:text-amber-300 transition-colors flex items-center gap-1.5">
-                            <i class="fas fa-phone-alt text-[10px]"></i> Front Desk Inquiries: +63 912 345 6789
+                        <a href="tel:+639456882266" class="text-xs text-slate-400 hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                            <i class="fas fa-phone-alt text-[10px]"></i> Front Desk Inquiries: +63 945 688 2266
                         </a>
                     </div>
                 </div>
@@ -884,67 +890,93 @@
                 
                 <div>
                     <span class="text-xs font-bold uppercase tracking-widest text-amber-400 bg-white/10 px-3.5 py-1.5 rounded-full">
-                        Island Location
+                        Island Location &bull; Dauis, Bohol
                     </span>
-                    <h2 class="text-3xl sm:text-4xl font-serif font-bold text-white mt-4 mb-6">
+                    <h2 class="text-3xl sm:text-4xl font-serif font-bold text-white mt-4 mb-3">
                         Easy to Reach, Hard to Leave
                     </h2>
-                    <p class="text-slate-300 text-base leading-relaxed mb-8 font-light">
-                        Located conveniently in Panglao Island, Bohol, W Island Hub Backpackers Inn is positioned close to the vibrant beach dining scene while offering a peaceful tropical oasis.
+                    <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-4 font-light">
+                        Strategically situated along the <strong class="text-white font-medium">Dauis - Panglao Center Road in Dao, Dauis</strong>, W Island Hub Backpackers Inn is positioned perfectly between Tagbilaran City's transport hubs and Panglao's world-famous beaches.
                     </p>
+                    
+                    <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-medium mb-6">
+                        <i class="fas fa-map-pin text-amber-400 flex-shrink-0"></i>
+                        <span>Landmark: Directly across <strong>Wilcon Depot Dauis</strong> &bull; Adjacent to <strong>Royal Palms 2</strong></span>
+                    </div>
 
-                    <div class="space-y-4">
-                        <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
-                            <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-base flex-shrink-0">
-                                <i class="fas fa-plane"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-white text-sm">Panglao-Bohol International Airport (TAG)</h4>
-                                <p class="text-xs text-slate-400 mt-0.5">Approx. 10 minutes drive &bull; Airport pickup available upon request</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="space-y-3.5">
+                        <div class="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition">
                             <div class="w-10 h-10 rounded-xl bg-sky-400 text-slate-950 flex items-center justify-center font-bold text-base flex-shrink-0">
                                 <i class="fas fa-ship"></i>
                             </div>
                             <div>
                                 <h4 class="font-bold text-white text-sm">Tagbilaran Seaport (Ferry Terminal)</h4>
-                                <p class="text-xs text-slate-400 mt-0.5">Approx. 25-30 minutes drive &bull; Easy tricycle and van connection</p>
+                                <p class="text-xs text-slate-400 mt-0.5">Approx. 10-15 minutes drive (6 km) &bull; Direct access via Dauis bridge for Cebu/Siquijor ferry arrivals</p>
                             </div>
                         </div>
 
-                        <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                        <div class="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition">
+                            <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-base flex-shrink-0">
+                                <i class="fas fa-plane"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">Panglao-Bohol International Airport (TAG)</h4>
+                                <p class="text-xs text-slate-400 mt-0.5">Approx. 15 minutes drive (10 km) &bull; Quick, scenic drive via Dauis-Panglao Road</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition">
+                            <div class="w-10 h-10 rounded-xl bg-purple-400 text-slate-950 flex items-center justify-center font-bold text-base flex-shrink-0">
+                                <i class="fas fa-mountain"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">Local Caves & Dauis Attractions</h4>
+                                <p class="text-xs text-slate-400 mt-0.5">Cambagat Cave (10-min walk) &bull; Hinagdanan Cave (6-8 mins / 3.7 km) &bull; Dauis Church (5 mins)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4 p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition">
                             <div class="w-10 h-10 rounded-xl bg-teal-400 text-slate-950 flex items-center justify-center font-bold text-base flex-shrink-0">
                                 <i class="fas fa-umbrella-beach"></i>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white text-sm">Alona Beach & Nightlife Hub</h4>
-                                <p class="text-xs text-slate-400 mt-0.5">Approx. 5 minutes drive &bull; Quick scooter trip or pleasant stroll</p>
+                                <h4 class="font-bold text-white text-sm">Panglao Beaches & Nightlife Strip</h4>
+                                <p class="text-xs text-slate-400 mt-0.5">White Beach / Libaong (8-10 mins) &bull; Dumaluan (12-15 mins) &bull; Alona Beach (15-20 mins)</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-8">
-                        <button onclick="router('about')" class="inline-flex items-center gap-2 text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors">
-                            <span>View Full Map & Directions</span>
+                    <div class="mt-7 flex flex-wrap items-center gap-4">
+                        <a href="https://maps.google.com/?q=Dao,+Dauis+-+Panglao+Center+Road,+Dauis,+Bohol" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-md">
+                            <i class="fas fa-directions"></i>
+                            <span>Get Driving Directions</span>
+                            <i class="fas fa-external-link-alt text-[10px]"></i>
+                        </a>
+                        <button onclick="router('contact')" class="inline-flex items-center gap-2 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors">
+                            <span>Contact Reception &bull; Front Desk</span>
                             <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 </div>
 
                 <!-- Google Maps Preview Box -->
-                <div class="h-96 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-slate-800">
-                    <iframe 
-                        width="100%" 
-                        height="100%" 
-                        frameborder="0" 
-                        style="border:0" 
-                        src="https://www.google.com/maps/embed?pb=!3m2!1sen!2sph!4v1773839985257!5m2!1sen!2sph!6m8!1m7!1szHZuFCclv2jgA4bBC2k8Lg!2m2!1d9.602317850938597!2d123.8082172682524!3f116.79589647239351!4f-12.777956511199221!5f0.7820865974627469" 
-                        loading="lazy" 
-                        referrerpolicy="no-referrer-when-downgrade" 
-                        allowfullscreen>
-                    </iframe>
+                <div class="flex flex-col gap-3">
+                    <div class="h-96 rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-slate-800 relative">
+                        <iframe 
+                            width="100%" 
+                            height="100%" 
+                            frameborder="0" 
+                            style="border:0" 
+                            src="https://www.google.com/maps/embed?pb=!3m2!1sen!2sph!4v1773839985257!5m2!1sen!2sph!6m8!1m7!1szHZuFCclv2jgA4bBC2k8Lg!2m2!1d9.602317850938597!2d123.8082172682524!3f116.79589647239351!4f-12.777956511199221!5f0.7820865974627469" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    <div class="flex items-center justify-between px-2 text-[11px] text-slate-400">
+                        <span class="flex items-center gap-1.5"><i class="fas fa-map-marker-alt text-amber-400"></i> Dao, Dauis - Panglao Center Road, Dauis, Bohol 6339</span>
+                        <a href="https://maps.google.com/?q=Dao,+Dauis+-+Panglao+Center+Road,+Dauis,+Bohol" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline">Open in Google Maps &rarr;</a>
+                    </div>
                 </div>
 
             </div>

@@ -14,17 +14,17 @@
                     A tropical sanctuary where island adventure meets modern boutique hospitality. Designed for global backpackers, couples, and digital nomads.
                 </p>
                 <div class="flex items-center space-x-3 text-slate-400">
-                    <a href="#" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all">
+                    <a href="https://www.facebook.com/people/W-Island-Backpackers-Inn/61555776609951/" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all" title="W Island Backpackers Inn Facebook">
                         <i class="fab fa-facebook-f text-sm"></i>
                     </a>
-                    <a href="#" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all">
-                        <i class="fab fa-instagram text-sm"></i>
-                    </a>
-                    <a href="#" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all">
-                        <i class="fab fa-tripadvisor text-sm"></i>
-                    </a>
-                    <a href="#" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all">
+                    <a href="https://wa.me/639456882266" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all" title="WhatsApp Concierge">
                         <i class="fab fa-whatsapp text-sm"></i>
+                    </a>
+                    <a href="https://maps.google.com/?q=Dao,+Dauis+-+Panglao+Center+Road,+Dauis,+Bohol" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all" title="Google Maps Location">
+                        <i class="fas fa-map-marker-alt text-sm"></i>
+                    </a>
+                    <a href="mailto:wislandhub2025@gmail.com" class="w-9 h-9 rounded-full bg-white/10 hover:bg-amber-500 hover:text-slate-950 flex items-center justify-center transition-all" title="Email Reservations">
+                        <i class="fas fa-envelope text-sm"></i>
                     </a>
                 </div>
             </div>
@@ -57,15 +57,15 @@
                 <ul class="space-y-3 text-slate-400 text-sm">
                     <li class="flex items-start gap-3">
                         <i class="fas fa-map-marker-alt text-amber-400 mt-1 flex-shrink-0"></i>
-                        <span>Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</span>
+                        <span>Dao, Dauis - Panglao Center Road (Across Wilcon Depot), Dauis, Bohol 6339, Philippines</span>
                     </li>
                     <li class="flex items-center gap-3">
                         <i class="fas fa-phone-alt text-amber-400 flex-shrink-0"></i>
-                        <span>+63 912 345 6789 / +63 998 765 4321</span>
+                        <a href="tel:+639456882266" class="hover:text-amber-300 transition-colors">+63 945 688 2266</a>
                     </li>
                     <li class="flex items-center gap-3">
                         <i class="fas fa-envelope text-amber-400 flex-shrink-0"></i>
-                        <span>info@wislandhub.com</span>
+                        <a href="mailto:wislandhub2025@gmail.com" class="hover:text-amber-300 transition-colors">wislandhub2025@gmail.com</a>
                     </li>
                     <li class="flex items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-800">
                         <i class="fas fa-clock text-teal-400 flex-shrink-0"></i>

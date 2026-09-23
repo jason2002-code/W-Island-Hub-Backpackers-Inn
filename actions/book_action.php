@@ -65,6 +65,16 @@ function createDirectBooking($data) {
             echo json_encode(['success' => false, 'message' => 'Room not found']);
             exit;
         }
+
+        $guests = max(1, intval($data['guests'] ?? 1));
+        $roomMaxCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 2));
+        if ($guests > $roomMaxCap) {
+            echo json_encode([
+                'success' => false,
+                'message' => "The hotel does not accommodate {$guests} guests for this room. The room is limited to {$roomMaxCap} guests."
+            ]);
+            exit;
+        }
         
         // Calculate nights and total
         $checkInDate = new DateTime($checkIn);
@@ -365,6 +375,113 @@ function getRoomAvailability($data) {
     }
 }
 
+/**
+ * Check total hotel capacity and available capacity for requested dates and guests
+ */
+function checkHotelCapacity($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $checkIn = $data['check_in'] ?? $data['checkIn'] ?? date('Y-m-d');
+    $checkOut = $data['check_out'] ?? $data['checkOut'] ?? date('Y-m-d', strtotime('+1 day'));
+    $guests = max(1, intval($data['guests'] ?? 1));
+
+    $today = date('Y-m-d');
+    if ($checkIn < $today) {
+        $checkIn = $today;
+    }
+    if ($checkOut <= $checkIn) {
+        $checkOut = date('Y-m-d', strtotime($checkIn . ' +1 day'));
+    }
+
+    try {
+        // Fetch all rooms
+        $stmt = $pdo->query("SELECT * FROM rooms ORDER BY id ASC");
+        $allRooms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalHotelCapacity = 0;
+        $totalAvailableCapacity = 0;
+        $availableRooms = [];
+        $bookedRooms = [];
+        $maintenanceRooms = [];
+        $maxSingleRoomCapacity = 0;
+
+        foreach ($allRooms as $room) {
+            $roomId = (int)$room['id'];
+            $roomCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 1));
+            $isMaintenance = ($room['status'] === 'Maintenance');
+
+            if (!$isMaintenance) {
+                $totalHotelCapacity += $roomCap;
+                if ($roomCap > $maxSingleRoomCapacity) {
+                    $maxSingleRoomCapacity = $roomCap;
+                }
+            } else {
+                $maintenanceRooms[] = $room;
+                continue;
+            }
+
+            // Check if this room is booked between check_in and check_out
+            $stmtOverlap = $pdo->prepare("
+                SELECT COUNT(*) FROM bookings 
+                WHERE room_id = ? 
+                AND status IN ('Pending', 'Confirmed')
+                AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                AND COALESCE(check_in_date, check_in) < ?
+                AND COALESCE(check_out_date, check_out) > ?
+            ");
+            $stmtOverlap->execute([$roomId, $checkOut, $checkIn]);
+            $isBooked = ((int)$stmtOverlap->fetchColumn() > 0);
+
+            if ($isBooked) {
+                $bookedRooms[] = $room;
+            } else {
+                $totalAvailableCapacity += $roomCap;
+                $availableRooms[] = [
+                    'id' => $roomId,
+                    'name' => $room['name'],
+                    'type' => $room['type'],
+                    'price' => (float)$room['price'],
+                    'capacity' => (int)($room['capacity'] ?? 1),
+                    'max_capacity' => $roomCap,
+                    'status' => $room['status']
+                ];
+            }
+        }
+
+        $canAccommodate = ($guests <= $totalAvailableCapacity);
+        $warningMessage = null;
+
+        if (!$canAccommodate) {
+            if ($totalAvailableCapacity === 0) {
+                $warningMessage = "The hotel has no available rooms for the selected dates.";
+            } else {
+                $warningMessage = "The hotel does not accommodate {$guests} guests as the available room capacity is limited to {$totalAvailableCapacity} guests.";
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'check_in' => $checkIn,
+            'check_out' => $checkOut,
+            'guests' => $guests,
+            'total_hotel_capacity' => $totalHotelCapacity,
+            'total_available_capacity' => $totalAvailableCapacity,
+            'max_single_room_capacity' => $maxSingleRoomCapacity,
+            'available_rooms_count' => count($availableRooms),
+            'available_rooms' => $availableRooms,
+            'can_accommodate' => $canAccommodate,
+            'warning_message' => $warningMessage
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
 // ----------------------------------------------------
 // MAIN REQUEST DISPATCHER (Invoked on direct API call)
 // ----------------------------------------------------
@@ -393,6 +510,9 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
             break;
         case 'get_room_availability':
             getRoomAvailability($input);
+            break;
+        case 'check_hotel_capacity':
+            checkHotelCapacity($input);
             break;
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action']);

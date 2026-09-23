@@ -4,7 +4,7 @@
  * Provides comprehensive hotel operational, financial, and manifest reporting
  * alongside guest feedback/inquiry management.
  */
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: application/json');
 
@@ -20,12 +20,12 @@ if (!function_exists('getHotelInformation')) {
             'tagline' => 'Cozy Island Haven, Traveler Hub & Bohol Tour Gateway',
             'address' => 'Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines',
             'island' => 'Panglao Island, Bohol',
-            'landmarks' => 'Approx. 4-5 km from Bohol-Panglao International Airport (BIA) • Near Hinagdanan Cave',
-            'contact_numbers' => '+63 912 345 6789 / +63 998 765 4321',
-            'primary_phone' => '+63 912 345 6789',
-            'secondary_phone' => '+63 998 765 4321',
-            'email' => 'info@wislandhub.com',
-            'reservations_email' => 'reservations@wislandhub.com',
+            'landmarks' => 'Across Wilcon Depot Dauis • Adjacent to Royal Palms 2 • Near Cambagat & Hinagdanan Caves',
+            'contact_numbers' => '+63 945 688 2266',
+            'primary_phone' => '+63 945 688 2266',
+            'secondary_phone' => '+63 945 688 2266',
+            'email' => 'wislandhub2025@gmail.com',
+            'reservations_email' => 'wislandhub2025@gmail.com',
             'website' => 'www.wislandhub.com',
             'dot_accreditation' => 'DOT-R7-ACC-2024-0318',
             'dot_region' => 'Department of Tourism Region VII (Central Visayas)',
@@ -157,7 +157,7 @@ function generateHotelReport($postData = null) {
     }
 
     try {
-        if ($reportType === 'front_desk_daily' || $reportType === 'daily_summary') {
+        if ($reportType === 'front_desk_daily') {
             generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $params);
             return;
         } elseif ($reportType === 'daily_manifest') {
@@ -444,10 +444,17 @@ function generateHotelReport($postData = null) {
         // Sort Daily Trend
         ksort($dailySummary);
 
+        $reportTitle = 'Daily Reservation Summary & Front Office Night Audit';
+        if ($reportType === 'financial') {
+            $reportTitle = 'Financial & Revenue Summary Report';
+        } elseif ($reportType === 'bookings') {
+            $reportTitle = 'Hotel Reservations & Main Reservation Ledger';
+        }
+
         echo json_encode([
             'success' => true,
             'report_type' => $reportType,
-            'report_title' => 'Daily Reservation Summary & Front Office Night Audit',
+            'report_title' => $reportTitle,
             'report_ref' => 'RES-AUDIT-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
             'database_instance' => 'w_island_hub',
             'system_version' => 'W Island Hub PMS v2.4.0 (Enterprise Reservation Engine)',
@@ -837,7 +844,7 @@ function generateDailyManifest($pdo, $targetDate, $rangeLabel) {
             FROM bookings b
             LEFT JOIN rooms r ON b.room_id = r.id
             LEFT JOIN users u ON b.user_id = u.id
-            WHERE b.check_in = :target_date AND b.status != 'Cancelled'
+            WHERE COALESCE(b.check_in_date, b.check_in) = :target_date AND b.status != 'Cancelled'
             ORDER BY b.status ASC, b.id ASC
         ");
         $stmtArrivals->execute([':target_date' => $targetDate]);
@@ -849,7 +856,7 @@ function generateDailyManifest($pdo, $targetDate, $rangeLabel) {
             FROM bookings b
             LEFT JOIN rooms r ON b.room_id = r.id
             LEFT JOIN users u ON b.user_id = u.id
-            WHERE b.check_out = :target_date AND b.status != 'Cancelled'
+            WHERE COALESCE(b.check_out_date, b.check_out) = :target_date AND b.status != 'Cancelled'
             ORDER BY b.id ASC
         ");
         $stmtDepartures->execute([':target_date' => $targetDate]);
@@ -861,7 +868,7 @@ function generateDailyManifest($pdo, $targetDate, $rangeLabel) {
             FROM bookings b
             LEFT JOIN rooms r ON b.room_id = r.id
             LEFT JOIN users u ON b.user_id = u.id
-            WHERE b.check_in < :target_date AND b.check_out > :target_date AND b.status = 'Confirmed'
+            WHERE COALESCE(b.check_in_date, b.check_in) < :target_date AND COALESCE(b.check_out_date, b.check_out) > :target_date AND b.status = 'Confirmed'
             ORDER BY r.name ASC, b.id ASC
         ");
         $stmtInHouse->execute([':target_date' => $targetDate]);
@@ -877,6 +884,7 @@ function generateDailyManifest($pdo, $targetDate, $rangeLabel) {
         echo json_encode([
             'success' => true,
             'report_type' => 'daily_manifest',
+            'report_title' => 'Front Desk Daily Operations Manifest',
             'report_ref' => 'MNF-' . date('Ymd', strtotime($targetDate)) . '-' . strtoupper(substr(uniqid(), -4)),
             'generated_at' => date('Y-m-d H:i:s'),
             'generated_at_formatted' => date('F d, Y - h:i A') . ' PHT (UTC+8)',
@@ -977,6 +985,7 @@ function generateRoomPerformanceReport($pdo, $startDate, $endDate, $rangeLabel) 
         echo json_encode([
             'success' => true,
             'report_type' => 'room_performance',
+            'report_title' => 'Room Occupancy & Utilization Performance Report',
             'report_ref' => 'RPR-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
             'generated_at' => date('Y-m-d H:i:s'),
             'generated_at_formatted' => date('F d, Y - h:i A') . ' PHT (UTC+8)',
@@ -1052,6 +1061,7 @@ function generateFeedbackReport($pdo, $startDate, $endDate, $rangeLabel) {
         echo json_encode([
             'success' => true,
             'report_type' => 'feedback',
+            'report_title' => 'Guest Satisfaction & Reviews Audit Report',
             'report_ref' => 'QST-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
             'generated_at' => date('Y-m-d H:i:s'),
             'generated_at_formatted' => date('F d, Y - h:i A') . ' PHT (UTC+8)',

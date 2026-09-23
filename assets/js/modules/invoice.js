@@ -146,8 +146,8 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                     <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-gray-700 font-medium bg-gray-50 py-2 px-3 rounded-lg border border-gray-100">
                         <span><i class="fas fa-clock text-teal-600 mr-1"></i>Check-in: <strong>02:00 PM</strong></span>
                         <span><i class="fas fa-sign-out-alt text-teal-600 mr-1"></i>Check-out: <strong>11:00 AM</strong></span>
-                        <span><i class="fas fa-phone-alt text-teal-600 mr-1"></i>+63 912 345 6789</span>
-                        <span><i class="fas fa-envelope text-teal-600 mr-1"></i>info@wislandhub.com</span>
+                        <span><i class="fas fa-phone-alt text-teal-600 mr-1"></i>+63 945 688 2266</span>
+                        <span><i class="fas fa-envelope text-teal-600 mr-1"></i>wislandhub2025@gmail.com</span>
                     </div>
                     <p class="text-[11px] text-gray-600">
                         Please present a valid government-issued photo ID along with this voucher at the front desk upon arrival.

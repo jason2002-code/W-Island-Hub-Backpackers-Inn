@@ -99,6 +99,12 @@ if ($pdo) {
                                     <span>Age 18+ counts as Adult. Age 17 and below counts as Child.</span>
                                 </div>
 
+                                <!-- Capacity Overlimit Warning in Dropdown -->
+                                <div id="rooms-stepper-capacity-warning" class="hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-2">
+                                    <i class="fas fa-exclamation-triangle text-rose-500 mt-0.5 flex-shrink-0"></i>
+                                    <span id="rooms-stepper-capacity-warning-text">The hotel does not accommodate this party size as room capacity is limited.</span>
+                                </div>
+
                                 <!-- Apply Button -->
                                 <button type="button" onclick="closeGuestDropdown('rooms')" class="w-full bg-brand-blue hover:bg-sky-600 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm">
                                     Done (<span id="rooms-total-guest-badge">1 Guest</span>)
@@ -111,6 +117,33 @@ if ($pdo) {
                     </form>
                 </div>
                 
+                <!-- Hotel Capacity Warning Banner -->
+                <div id="capacity-warning-banner" class="hidden mb-8 p-5 bg-rose-50 border-2 border-rose-200 rounded-2xl text-rose-900 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 text-xl font-bold">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-sm font-bold text-rose-900 uppercase tracking-wide">Hotel Capacity Limit Notice</h4>
+                                <span class="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-bold">Capacity Exceeded</span>
+                            </div>
+                            <p id="capacity-warning-text" class="text-xs sm:text-sm text-rose-800 mt-1.5 font-semibold leading-relaxed">
+                                The hotel does not accommodate the number of guests requested because available room capacity is limited.
+                            </p>
+                            <div class="mt-2.5 text-xs text-rose-700 flex flex-wrap items-center gap-4 font-normal">
+                                <span><i class="fas fa-arrow-down mr-1 text-rose-500"></i> Please reduce your guest count or select different dates.</span>
+                                <a href="javascript:void(0)" onclick="router('contact')" class="font-bold underline hover:text-rose-950 flex items-center gap-1">
+                                    <i class="fas fa-headset text-rose-500"></i> Contact Front Desk
+                                </a>
+                            </div>
+                        </div>
+                        <button type="button" onclick="document.getElementById('capacity-warning-banner').classList.add('hidden')" class="text-rose-400 hover:text-rose-700 text-sm p-1 rounded-lg" title="Dismiss">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Rooms Grid -->
                 <?php include "user/rooms.php"; ?>
             </div>
@@ -135,11 +168,57 @@ if ($pdo) {
                     <div class="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
                         <!-- Left Column: Form & Payment Selector -->
                         <div class="lg:col-span-7 space-y-6">
-                            <!-- Stay Details Summary -->
+                            <!-- Stay Details Summary with Date Change Controls -->
                             <div>
-                                <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                    <i class="fas fa-calendar-alt text-brand-blue"></i> Stay Summary
-                                </h3>
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+                                        <i class="fas fa-calendar-alt text-brand-blue"></i> Stay Dates &amp; Reservation Details
+                                    </h3>
+                                    <span id="summary-dates-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                                        <i class="fas fa-check-circle text-emerald-500"></i> <span id="summary-dates-badge-text">Available</span>
+                                    </span>
+                                </div>
+
+                                <!-- Date Modification Card -->
+                                <div class="p-4 sm:p-5 bg-slate-50 border border-slate-200/90 rounded-2xl mb-4 shadow-xs">
+                                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                        <span class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                                            <i class="fas fa-calendar-check text-amber-500"></i> Reservation Dates
+                                        </span>
+                                        <span class="text-[11px] text-slate-500 flex items-center gap-1">
+                                            <i class="fas fa-edit text-brand-blue"></i> Modify dates anytime before confirmation
+                                        </span>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                                                Check-in Date <span class="text-slate-400 font-normal">(2:00 PM)</span>
+                                            </label>
+                                            <div class="relative">
+                                                <input type="date" id="summary-check-in-date" onchange="handleSummaryDateChange()" class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none transition shadow-xs cursor-pointer">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                                                Check-out Date <span class="text-slate-400 font-normal">(11:00 AM)</span>
+                                            </label>
+                                            <div class="relative">
+                                                <input type="date" id="summary-check-out-date" onchange="handleSummaryDateChange()" class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none transition shadow-xs cursor-pointer">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs pt-2.5 border-t border-slate-200/60 text-slate-600">
+                                        <span id="summary-stay-duration" class="font-medium text-slate-700 flex items-center gap-1.5">
+                                            <i class="fas fa-moon text-amber-500"></i> Duration: <strong id="summary-stay-nights-text">1 Night</strong>
+                                        </span>
+                                        <span id="summary-date-status-msg" class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                                            <i class="fas fa-check text-emerald-500"></i> Pricing and availability auto-update
+                                        </span>
+                                    </div>
+                                </div>
+
                                 <div id="booking-details-content" class="space-y-3 text-gray-600">
                                     <!-- Filled by JS -->
                                 </div>
@@ -169,7 +248,7 @@ if ($pdo) {
                                         </div>
                                         <div>
                                             <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Phone / Mobile <span class="text-rose-500">*</span></label>
-                                            <input type="tel" id="book-phone" required class="w-full border border-gray-200 bg-slate-50 focus:bg-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition" placeholder="+63 912 345 6789">
+                                            <input type="tel" id="book-phone" required class="w-full border border-gray-200 bg-slate-50 focus:bg-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition" placeholder="+63 900 000 0000">
                                         </div>
                                         <div>
                                             <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Special Requests (Optional)</label>

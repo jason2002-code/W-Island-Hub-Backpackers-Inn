@@ -88,6 +88,26 @@ function updateGuestStepper(scope, type, delta) {
 }
 
 /**
+ * Computes total active room capacity across the inn.
+ * @returns {number} Total max guest capacity of all non-maintenance rooms.
+ */
+function getTotalHotelCapacity() {
+    let totalCap = 0;
+    const rooms = (window.appState && Array.isArray(window.appState.rooms) && window.appState.rooms.length > 0)
+        ? window.appState.rooms
+        : (window.serverRoomsData ? Object.values(window.serverRoomsData) : []);
+
+    rooms.forEach(r => {
+        if (r.status !== 'Maintenance') {
+            const cap = parseInt(r.max_capacity || r.capacity, 10) || 2;
+            totalCap += cap;
+        }
+    });
+
+    return totalCap > 0 ? totalCap : 17;
+}
+
+/**
  * Applies adult, child, and total guest values to UI elements for a scope.
  */
 function applyGuestValuesToScope(scope, adults, children, totalGuests) {
@@ -125,10 +145,26 @@ function applyGuestValuesToScope(scope, adults, children, totalGuests) {
 
     if (summaryText) summaryText.textContent = summaryStr;
     if (totalBadge) totalBadge.textContent = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'}`;
+
+    // Live capacity warning inside dropdown stepper
+    const hotelCap = getTotalHotelCapacity();
+    const isExceeded = totalGuests > hotelCap;
+    const stepperWarn = document.getElementById(`${scope}-stepper-capacity-warning`);
+    const stepperWarnText = document.getElementById(`${scope}-stepper-capacity-warning-text`);
+    if (stepperWarn) {
+        if (isExceeded) {
+            stepperWarn.classList.remove('hidden');
+            if (stepperWarnText) {
+                stepperWarnText.textContent = `The hotel does not accommodate ${totalGuests} guests as total room capacity is limited to ${hotelCap} guests.`;
+            }
+        } else {
+            stepperWarn.classList.add('hidden');
+        }
+    }
 }
 
 function syncGuestSelectorLimits() {
-    // Guest limit removed per user request. Guests can be any party size.
+    // Dynamic warning handled live via applyGuestValuesToScope and getTotalHotelCapacity
 }
 
 /**
@@ -448,6 +484,8 @@ function initAvailabilityForm() {
 
         try {
             const roomsContainer = document.getElementById('rooms-container');
+            const capBanner = document.getElementById('capacity-warning-banner');
+            const capBannerText = document.getElementById('capacity-warning-text');
             let allRoomEls = Array.from(document.querySelectorAll('.room-card[data-room-id]'));
 
             // Fallback if data-room-id or .room-card class is missing in PHP-rendered rooms
@@ -467,9 +505,85 @@ function initAvailabilityForm() {
                 });
             }
 
+            // 1. Check total hotel capacity and available capacity for requested dates and guests
+            let capData = null;
+            try {
+                const capRes = await fetch('actions/book_action.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'check_hotel_capacity',
+                        check_in: checkIn,
+                        check_out: checkOut,
+                        guests: guests
+                    })
+                });
+                capData = await capRes.json();
+            } catch (capErr) {
+                console.warn('Hotel capacity check error:', capErr);
+            }
+
+            // 2. Overcapacity Handling: Guest number exceeds available hotel capacity
+            if (capData && capData.success && !capData.can_accommodate) {
+                const warningMsg = capData.warning_message || `The hotel does not accommodate ${guests} guests as the available room capacity is limited to ${capData.total_available_capacity} guests.`;
+
+                if (capBanner) {
+                    capBanner.classList.remove('hidden');
+                    if (capBannerText) {
+                        capBannerText.innerHTML = `<strong>Notice:</strong> The hotel does not accommodate <strong>${guests} guests</strong> as the available room capacity is limited to <strong>${capData.total_available_capacity} guests</strong> for your selected dates.`;
+                    }
+                    capBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                if (typeof window.showToast === 'function') {
+                    window.showToast(warningMsg, 'warning');
+                }
+
+                // Hide room cards because total hotel accommodation is insufficient
+                allRoomEls.forEach(el => {
+                    el.style.display = 'none';
+                });
+
+                let noAvailEl = document.getElementById('no-available-rooms');
+                if (!noAvailEl && roomsContainer) {
+                    noAvailEl = document.createElement('div');
+                    noAvailEl.id = 'no-available-rooms';
+                    noAvailEl.className = 'col-span-full text-center text-gray-500 py-12';
+                    roomsContainer.appendChild(noAvailEl);
+                }
+                if (noAvailEl) {
+                    noAvailEl.innerHTML = `
+                        <div class="bg-rose-50 border-2 border-rose-200 rounded-3xl p-8 max-w-lg mx-auto text-center shadow-sm">
+                            <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                                <i class="fas fa-users-slash"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-rose-900 mb-1">Hotel Capacity Limited</h4>
+                            <p class="text-xs sm:text-sm text-rose-800 mb-4 leading-relaxed font-medium">
+                                The hotel does not accommodate <strong>${guests} guests</strong>. Our available room capacity for these dates is limited to <strong>${capData.total_available_capacity} guests</strong>.
+                            </p>
+                            <div class="p-3 bg-white/80 rounded-xl border border-rose-100 text-xs text-rose-700 mb-4">
+                                <span><i class="fas fa-info-circle mr-1 text-rose-500"></i> Please reduce your party size or select alternative dates.</span>
+                            </div>
+                            <button type="button" onclick="window.router('contact')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2">
+                                <i class="fas fa-envelope"></i> Contact Front Desk
+                            </button>
+                        </div>
+                    `;
+                    noAvailEl.style.display = '';
+                }
+
+                return;
+            } else {
+                if (capBanner) {
+                    capBanner.classList.add('hidden');
+                }
+            }
+
             allRoomEls.forEach(el => {
                 el.style.display = '';
             });
+
+            const maxAvailCap = (capData && capData.total_available_capacity) ? capData.total_available_capacity : getTotalHotelCapacity();
 
             const results = await Promise.all(allRoomEls.map(async (roomEl) => {
                 const roomId = roomEl.dataset.roomId;
@@ -481,7 +595,7 @@ function initAvailabilityForm() {
                                         roomCapacity;
 
                 const isSmallForGroup = roomMaxCapacity < guests;
-                const isTwoCapRecommendation = (guests >= 4 && roomMaxCapacity <= 2);
+                const isTwoCapRecommendation = (guests >= 4 && roomMaxCapacity <= 2 && guests <= maxAvailCap);
 
                 if (isSmallForGroup && !isTwoCapRecommendation) {
                     roomEl.style.display = 'none';
@@ -1024,7 +1138,7 @@ document.addEventListener('keydown', (e) => {
 let recommendationContext = null;
 
 /**
- * Displays the Room Recommendation Modal when group size (e.g. 4+) exceeds a 2-capacity room.
+ * Displays the Room Recommendation Modal when group size exceeds room capacity or hotel capacity.
  * @param {Object} chosenRoom - The room object.
  * @param {number} totalGuests - Total number of guests.
  * @param {number} adults - Adults count.
@@ -1035,6 +1149,8 @@ function showRoomRecommendationModal(chosenRoom, totalGuests, adults, children) 
     if (!modal) return;
 
     const chosenCap = parseInt(chosenRoom.max_capacity || chosenRoom.capacity, 10) || 2;
+    const hotelCap = getTotalHotelCapacity();
+    const isHotelOvercapacity = totalGuests > hotelCap;
     const neededRooms = Math.ceil(totalGuests / chosenCap);
     const roomPrice = parseFloat(chosenRoom.price) || 0;
     const multiRoomNightPrice = roomPrice * neededRooms;
@@ -1044,20 +1160,35 @@ function showRoomRecommendationModal(chosenRoom, totalGuests, adults, children) 
         totalGuests,
         adults,
         children,
-        neededRooms
+        neededRooms,
+        chosenCap,
+        hotelCap
     };
 
     // Populate explanation banner
     const banner = document.getElementById('rec-explanation-banner');
     if (banner) {
-        banner.innerHTML = `
-            <div class="flex items-start gap-2">
-                <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5 text-sm flex-shrink-0"></i>
-                <div>
-                    <strong>Group Size Exceeds Room Capacity:</strong> You selected <strong>${chosenRoom.name}</strong> (${chosenRoom.type || 'Standard'}), which accommodates up to <strong>${chosenCap} guests</strong>. Your party has <strong>${totalGuests} guests</strong> (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}).
+        if (isHotelOvercapacity) {
+            banner.className = 'p-3.5 bg-rose-50/90 rounded-2xl border border-rose-200 text-xs text-rose-900 mb-4 leading-relaxed flex-shrink-0';
+            banner.innerHTML = `
+                <div class="flex items-start gap-2">
+                    <i class="fas fa-exclamation-circle text-rose-600 mt-0.5 text-sm flex-shrink-0"></i>
+                    <div>
+                        <strong class="font-bold text-rose-950">Hotel Capacity Notice:</strong> The hotel does not accommodate <strong>${totalGuests} guests</strong> because our available room capacity is limited to <strong>${hotelCap} guests</strong>.
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            banner.className = 'p-3.5 bg-amber-50/90 rounded-2xl border border-amber-200 text-xs text-amber-900 mb-4 leading-relaxed flex-shrink-0';
+            banner.innerHTML = `
+                <div class="flex items-start gap-2">
+                    <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5 text-sm flex-shrink-0"></i>
+                    <div>
+                        <strong>Group Size Exceeds Room Capacity:</strong> You selected <strong>${chosenRoom.name}</strong> (${chosenRoom.type || 'Standard'}), which accommodates up to <strong>${chosenCap} guests</strong>. Your party has <strong>${totalGuests} guests</strong> (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}).
+                    </div>
+                </div>
+            `;
+        }
     }
 
     // Find larger alternative rooms from state that can accommodate the whole group
@@ -1070,74 +1201,111 @@ function showRoomRecommendationModal(chosenRoom, totalGuests, adults, children) 
         return r.id != chosenRoom.id && cap >= totalGuests && r.status !== 'Maintenance';
     });
 
+    // Check how many rooms of the same category exist in the hotel
+    const sameTypeRooms = allRooms.filter(r => (r.type || '').toLowerCase() === (chosenRoom.type || '').toLowerCase() && r.status !== 'Maintenance');
+    const sameTypeCount = sameTypeRooms.length;
+    const canDoMultiRoom = !isHotelOvercapacity && neededRooms <= sameTypeCount && (neededRooms * chosenCap <= hotelCap);
+
     const container = document.getElementById('rec-options-container');
     if (container) {
         let html = '';
 
-        // Option 1: Add Multiple Rooms (e.g. 2x Standard Double)
-        html += `
-            <div class="p-4 rounded-2xl border-2 border-brand-blue/30 bg-blue-50/40 hover:border-brand-blue transition shadow-xs">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider text-brand-blue flex items-center gap-1.5">
-                        <i class="fas fa-layer-group"></i> Option 1: Add More Rooms (${neededRooms} Rooms Needed)
-                    </span>
-                    <span class="text-[11px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                        Recommended
-                    </span>
-                </div>
-                <h4 class="text-base font-bold text-gray-800 mb-1">Book ${neededRooms}x ${chosenRoom.name}</h4>
-                <p class="text-xs text-gray-500 mb-3">
-                    Reserve <strong>${neededRooms} rooms</strong> of this accommodation to fit all ${totalGuests} guests (${neededRooms} rooms &times; ${chosenCap} capacity = ${neededRooms * chosenCap} total capacity).
-                </p>
-                <div class="flex items-center justify-between pt-2 border-t border-blue-100/80">
-                    <div>
-                        <span class="text-[10px] text-gray-400 uppercase font-bold block">Combined Rate</span>
-                        <strong class="text-sm font-bold text-brand-dark">₱${multiRoomNightPrice.toFixed(2)}</strong>
-                        <span class="text-[11px] text-gray-500">/ night (${neededRooms} rooms)</span>
-                    </div>
-                    <button type="button" onclick="proceedMultiRoomBooking(${chosenRoom.id}, ${neededRooms})" class="bg-brand-blue hover:bg-sky-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer">
-                        <i class="fas fa-check"></i> Book ${neededRooms} Rooms
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Option 2: Recommended Larger Rooms (e.g. Family Suite / Dorm)
-        if (largerRooms.length > 0) {
+        if (isHotelOvercapacity) {
             html += `
-                <div class="space-y-3">
-                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5 pt-1">
-                        <i class="fas fa-star text-amber-500"></i> Option 2: Switch to a Room that Fits Your Whole Group
-                    </span>
-            `;
-            largerRooms.forEach(lr => {
-                const lrCap = parseInt(lr.max_capacity || lr.capacity, 10) || 0;
-                const lrPrice = parseFloat(lr.price) || 0;
-                html += `
-                    <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/30 hover:border-emerald-400 transition shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                        <div class="flex items-center gap-3">
-                            <img src="${lr.image}" alt="${lr.name}" class="w-16 h-16 rounded-xl object-cover border border-gray-200 flex-shrink-0">
-                            <div>
-                                <div class="flex items-center gap-1.5">
-                                    <h4 class="font-bold text-gray-800 text-sm">${lr.name}</h4>
-                                    <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-white text-emerald-800 border border-emerald-200">${lr.type}</span>
-                                </div>
-                                <p class="text-xs text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
-                                    <i class="fas fa-user-friends text-[10px]"></i> Accommodates up to ${lrCap} Guests
-                                </p>
-                                <span class="text-xs font-bold text-gray-900 mt-1 block">₱${lrPrice.toFixed(2)} <span class="text-[10px] text-gray-500 font-normal">/ night</span></span>
-                            </div>
-                        </div>
-                        <button type="button" onclick="proceedSwitchRoomBooking(${lr.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex-shrink-0 w-full sm:w-auto flex items-center justify-center gap-1.5 cursor-pointer">
-                            Switch &amp; Book
+                <div class="p-6 bg-rose-50/70 border-2 border-rose-200 rounded-2xl text-center space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mx-auto shadow-inner">
+                        <i class="fas fa-users-slash"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-rose-900">Hotel Cannot Accommodate ${totalGuests} Guests</h4>
+                    <p class="text-xs text-rose-800 leading-relaxed max-w-md mx-auto font-medium">
+                        The hotel does not accommodate ${totalGuests} guests as the available room capacity is limited to ${hotelCap} guests.
+                    </p>
+                    <div class="pt-2">
+                        <button type="button" onclick="closeRoomRecommendationModal(); window.router('contact');" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2 cursor-pointer">
+                            <i class="fas fa-phone-alt"></i> Contact Front Desk for Special Inquiries
                         </button>
                     </div>
+                </div>
+            `;
+        } else {
+            // Option 1: Add Multiple Rooms (e.g. 2x Standard Double)
+            if (canDoMultiRoom) {
+                html += `
+                    <div class="p-4 rounded-2xl border-2 border-brand-blue/30 bg-blue-50/40 hover:border-brand-blue transition shadow-xs">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-brand-blue flex items-center gap-1.5">
+                                <i class="fas fa-layer-group"></i> Option 1: Add More Rooms (${neededRooms} Rooms Needed)
+                            </span>
+                            <span class="text-[11px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                                Recommended
+                            </span>
+                        </div>
+                        <h4 class="text-base font-bold text-gray-800 mb-1">Book ${neededRooms}x ${chosenRoom.name}</h4>
+                        <p class="text-xs text-gray-500 mb-3">
+                            Reserve <strong>${neededRooms} rooms</strong> of this accommodation to fit all ${totalGuests} guests (${neededRooms} rooms &times; ${chosenCap} capacity = ${neededRooms * chosenCap} total capacity).
+                        </p>
+                        <div class="flex items-center justify-between pt-2 border-t border-blue-100/80">
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold block">Combined Rate</span>
+                                <strong class="text-sm font-bold text-brand-dark">₱${multiRoomNightPrice.toFixed(2)}</strong>
+                                <span class="text-[11px] text-gray-500">/ night (${neededRooms} rooms)</span>
+                            </div>
+                            <button type="button" onclick="proceedMultiRoomBooking(${chosenRoom.id}, ${neededRooms})" class="bg-brand-blue hover:bg-sky-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                                <i class="fas fa-check"></i> Book ${neededRooms} Rooms
+                            </button>
+                        </div>
+                    </div>
                 `;
-            });
-            html += `</div>`;
+            } else if (neededRooms > 1) {
+                html += `
+                    <div class="p-4 rounded-2xl border border-amber-200 bg-amber-50/40 text-xs text-amber-900 space-y-1">
+                        <strong>Multi-Room Notice:</strong> The hotel does not have enough rooms of this category to accommodate ${totalGuests} guests in ${neededRooms} separate rooms (only ${sameTypeCount} room${sameTypeCount > 1 ? 's' : ''} available).
+                    </div>
+                `;
+            }
+
+            // Option 2: Recommended Larger Rooms (e.g. Family Suite / Dorm)
+            if (largerRooms.length > 0) {
+                html += `
+                    <div class="space-y-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5 pt-1">
+                            <i class="fas fa-star text-amber-500"></i> Option 2: Switch to a Room that Fits Your Whole Group
+                        </span>
+                `;
+                largerRooms.forEach(lr => {
+                    const lrCap = parseInt(lr.max_capacity || lr.capacity, 10) || 0;
+                    const lrPrice = parseFloat(lr.price) || 0;
+                    html += `
+                        <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/30 hover:border-emerald-400 transition shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${lr.image}" alt="${lr.name}" class="w-16 h-16 rounded-xl object-cover border border-gray-200 flex-shrink-0">
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <h4 class="font-bold text-gray-800 text-sm">${lr.name}</h4>
+                                        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-white text-emerald-800 border border-emerald-200">${lr.type}</span>
+                                    </div>
+                                    <p class="text-xs text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+                                        <i class="fas fa-user-friends text-[10px]"></i> Accommodates up to ${lrCap} Guests
+                                    </p>
+                                    <span class="text-xs font-bold text-gray-900 mt-1 block">₱${lrPrice.toFixed(2)} <span class="text-[10px] text-gray-500 font-normal">/ night</span></span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="proceedSwitchRoomBooking(${lr.id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex-shrink-0 w-full sm:w-auto flex items-center justify-center gap-1.5 cursor-pointer">
+                                Switch &amp; Book
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
         }
 
         container.innerHTML = html;
+    }
+
+    const proceedSingleBtn = document.getElementById('rec-proceed-single-btn');
+    if (proceedSingleBtn) {
+        proceedSingleBtn.textContent = `Continue with 1 Room (${chosenCap} Guest${chosenCap > 1 ? 's' : ''} Max)`;
     }
 
     modal.classList.remove('hidden');
@@ -1187,12 +1355,21 @@ function proceedSingleRoomAnyway() {
     closeRoomRecommendationModal();
     const ctx = recommendationContext;
     if (!ctx) return;
+    const roomCap = parseInt(ctx.chosenRoom.max_capacity || ctx.chosenRoom.capacity, 10) || 2;
+    const clampedAdults = Math.min(ctx.adults, roomCap);
+    const clampedChildren = Math.max(0, Math.min(ctx.children, roomCap - clampedAdults));
+    const clampedTotal = clampedAdults + clampedChildren;
+
+    if (typeof window.showToast === 'function') {
+        window.showToast(`Party size adjusted to ${clampedTotal} guests to match room capacity (${roomCap} max).`, 'info');
+    }
+
     if (typeof window.initiateBooking === 'function') {
         window.initiateBooking(ctx.chosenRoom.id, {
             roomsCount: 1,
-            guests: 2,
-            adults: 2,
-            children: 0,
+            guests: clampedTotal,
+            adults: clampedAdults,
+            children: clampedChildren,
             bypassRecommendation: true
         });
     }

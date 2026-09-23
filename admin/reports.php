@@ -116,16 +116,16 @@
                     </div>
 
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="generateHotelReportData()" id="btn-generate-report" class="bg-brand-purple text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-purple-700 transition flex items-center gap-2 text-sm">
-                            <i class="fas fa-bolt"></i> Generate Report
+                        <button onclick="generateHotelReportData(true, true)" id="btn-generate-report" class="bg-gradient-to-r from-brand-purple to-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:from-purple-700 hover:to-indigo-700 transition flex items-center gap-2 text-sm" title="Generate fresh report with new audit reference and direct to print page">
+                            <i class="fas fa-print"></i> Generate & Print Report
                         </button>
-                        <button onclick="printHotelReport()" id="btn-print-report" class="bg-brand-blue text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-sky-600 transition flex items-center gap-2 text-sm">
-                            <i class="fas fa-print"></i> Print Report
+                        <button onclick="printHotelReport()" id="btn-print-report" class="bg-brand-blue text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-sky-600 transition flex items-center gap-2 text-sm" title="Print Current View without regenerating reference">
+                            <i class="fas fa-file-invoice"></i> Print Current View
                         </button>
                         <button onclick="exportReportCSV()" id="btn-export-csv" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition flex items-center gap-2 text-sm">
                             <i class="fas fa-file-excel"></i> Export CSV
                         </button>
-                        <button onclick="generateHotelReportData(true)" class="bg-gray-100 text-gray-600 px-3.5 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition" title="Refresh">
+                        <button onclick="generateHotelReportData(true, false)" class="bg-gray-100 text-gray-600 px-3.5 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition" title="Refresh Data Only (No Print)">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
@@ -158,9 +158,9 @@
                                     <span class="text-gray-500 text-[11px]"><i class="fas fa-plane-departure text-brand-blue mr-1"></i>~4.5 km from Bohol-Panglao Int'l Airport (BIA)</span>
                                 </p>
                                 <div class="text-[11px] text-gray-500 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                                    <span><i class="fas fa-phone-alt text-brand-purple mr-1"></i>+63 912 345 6789 / +63 998 765 4321</span>
+                                    <span><i class="fas fa-phone-alt text-brand-purple mr-1"></i>+63 945 688 2266</span>
                                     <span>•</span>
-                                    <span><i class="fas fa-envelope text-brand-blue mr-1"></i>info@wislandhub.com</span>
+                                    <span><i class="fas fa-envelope text-brand-blue mr-1"></i>wislandhub2025@gmail.com</span>
                                     <span>•</span>
                                     <span><i class="fas fa-globe text-emerald-600 mr-1"></i>www.wislandhub.com</span>
                                 </div>
@@ -191,6 +191,7 @@
                             </div>
                         </div>
                     </div>
+                </div>
                 <!-- ================= HOTEL FRONT DESK BUSINESS DAILY REPORT ================= -->
                 <div id="front-desk-daily-section" class="space-y-6">
                     <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-200">
@@ -750,7 +751,7 @@ function handleDatePeriodChange() {
 }
 
 // Generate Report Data from API
-function generateHotelReportData(forceRefresh = false) {
+function generateHotelReportData(forceRefresh = false, autoPrint = false) {
     const reportType = document.getElementById('hotel-report-type').value;
     const dateRange = document.getElementById('hotel-report-period').value;
     const fromDate = document.getElementById('hotel-report-from').value;
@@ -759,16 +760,87 @@ function generateHotelReportData(forceRefresh = false) {
     const roomType = document.getElementById('hotel-report-room-type').value;
     const dateField = document.getElementById('hotel-report-date-field') ? document.getElementById('hotel-report-date-field').value : 'created_at';
 
-    // Show loading state
+    // When autoPrint is requested, synchronously open the print window in the direct user click context
+    // This prevents modern browser popup blockers from blocking window.open during async fetch
+    let printWindow = null;
+    if (autoPrint) {
+        printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Generating Official Hotel Report & Audit Ref...</title>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            background: #f8fafc;
+                            color: #1e293b;
+                        }
+                        .loader-container {
+                            background: #ffffff;
+                            padding: 32px 40px;
+                            border-radius: 16px;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+                            text-align: center;
+                            max-width: 420px;
+                            border: 1px solid #e2e8f0;
+                        }
+                        .spinner {
+                            width: 44px;
+                            height: 44px;
+                            border: 4px solid #e2e8f0;
+                            border-top-color: #6366f1;
+                            border-radius: 50%;
+                            animation: spin 0.8s linear infinite;
+                            margin: 0 auto 16px;
+                        }
+                        @keyframes spin { to { transform: rotate(360deg); } }
+                        h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #0f172a; }
+                        p { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+                        .ref-pill {
+                            display: inline-block;
+                            margin-top: 14px;
+                            padding: 4px 12px;
+                            background: #eef2ff;
+                            color: #4338ca;
+                            font-size: 11px;
+                            font-weight: 600;
+                            border-radius: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="loader-container">
+                        <div class="spinner"></div>
+                        <h3>Generating Official Report & Audit Ref...</h3>
+                        <p>Compiling official hotel records and generating audit reference.</p>
+                        <div class="ref-pill"><i class="fas fa-sync-alt"></i> Generating Reference ID & Preparing Print...</div>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+    }
+
+    // Show loading state in on-screen table
     const tbody = document.getElementById('report-table-body');
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="10" class="p-12 text-center text-gray-400">
-                <i class="fas fa-spinner fa-spin text-2xl mb-3 block text-brand-purple"></i>
-                Fetching official hotel data...
-            </td>
-        </tr>
-    `;
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="p-12 text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-3 block text-brand-purple"></i>
+                    Fetching official hotel data and generating audit reference...
+                </td>
+            </tr>
+        `;
+    }
 
     const queryParams = new URLSearchParams({
         action: 'generate_report',
@@ -788,15 +860,38 @@ function generateHotelReportData(forceRefresh = false) {
                 currentReportData = data;
                 renderReportView(data);
                 if (forceRefresh && typeof showToast === 'function') {
-                    showToast('Report updated with latest records', 'success');
+                    showToast(`Official report compiled (Ref: ${data.report_ref || 'OK'})`, 'success');
+                }
+                if (autoPrint) {
+                    printHotelReport(printWindow);
                 }
             } else {
-                tbody.innerHTML = `<tr><td colspan="10" class="p-12 text-center text-red-500 font-medium">${data.message || 'Error loading report'}</td></tr>`;
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-12 text-center text-red-500 font-medium">${data.message || 'Error loading report'}</td></tr>`;
+                }
+                if (printWindow && !printWindow.closed) {
+                    printWindow.document.body.innerHTML = `
+                        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; text-align: center; color: #dc2626;">
+                            <h3 style="font-size: 18px; margin-bottom: 8px;">Failed to Generate Report</h3>
+                            <p style="color: #64748b; font-size: 13px;">${data.message || 'An error occurred while compiling the report.'}</p>
+                        </div>
+                    `;
+                }
             }
         })
         .catch(err => {
             console.error('Report API Error:', err);
-            tbody.innerHTML = `<tr><td colspan="10" class="p-12 text-center text-red-500 font-medium">Failed to connect to reporting server. Please check database connection.</td></tr>`;
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-12 text-center text-red-500 font-medium">Failed to connect to reporting server. Please check database connection.</td></tr>`;
+            }
+            if (printWindow && !printWindow.closed) {
+                printWindow.document.body.innerHTML = `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; text-align: center; color: #dc2626;">
+                        <h3 style="font-size: 18px; margin-bottom: 8px;">Reporting Server Connection Failed</h3>
+                        <p style="color: #64748b; font-size: 13px;">Please verify your database connection and try again.</p>
+                    </div>
+                `;
+            }
         });
 }
 
@@ -829,7 +924,7 @@ function renderReportView(data) {
     // Always update Section 1 (Header) & Section 5 (Footer) metadata
     const reportTitleMap = {
         'front_desk_daily': 'Hotel Front Desk Business Daily Report',
-        'daily_summary': 'Hotel Front Desk Business Daily Report',
+        'daily_summary': 'Daily Reservation Summary & Front Office Night Audit',
         'bookings': 'Hotel Reservations & Main Reservation Ledger',
         'financial': 'Financial & Revenue Summary Report',
         'daily_manifest': 'Front Desk Daily Operations Manifest',
@@ -864,6 +959,7 @@ function renderReportView(data) {
         if (breakdownSection) breakdownSection.classList.remove('hidden');
         if (ledgerSection) ledgerSection.classList.remove('hidden');
         if (signoffSection) signoffSection.classList.remove('hidden');
+
         if (data.report_type === 'daily_manifest') {
             renderManifestView(data);
         } else if (data.report_type === 'room_performance') {
@@ -1431,7 +1527,7 @@ function renderFeedbackReportView(data) {
  * Professional Hotel Printable Report Generator
  * Opens a clean, branded, landscape multi-page print document adhering to the 5 Key Structural Sections
  */
-function printHotelReport() {
+function printHotelReport(customWindow = null) {
     if (!currentReportData) {
         showToast('Please generate report data first', 'warning');
         return;
@@ -1444,8 +1540,8 @@ function printHotelReport() {
     const hotelInfo = d.hotel_info || {
         name: "W Island Backpackers Inn",
         address: "Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines",
-        contact_numbers: "+63 912 345 6789 / +63 998 765 4321",
-        email: "info@wislandhub.com",
+        contact_numbers: "+63 945 688 2266",
+        email: "wislandhub2025@gmail.com",
         website: "www.wislandhub.com",
         dot_accreditation: "DOT-R7-ACC-2024-0318",
         tin: "432-876-543-00000",
@@ -1471,7 +1567,11 @@ function printHotelReport() {
             roomAvailStr = sec.reservation_overview && sec.reservation_overview.items && sec.reservation_overview.items[1] ? sec.reservation_overview.items[1].value : 'Single: 5 | Double: 10 | Suite: 2 | Luxury: 3';
         }
 
-        const printWindow = window.open('', '_blank');
+        const isWindowObj = customWindow && typeof customWindow.document !== 'undefined';
+        let printWindow = (isWindowObj && !customWindow.closed) ? customWindow : null;
+        if (!printWindow) {
+            printWindow = window.open('', '_blank');
+        }
         if (!printWindow) {
             alert('Please allow popups to print report');
             return;
@@ -1811,7 +1911,7 @@ function printHotelReport() {
                 <!-- Legal Privacy and Node Info -->
                 <div class="legal-footer">
                     <div><strong>CONFIDENTIAL HOTEL BUSINESS RECORD</strong> &bull; Protected under RA 10173 (Philippine Data Privacy Act)</div>
-                    <div>PMS v2.4.0 &bull; DB: w_island_hub &bull; Node: PH-BOHOL-PANGLAO-01</div>
+                    <div>PMS v2.4.0 &bull; DB: w_island_hub &bull; Node: PH-BOHOL-PANGLAO-01 &bull; <strong>Ref:</strong> ${reportRef}</div>
                 </div>
 
                 <script>
@@ -2196,7 +2296,11 @@ function printHotelReport() {
         `).join('');
     }
 
-    const printWindow = window.open('', '_blank');
+    const isWindowObj2 = customWindow && typeof customWindow.document !== 'undefined';
+    let printWindow = (isWindowObj2 && !customWindow.closed) ? customWindow : null;
+    if (!printWindow) {
+        printWindow = window.open('', '_blank');
+    }
     if (!printWindow) {
         alert('Please allow popups to print report');
         return;
@@ -2493,7 +2597,7 @@ function exportReportCSV() {
         csvRows.push([`"W Island Backpackers Inn - Front Desk Business Daily Report"`]);
         csvRows.push([`"Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines"`]);
         csvRows.push([`"DOT Region VII: DOT-R7-ACC-2024-0318 | BIR TIN: 432-876-543-00000 | BP-2024-DAUIS-0521"`]);
-        csvRows.push([`"Contact: +63 912 345 6789 / +63 998 765 4321 | info@wislandhub.com | www.wislandhub.com"`]);
+        csvRows.push([`"Contact: +63 945 688 2266 | wislandhub2025@gmail.com | www.wislandhub.com"`]);
         csvRows.push([]);
         csvRows.push([`"Hotel Front Desk Business Daily Report"`]);
         csvRows.push([`"Date:"`, `"${fdb.date || ''}"`]);
@@ -2591,7 +2695,7 @@ function exportReportCSV() {
     csvRows.push([`"W Island Backpackers Inn - Official Property Management System"`]);
     csvRows.push([`"Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines"`]);
     csvRows.push([`"DOT Region VII: DOT-R7-ACC-2024-0318 | BIR TIN: 432-876-543-00000 (Non-VAT) | BP-2024-DAUIS-0521"`]);
-    csvRows.push([`"Contact: +63 912 345 6789 / +63 998 765 4321 | info@wislandhub.com | www.wislandhub.com"`]);
+    csvRows.push([`"Contact: +63 945 688 2266 | wislandhub2025@gmail.com | www.wislandhub.com"`]);
     csvRows.push([`"Report Title"`, `"${(d.report_title || 'DAILY RESERVATION SUMMARY & FRONT OFFICE NIGHT AUDIT').toUpperCase()}"`]);
     csvRows.push([`"Classification"`, `"CONFIDENTIAL // OFFICIAL PROPERTY AUDIT"`]);
     csvRows.push([`"Reference #"`, `"${d.report_ref || ''}"`]);
