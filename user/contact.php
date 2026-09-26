@@ -11,7 +11,7 @@
                 Get In Touch With Us
             </h2>
             <p class="text-slate-600 text-base sm:text-lg mt-3 leading-relaxed font-light">
-                Have questions about rooms, airport pickups, or scooter rentals? Reach out directly to our friendly front desk team in Dauis, Bohol.
+                Have questions about rooms, check-in, or group reservations? Reach out directly to our friendly front desk team in Dauis, Bohol.
             </p>
         </div>
 
@@ -74,7 +74,7 @@
                         </div>
                         <div class="flex-1">
                             <h3 class="font-bold text-slate-900 text-base">Official Email</h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Booking inquiries, group tours &amp; corporate stays</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Room reservations, long-term nomad stays &amp; group inquiries</p>
                             <a href="mailto:wislandhub2025@gmail.com" class="text-sm font-semibold text-sky-700 hover:text-sky-800 block mt-1 transition break-all">
                                 wislandhub2025@gmail.com
                             </a>
@@ -181,9 +181,9 @@
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">Topic / Inquiry</label>
                                 <select class="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 focus:bg-white text-sm focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition">
                                     <option>Room Reservation &amp; Availability</option>
-                                    <option>Airport / Seaport Transfer Assistance</option>
-                                    <option>Scooter / Motorbike Rentals</option>
-                                    <option>Bohol Tours &amp; Island Hopping</option>
+                                    <option>Airport / Seaport Transfer Directions</option>
+                                    <option>Long-Term Nomad &amp; Group Stays</option>
+                                    <option>Pickleball Court &amp; On-Site Amenities</option>
                                     <option>General Question</option>
                                 </select>
                             </div>

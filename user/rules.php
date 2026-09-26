@@ -272,7 +272,7 @@
                             <i class="fas fa-bolt text-teal-600 text-base mt-0.5 flex-shrink-0"></i>
                             <div>
                                 <strong class="text-slate-900 block font-semibold text-xs uppercase tracking-wide">Energy & Power Mindfulness</strong>
-                                <span class="text-xs leading-relaxed text-slate-600">Island electricity grids are delicate and precious. Please help us conserve by turning off air conditioning units, fans, and room lights whenever leaving your room for island tours or meals.</span>
+                                <span class="text-xs leading-relaxed text-slate-600">Island electricity grids are delicate and precious. Please help us conserve by turning off air conditioning units, fans, and room lights whenever leaving your room for island exploration, beach visits, or meals.</span>
                             </div>
                         </div>
 

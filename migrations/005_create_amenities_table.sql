@@ -31,7 +31,7 @@ SELECT 3, 'Sunset Social Lounge & Bar', 'Vibrant open-air communal hub with boar
 WHERE NOT EXISTS (SELECT 1 FROM `amenities` WHERE `id` = 3);
 
 INSERT INTO `amenities` (`id`, `title`, `description`, `icon`, `category`, `image_url`, `sort_order`, `is_active`)
-SELECT 4, 'Scooter Rentals & Island Tours', 'Rent scooters right from the front desk. Book hassle-free tours to Chocolate Hills, Tarsier Sanctuaries, and dolphin watching expeditions.', 'fas fa-motorcycle', 'Adventures', 'assets/image/amenity_scooter_tour.jpg', 4, 1
+SELECT 4, 'Fresh & Easy Laundry Hub', 'Travel light and stay fresh! Enjoy our fast, hassle-free laundry service designed for adventurers and island explorers. Drop off beachwear and pick up clean clothes ready for your journey.', 'fas fa-soap', 'Comfort', 'assets/image/amenity_6aa79d1dbec73.jpg', 4, 1
 WHERE NOT EXISTS (SELECT 1 FROM `amenities` WHERE `id` = 4);
 
 INSERT INTO `amenities` (`id`, `title`, `description`, `icon`, `category`, `image_url`, `sort_order`, `is_active`)

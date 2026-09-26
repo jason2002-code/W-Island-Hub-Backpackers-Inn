@@ -238,11 +238,11 @@
 
                 <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center">
                     <div class="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-2xl mb-4 shadow-inner">
-                        <i class="fas fa-walking"></i>
+                        <i class="fas fa-tags"></i>
                     </div>
-                    <h3 class="text-3xl font-bold text-slate-900 mb-1">2 Mins</h3>
-                    <p class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">Walk to Beach</p>
-                    <span class="text-xs text-slate-400 mt-2">Pristine Panglao coast</span>
+                    <h3 class="text-3xl font-bold text-slate-900 mb-1">Best Rates</h3>
+                    <p class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">Direct Booking Hook</p>
+                    <span class="text-xs text-slate-400 mt-2">Zero third-party markup fees</span>
                 </div>
 
                 <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center">
@@ -359,12 +359,12 @@
     }
     if (empty($activeAmenitiesList)) {
         $activeAmenitiesList = [
-            ['title' => 'Beachfront & Coral Coast', 'icon' => 'fas fa-umbrella-beach', 'category' => 'Location', 'description' => 'Steps away from pristine white sands. Enjoy early morning ocean dips, snorkeling among reef life, and front-row seats to world-famous sunsets.', 'image_url' => 'assets/image/amenity_beachfront.jpg'],
-            ['title' => 'Nomad-Grade Starlink WiFi', 'icon' => 'fas fa-wifi', 'category' => 'Connectivity', 'description' => 'Lightning-fast, reliable satellite internet across all dorms, private rooms, and chill lounges. Seamless for remote work, video calls, and streaming.', 'image_url' => 'assets/image/amenity_starlink.jpg'],
-            ['title' => 'Sunset Social Lounge & Bar', 'icon' => 'fas fa-cocktail', 'category' => 'Social', 'description' => 'Vibrant open-air communal hub with board games, craft beers, refreshing tropical fruit shakes, and evening acoustic music jams.', 'image_url' => 'assets/image/amenity_lounge_bar.jpg'],
-            ['title' => 'Scooter Rentals & Island Tours', 'icon' => 'fas fa-motorcycle', 'category' => 'Adventures', 'description' => 'Rent scooters right from the front desk. Book hassle-free tours to Chocolate Hills, Tarsier Sanctuaries, and dolphin watching expeditions.', 'image_url' => 'assets/image/amenity_scooter_tour.jpg'],
-            ['title' => 'Keycard Security & Lockers', 'icon' => 'fas fa-key', 'category' => 'Security', 'description' => 'Travel with total peace of mind. Every dorm guest receives an oversized security locker, personal bedside power socket, and reading lamp.', 'image_url' => 'assets/image/amenity_lockers.jpg'],
-            ['title' => 'Free Coffee & Water Refills', 'icon' => 'fas fa-mug-hot', 'category' => 'Dining', 'description' => 'Complimentary fresh-brewed local island coffee every morning. Unlimited filtered cold drinking water stations to keep you energized and eco-friendly.', 'image_url' => 'assets/image/amenity_coffee_water.jpg']
+            ['title' => 'Central Island Gateway', 'icon' => 'fas fa-map-marked-alt', 'category' => 'Location', 'description' => 'Strategically located in Dauis between Tagbilaran seaport and Panglao white-sand beaches. Enjoy easy access across Bohol without noisy beach crowds.', 'image_url' => 'assets/image/background.jpg'],
+            ['title' => 'Nomad-Grade Starlink WiFi', 'icon' => 'fas fa-wifi', 'category' => 'Connectivity', 'description' => 'Lightning-fast, reliable satellite internet across all dorms, private rooms, and chill lounges. Seamless for remote work, video calls, and streaming.', 'image_url' => 'assets/image/background.jpg'],
+            ['title' => 'Fresh & Easy Laundry Hub', 'icon' => 'fas fa-soap', 'category' => 'Comfort', 'description' => 'Travel light and stay fresh! Enjoy our fast, hassle-free laundry service designed for adventurers and island explorers. Drop off beachwear and pick up clean clothes ready for your journey.', 'image_url' => 'assets/image/amenity_6aa79d1dbec73.jpg'],
+            ['title' => 'Island Pickleball Court', 'icon' => 'fas fa-table-tennis-paddle-ball', 'category' => 'Leisure', 'description' => 'Stay active on your island getaway with friendly games and rallies on our dedicated pickleball court right here at the inn.', 'image_url' => 'assets/image/amenity_6aa7997251058.jpg'],
+            ['title' => 'Keycard Security & Lockers', 'icon' => 'fas fa-key', 'category' => 'Security', 'description' => 'Travel with total peace of mind. Every dorm guest receives an oversized security locker, personal bedside power socket, and reading lamp.', 'image_url' => 'assets/image/background.jpg'],
+            ['title' => 'Island Grind Coffee & Brunch', 'icon' => 'fas fa-mug-hot', 'category' => 'Dining', 'description' => 'Complimentary fresh-brewed local island coffee every morning. Unlimited filtered cold drinking water stations to keep you energized and eco-friendly.', 'image_url' => 'assets/image/amenity_6aa7984429fa0.jpg']
         ];
     }
 
@@ -572,12 +572,13 @@
                     Top Tourist Attractions Just Minutes Away
                 </h2>
                 <p class="text-slate-600 text-base sm:text-lg mt-3 leading-relaxed font-light">
-                    Situated centrally in Panglao Island, <strong class="text-slate-900 font-semibold">W Island Hub Backpackers Inn</strong> is your ultimate basecamp. Experience world-famous white beaches, swimming with giant sea turtles, mystical caves, and legendary countryside wonders with ease.
+                    Centrally situated in Dauis, <strong class="text-slate-900 font-semibold">W Island Hub Backpackers Inn</strong> is your serene, high-value island basecamp. Avoid overpriced beachfront resort markups while staying just minutes away from pristine white shores, marine sanctuaries, caves, and Bohol countryside wonders on your own schedule.
                 </p>
                 <div class="flex flex-wrap items-center justify-center gap-2.5 mt-5 text-xs text-slate-600 font-medium">
-                    <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-full shadow-xs"><i class="fas fa-motorcycle text-amber-500"></i> Motorbike Rentals On-Site</span>
-                    <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-full shadow-xs"><i class="fas fa-ticket-alt text-teal-500"></i> Concierge Tour Packages</span>
+                    <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-full shadow-xs"><i class="fas fa-map-marker-alt text-amber-500"></i> Central Island Basecamp</span>
+                    <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-full shadow-xs"><i class="fas fa-tags text-teal-500"></i> Best Direct Rates &bull; Zero Fees</span>
                     <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-full shadow-xs"><i class="fas fa-bolt text-brand-blue"></i> Instant Booking (No Login Needed)</span>
+                    <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-full shadow-xs"><i class="fas fa-wifi text-sky-500"></i> Nomad-Grade Starlink WiFi</span>
                 </div>
             </div>
 
@@ -593,7 +594,7 @@
                             Beach &amp; Nightlife
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-motorcycle text-amber-400"></i> 15-20 Mins from Inn (13 km)
+                            <i class="fas fa-route text-amber-400"></i> 15-20 Mins from Inn (13 km)
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -606,10 +607,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Rent an automatic scooter at our front desk or take a scenic tricycle ride to Panglao nightlife.</span>
+                                <span><strong>Why Stay With Us:</strong> Enjoy vibrant Alona beach bars and dining, then retreat to W Island Hub for a peaceful, noise-free night's sleep at half the beachfront price!</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Book Stay Near Alona</span>
+                                <i class="fas fa-bed text-amber-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -619,7 +621,7 @@
                 <!-- 2. Dumaluan Beach / White Beach -->
                 <div class="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col group hover:-translate-y-1">
                     <div class="h-48 relative overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80" alt="Dumaluan Beach Panglao" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <img src="https://pix10.agoda.net/hotelImages/240/240062/240062_15062417390030699657.jpg?va=1&ca=4&ce=1&s=414x232" alt="Dumaluan Beach Panglao" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                         <span class="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[11px] font-bold text-teal-700 uppercase shadow-sm">
                             Tranquil White Sand
@@ -638,10 +640,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-teal-800 bg-teal-50 p-2.5 rounded-xl border border-teal-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-teal-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Our backpackers' top choice for peaceful sunrise swims and sunset picnics.</span>
+                                <span><strong>Why Stay With Us:</strong> Only 12-15 minutes to Panglao's most tranquil white sands. Head back to our on-site laundry hub to easily wash and refresh your beach clothes!</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Stay Minutes Away</span>
+                                <i class="fas fa-bed text-teal-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -670,10 +673,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-blue-800 bg-blue-50 p-2.5 rounded-xl border border-blue-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-blue-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Free snorkel mask rentals and tides schedule advice provided at the inn.</span>
+                                <span><strong>Why Stay With Us:</strong> Snorkel or freedive the world-famous sardine run, then refresh with our hot/cold showers, cold fruit shakes, and high-speed Starlink WiFi to upload your footage.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Book Snorkel Adventure</span>
+                                <i class="fas fa-bed text-blue-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -683,7 +687,7 @@
                 <!-- 4. Hinagdanan Cave -->
                 <div class="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col group hover:-translate-y-1">
                     <div class="h-48 relative overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80" alt="Hinagdanan Cave Panglao" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSD-mzqavTt8VXfhejq8BYT9e-myQBoiMLC1pxGieUlhDnFlDA6bleU1Cc&s=10" alt="Hinagdanan Cave Panglao" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                         <span class="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[11px] font-bold text-purple-700 uppercase shadow-sm">
                             Limestone Cenote
@@ -702,10 +706,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-purple-800 bg-purple-50 p-2.5 rounded-xl border border-purple-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-purple-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Located right here in Dauis! Quick and easy 6-minute scooter ride or tricycle from our inn.</span>
+                                <span><strong>Why Stay With Us:</strong> Right here in our home municipality of Dauis! Beat the tour crowds by visiting early in the morning just 6-8 minutes from our front door.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Reserve Your Stay</span>
+                                <i class="fas fa-bed text-purple-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -721,7 +726,7 @@
                             Sea Turtles Reserve
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-ship text-emerald-400"></i> Daily Boat Departures
+                            <i class="fas fa-water text-emerald-400"></i> World-Class Marine Sanctuary
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -734,10 +739,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-emerald-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Direct concierge booking with trusted local boat captains &amp; group joiner discounts.</span>
+                                <span><strong>Why Stay With Us:</strong> Early morning adventure friendly! Enjoy restful beds for early starts, freshly brewed morning coffee, and secure luggage storage while you explore.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Book Island Basecamp</span>
+                                <i class="fas fa-bed text-emerald-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -766,10 +772,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Regularly paired with our morning Balicasag island hopping boat itineraries.</span>
+                                <span><strong>Why Stay With Us:</strong> Relax in cool air-conditioned comfort after a sunny day on the tidal sandbars, recharge your devices, and share your photos instantly over fast Starlink internet.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Explore Island Trips</span>
+                                <i class="fas fa-bed text-amber-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -779,13 +786,13 @@
                 <!-- 7. Chocolate Hills & ATV Safari -->
                 <div class="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col group hover:-translate-y-1">
                     <div class="h-48 relative overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80" alt="Chocolate Hills Bohol" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRsmph_l6fp7QbSHqEGfiLpgjNj1k_XefHTE7GZhqTzK01we5N-9pNGOHN&s=10" alt="Chocolate Hills Bohol" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                         <span class="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[11px] font-bold text-amber-800 uppercase shadow-sm">
                             UNESCO Geopark
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-mountain text-amber-400"></i> Countryside Day Tour
+                            <i class="fas fa-mountain text-amber-400"></i> Bohol Landmark &bull; Main Highway Access
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -798,10 +805,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Air-conditioned tour vans pick you up right outside our inn gate after morning breakfast.</span>
+                                <span><strong>Why Stay With Us:</strong> Prime position on the Dauis-Panglao main highway makes traveling inland to Chocolate Hills fast and direct, bypassing resort peninsula traffic bottlenecks.</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Book Countryside Base</span>
+                                <i class="fas fa-bed text-amber-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -811,13 +819,13 @@
                 <!-- 8. Philippine Tarsier Sanctuary & Loboc River -->
                 <div class="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col group hover:-translate-y-1">
                     <div class="h-48 relative overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=800&q=80" alt="Loboc River Cruise Bohol" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <img src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/16/9e/51/b3/photo1jpg.jpg?w=1200&h=1200&s=1" alt="Loboc River Cruise Bohol" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                         <span class="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[11px] font-bold text-emerald-700 uppercase shadow-sm">
                             Wildlife &amp; Culture
                         </span>
                         <span class="absolute bottom-3 left-3 text-white text-xs font-bold flex items-center gap-1.5 drop-shadow-md">
-                            <i class="fas fa-leaf text-emerald-400"></i> Day Tour Highlight
+                            <i class="fas fa-leaf text-emerald-400"></i> Ethical Wildlife Sanctuary
                         </span>
                     </div>
                     <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -830,10 +838,11 @@
                         <div class="pt-3 border-t border-slate-100 space-y-2.5">
                             <div class="text-[11px] text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/50 flex items-start gap-2">
                                 <i class="fas fa-check-circle text-emerald-500 mt-0.5 flex-shrink-0"></i>
-                                <span><strong>Inn Perk:</strong> Seamlessly bundled in our Bohol Island tour packages with guaranteed seats.</span>
+                                <span><strong>Why Stay With Us:</strong> Backpacker-friendly room rates maximize your travel budget for unforgettable Bohol cultural sights, river buffet cruises, and eco-sanctuary experiences!</span>
                             </div>
                             <button onclick="router('rooms')" class="w-full py-2.5 bg-slate-100 hover:bg-brand-dark hover:text-white text-slate-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
-                                <span>Reserve Your Stay</span>
+                                <i class="fas fa-bed text-emerald-500"></i>
+                                <span>Book Room at W Island Hub</span>
                                 <i class="fas fa-arrow-right text-[10px]"></i>
                             </button>
                         </div>
@@ -854,19 +863,19 @@
                             Book Your Room in Under a Minute &bull; No Login Required!
                         </h3>
                         <p class="text-slate-300 text-sm sm:text-base font-light leading-relaxed">
-                            Stay right where the adventure begins. Enjoy air-conditioned dorms and boutique private rooms, Starlink high-speed internet, on-site motorbike rentals, and exclusive guest tour packages.
+                            Stay right where island comfort meets value. Enjoy whisper-quiet air-conditioned dorms and boutique private rooms, Starlink high-speed internet, an on-site laundry hub, pickleball court, and guaranteed best rates.
                         </p>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs text-slate-300">
-                            <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> Instant Booking</div>
+                            <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> Instant Direct Booking</div>
                             <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> No Login Needed</div>
-                            <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> PayMongo / GCash</div>
-                            <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> Free Tour Advice</div>
+                            <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> Secure GCash / Pay Later</div>
+                            <div class="flex items-center gap-1.5"><i class="fas fa-check text-amber-400"></i> Best Price Guarantee</div>
                         </div>
                     </div>
                     <div class="flex flex-col sm:flex-row lg:flex-col items-center gap-3 w-full lg:w-auto flex-shrink-0">
                         <button onclick="router('rooms')" class="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center gap-3 text-sm sm:text-base cursor-pointer">
                             <i class="fas fa-bed"></i>
-                            <span>Check Available Rooms</span>
+                            <span>Book Room at W Island Hub</span>
                             <i class="fas fa-arrow-right text-xs"></i>
                         </button>
                         <a href="tel:+639456882266" class="text-xs text-slate-400 hover:text-amber-300 transition-colors flex items-center gap-1.5">
@@ -1037,11 +1046,23 @@
                 <!-- FAQ Item 4 -->
                 <details class="group bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300">
                     <summary class="cursor-pointer font-bold text-slate-900 flex items-center justify-between gap-4 text-base sm:text-lg">
-                        <span>Can I rent motorbikes or book island tours directly?</span>
+                        <span>How do I get around Bohol, and why is your Dauis location ideal?</span>
+                        <i class="fas fa-chevron-down text-sm text-slate-400 group-open:rotate-180 transition-transform duration-300"></i>
+                    </summary>
+                    <div class="mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed space-y-2">
+                        <p>While we focus exclusively on delivering clean, quiet, and affordable boutique accommodations (we do not operate vehicle rentals or tour services), our position right along the Dauis-Panglao main road means local tricycles, multicabs, and airport transfers pass right outside our inn!</p>
+                        <p>Our friendly front desk team is always delighted to share honest local travel advice and fair fare estimates so you can explore Bohol independently without tourist markups. Plus, our central location lets you easily reach both Tagbilaran Seaport and Panglao beaches in just 10-15 minutes.</p>
+                    </div>
+                </details>
+
+                <!-- FAQ Item 5 -->
+                <details class="group bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300">
+                    <summary class="cursor-pointer font-bold text-slate-900 flex items-center justify-between gap-4 text-base sm:text-lg">
+                        <span>Why should I book directly on this official website?</span>
                         <i class="fas fa-chevron-down text-sm text-slate-400 group-open:rotate-180 transition-transform duration-300"></i>
                     </summary>
                     <div class="mt-4 pt-4 border-t border-slate-100 text-slate-600 text-sm leading-relaxed">
-                        Absolutely. We maintain a fleet of well-serviced automatic scooters for rent right at the reception, and our front desk can instantly arrange Balicasag island hopping, whale shark encounters, and Bohol countryside tours at direct local rates.
+                        Booking directly on our website gives you our <strong>guaranteed best room rates</strong> with zero third-party platform markups or hidden fees. You get <strong>instant room confirmation in under 60 seconds with no login required</strong>, priority room selection, access to our on-site pickleball court and laundry hub, and direct support from our on-site team!
                     </div>
                 </details>
 
@@ -1066,7 +1087,7 @@
                     Reserve Your Room Now
                 </button>
                 <button onclick="router('contact')" class="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold py-4 px-8 rounded-full transition-all text-base">
-                    Contact Inn Concierge
+                    Contact Front Desk
                 </button>
             </div>
         </div>

@@ -52,7 +52,6 @@ if ($pdo) {
                                 <div class="flex justify-between items-center pb-2 border-b border-gray-100">
                                     <div>
                                         <h4 class="text-xs font-bold uppercase text-gray-700 tracking-wider">Select Guests</h4>
-                                        <p class="text-[11px] text-gray-400">No maximum limit</p>
                                     </div>
                                     <button type="button" onclick="closeGuestDropdown('rooms')" class="text-gray-400 hover:text-gray-600 text-xs p-1 rounded-lg">
                                         <i class="fas fa-times"></i>

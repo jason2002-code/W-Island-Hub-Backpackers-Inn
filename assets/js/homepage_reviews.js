@@ -29,7 +29,7 @@ const curatedGuestReviews = [
         rating: 5.0,
         formatted_date: 'Aug 19, 2026',
         stay_type: 'Couples Getaway &bull; Ocean Deluxe',
-        comment: 'Warm island hospitality from start to finish. The front desk organized our scooter rental and dolphin tour without any hassle. Acoustic music evening was magical!',
+        comment: 'Warm island hospitality from start to finish. The front desk was so welcoming, the rooms were quiet and spotless, and having the Fresh & Easy Laundry Hub on-site was a lifesaver after beach trips. Acoustic music evening was magical!',
         admin_reply: null
     },
     {
@@ -45,7 +45,7 @@ const curatedGuestReviews = [
         rating: 5.0,
         formatted_date: 'Jul 30, 2026',
         stay_type: 'Island Hopper &bull; Standard Double',
-        comment: 'Such a relaxing tropical haven. The beds are high quality and super comfortable after a long day touring Chocolate Hills. Exceptional value for money in Bohol.',
+        comment: 'Such a relaxing tropical haven. The beds are high quality and super comfortable after a long day exploring Bohol. Best direct booking rates and exceptional value for money.',
         admin_reply: null
     },
     {

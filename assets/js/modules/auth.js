@@ -134,15 +134,15 @@ function updateAuthUI() {
         `;
     } else {  
         html = `
-            <div class="flex items-center gap-3">
-                <a onclick="router('login')" class="text-gray-600 hover:text-brand-dark font-semibold cursor-pointer px-5 py-2.5 rounded-full hover:bg-gray-100 transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Login</a>
-                <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg hover:-translate-y-0.5 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-md cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus"></i> Sign Up</a>
+            <div class="flex items-center gap-2.5">
+                <a onclick="router('login')" class="text-slate-700 hover:text-amber-600 font-semibold cursor-pointer px-4 py-2 rounded-full hover:bg-slate-100 transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt text-amber-500 text-xs"></i> Login</a>
+                <a onclick="router('register')" class="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 hover:shadow-md hover:-translate-y-0.5 text-slate-950 px-5 py-2 rounded-full font-bold transition-all shadow-xs cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus text-xs"></i> Sign Up</a>
             </div>
         `;
         mobileHtml = `
             <div class="flex flex-col gap-2.5">
-                <a onclick="router('login')" class="text-gray-700 bg-white hover:bg-gray-100 border border-gray-200 font-semibold cursor-pointer px-5 py-2.5 rounded-xl transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2 shadow-xs"><i class="fas fa-sign-in-alt"></i> Login</a>
-                <a onclick="router('register')" class="bg-gradient-to-r from-brand-blue to-brand-cyan hover:shadow-lg text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus"></i> Sign Up</a>
+                <a onclick="router('login')" class="text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 font-semibold cursor-pointer px-5 py-2.5 rounded-xl transition-all text-sm tracking-wide text-center flex items-center justify-center gap-2 shadow-xs"><i class="fas fa-sign-in-alt text-amber-500"></i> Login</a>
+                <a onclick="router('register')" class="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 hover:shadow-md text-slate-950 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm cursor-pointer text-sm tracking-wide text-center flex items-center justify-center gap-2"><i class="fas fa-user-plus"></i> Sign Up</a>
             </div>
         `;
     }
@@ -299,8 +299,20 @@ function initAuthForms() {
             const updateIndicator = (id, isValid) => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.style.color = isValid ? 'green' : 'gray';
-                    el.style.fontWeight = isValid ? 'bold' : 'normal';
+                    const icon = el.querySelector('i');
+                    if (isValid) {
+                        el.classList.remove('text-slate-400');
+                        el.classList.add('text-emerald-600', 'font-medium');
+                        if (icon) {
+                            icon.className = 'fas fa-check-circle text-[10px] mr-1.5 text-emerald-500';
+                        }
+                    } else {
+                        el.classList.remove('text-emerald-600', 'font-medium');
+                        el.classList.add('text-slate-400');
+                        if (icon) {
+                            icon.className = 'far fa-circle text-[10px] mr-1.5 text-slate-300';
+                        }
+                    }
                 }
             };
             
@@ -309,6 +321,38 @@ function initAuthForms() {
             updateIndicator('req-lowercase', hasLowercase);
             updateIndicator('req-number', hasNumber);
             updateIndicator('req-special', hasSpecial);
+
+            // Dynamic Password Strength Meter
+            const strengthBar = document.getElementById('reg-password-strength-bar');
+            const strengthText = document.getElementById('reg-password-strength-text');
+            if (strengthBar && strengthText) {
+                let score = 0;
+                if (hasLength) score++;
+                if (hasUppercase) score++;
+                if (hasLowercase) score++;
+                if (hasNumber) score++;
+                if (hasSpecial) score++;
+
+                if (password.length === 0) {
+                    strengthBar.style.width = '0%';
+                    strengthBar.className = 'h-full bg-slate-200 transition-all duration-300 rounded-full';
+                    strengthText.textContent = 'Enter password';
+                    strengthText.className = 'text-[11px] font-semibold text-slate-400';
+                } else {
+                    const levels = [
+                        { width: '20%', text: 'Very Weak', color: 'bg-rose-500', textColor: 'text-rose-500' },
+                        { width: '40%', text: 'Weak', color: 'bg-orange-500', textColor: 'text-orange-500' },
+                        { width: '60%', text: 'Fair', color: 'bg-amber-500', textColor: 'text-amber-500' },
+                        { width: '80%', text: 'Good', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
+                        { width: '100%', text: 'Strong & Secure ✓', color: 'bg-emerald-600', textColor: 'text-emerald-700' }
+                    ];
+                    const current = levels[Math.max(0, score - 1)];
+                    strengthBar.style.width = current.width;
+                    strengthBar.className = `h-full ${current.color} transition-all duration-300 rounded-full`;
+                    strengthText.textContent = current.text;
+                    strengthText.className = `text-[11px] font-semibold ${current.textColor}`;
+                }
+            }
         });
     }
 }
