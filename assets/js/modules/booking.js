@@ -109,6 +109,37 @@ async function initiateBooking(roomId, options = {}) {
     const totalGuests = options.guests !== undefined ? options.guests : (adults + children);
     const roomsCount = Math.max(1, parseInt(options.roomsCount, 10) || 1);
 
+    // Retrieve and validate child ages
+    let childrenAges = [];
+    if (options.childrenAges && Array.isArray(options.childrenAges)) {
+        childrenAges = options.childrenAges;
+    } else if (typeof window.getChildAges === 'function') {
+        childrenAges = window.getChildAges().slice(0, children);
+    } else {
+        try {
+            const rawAges = document.getElementById('children-ages')?.value || document.getElementById('home-children-ages')?.value || '[]';
+            childrenAges = JSON.parse(rawAges).slice(0, children);
+        } catch(e) {
+            childrenAges = [];
+        }
+    }
+
+    if (children > 0 && !options.bypassRecommendation) {
+        const unselectedIdx = childrenAges.findIndex(a => a === '' || a === undefined || a === null);
+        if (unselectedIdx !== -1) {
+            window.showToast(`Please select the age for Child ${unselectedIdx + 1} at check-in.`, 'warning');
+            if (typeof window.toggleGuestDropdown === 'function') {
+                const dropdown = document.getElementById('rooms-guest-dropdown');
+                if (dropdown && dropdown.classList.contains('hidden')) {
+                    window.toggleGuestDropdown('rooms');
+                }
+                const sel = document.getElementById(`rooms-child-age-${unselectedIdx}`);
+                if (sel) sel.focus();
+            }
+            return;
+        }
+    }
+
     const roomCap = parseInt(room.max_capacity || room.capacity, 10) || 2;
     const totalAllowedCap = roomCap * roomsCount;
 
@@ -175,27 +206,44 @@ async function initiateBooking(roomId, options = {}) {
             if (availData.room.image) room.image = availData.room.image;
         }
 
-        if (!availData.is_currently_available) {
+        const isDorm = (parseInt(roomId) === 5 || (room.type && room.type.toLowerCase().includes('dorm')));
+        const dormRemainingBeds = isDorm ? (availData.remaining_beds !== undefined ? parseInt(availData.remaining_beds, 10) : 8) : 0;
+
+        if (isDorm && dormRemainingBeds <= 0) {
+            showOccupiedModal(room, availData.occupied_ranges || [], availData.next_vacant);
+            return;
+        }
+
+        if (!isDorm && !availData.is_currently_available) {
             showOccupiedModal(room, availData.occupied_ranges || [], availData.next_vacant);
             return;
         }
 
         // Construct pending booking context
-        const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000));
-        const total = (room.price * nights * roomsCount) + 15; // (Price * nights * rooms) + Tax & service fees
+        const nights = Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (24*60*60*1000)));
+        const bedPrice = 460.00;
+        let initialBeds = isDorm ? Math.min(dormRemainingBeds, Math.max(1, totalGuests || 1)) : 1;
+        const pricePerNight = isDorm ? (initialBeds * bedPrice) : room.price;
+        const total = isDorm ? ((pricePerNight * nights) + 15) : ((room.price * nights * roomsCount) + 15);
 
         pendingBooking = {
             roomId: parseInt(roomId),
             roomName: room.name,
-            roomsCount,
-            guests: totalGuests,
-            adults,
-            children,
+            roomsCount: isDorm ? 1 : roomsCount,
+            isDorm: isDorm,
+            bedsCount: initialBeds,
+            remainingBeds: dormRemainingBeds,
+            totalBeds: 8,
+            bedPrice: bedPrice,
+            guests: isDorm ? initialBeds : totalGuests,
+            adults: isDorm ? initialBeds : adults,
+            children: isDorm ? 0 : children,
+            childrenAges: isDorm ? [] : childrenAges,
             checkIn,
             checkOut,
-            nights: Math.max(1, nights),
+            nights: nights,
             total,
-            pricePerNight: room.price
+            pricePerNight
         };
         window.pendingBooking = pendingBooking;
 
@@ -210,20 +258,52 @@ async function initiateBooking(roomId, options = {}) {
         const summaryPrice = document.getElementById('summary-price');
         const summaryRoomsRow = document.getElementById('summary-rooms-count-row');
         const summaryRoomsCount = document.getElementById('summary-rooms-count');
+        const summaryDormRow = document.getElementById('summary-dorm-beds-row');
+        const summaryDormBeds = document.getElementById('summary-dorm-beds');
         const summaryNights = document.getElementById('summary-nights');
         const summaryTotal = document.getElementById('summary-total');
 
-        if (summaryName) summaryName.textContent = (roomsCount > 1 ? `${roomsCount}x ` : '') + room.name;
+        if (summaryName) summaryName.textContent = (!isDorm && roomsCount > 1 ? `${roomsCount}x ` : '') + room.name;
         if (summaryDesc) summaryDesc.textContent = room.desc || room.type;
-        if (summaryPrice) summaryPrice.textContent = '₱' + room.price.toFixed(2) + (roomsCount > 1 ? ` (x${roomsCount} rooms)` : '');
-        if (summaryRoomsRow && summaryRoomsCount) {
-            if (roomsCount > 1) {
-                summaryRoomsRow.classList.remove('hidden');
-                summaryRoomsCount.textContent = `${roomsCount} Rooms`;
-            } else {
-                summaryRoomsRow.classList.add('hidden');
+
+        // Dorm Bed Controls in Form
+        const dormSelectorContainer = document.getElementById('dorm-bed-selector-container');
+        const dormRemainingBadge = document.getElementById('dorm-remaining-beds-badge');
+        const dormBedCountDisplay = document.getElementById('dorm-bed-count-display');
+        const dormBedsInput = document.getElementById('dorm-beds-count-input');
+        const dormBedSubtotalHint = document.getElementById('dorm-bed-subtotal-hint');
+        const btnDormMinus = document.getElementById('btn-dorm-bed-minus');
+        const btnDormPlus = document.getElementById('btn-dorm-bed-plus');
+
+        if (isDorm) {
+            if (dormSelectorContainer) dormSelectorContainer.classList.remove('hidden');
+            if (dormRemainingBadge) {
+                dormRemainingBadge.textContent = `${dormRemainingBeds} Bed${dormRemainingBeds > 1 ? 's' : ''} Available (${availData.occupied_beds || (8 - dormRemainingBeds)} Occupied / 8 Total)`;
+            }
+            if (dormBedCountDisplay) dormBedCountDisplay.textContent = `${initialBeds} Bed${initialBeds > 1 ? 's' : ''}`;
+            if (dormBedsInput) dormBedsInput.value = initialBeds;
+            if (dormBedSubtotalHint) dormBedSubtotalHint.textContent = `${initialBeds} bed${initialBeds > 1 ? 's' : ''} × ₱460.00 = ₱${(initialBeds * bedPrice).toFixed(2)} / night`;
+            if (btnDormMinus) btnDormMinus.disabled = (initialBeds <= 1);
+            if (btnDormPlus) btnDormPlus.disabled = (initialBeds >= dormRemainingBeds);
+
+            if (summaryRoomsRow) summaryRoomsRow.classList.add('hidden');
+            if (summaryDormRow) summaryDormRow.classList.remove('hidden');
+            if (summaryDormBeds) summaryDormBeds.textContent = `${initialBeds} Bed${initialBeds > 1 ? 's' : ''} (₱460.00/bed)`;
+            if (summaryPrice) summaryPrice.textContent = `₱${(initialBeds * bedPrice).toFixed(2)} (${initialBeds} Bed${initialBeds > 1 ? 's' : ''} @ ₱460.00)`;
+        } else {
+            if (dormSelectorContainer) dormSelectorContainer.classList.add('hidden');
+            if (summaryDormRow) summaryDormRow.classList.add('hidden');
+            if (summaryPrice) summaryPrice.textContent = '₱' + room.price.toFixed(2) + (roomsCount > 1 ? ` (x${roomsCount} rooms)` : '');
+            if (summaryRoomsRow && summaryRoomsCount) {
+                if (roomsCount > 1) {
+                    summaryRoomsRow.classList.remove('hidden');
+                    summaryRoomsCount.textContent = `${roomsCount} Rooms`;
+                } else {
+                    summaryRoomsRow.classList.add('hidden');
+                }
             }
         }
+
         if (summaryNights) summaryNights.textContent = pendingBooking.nights + (pendingBooking.nights > 1 ? ' Nights' : ' Night');
         if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
 
@@ -264,6 +344,20 @@ async function initiateBooking(roomId, options = {}) {
 
         const detailsContent = document.getElementById('booking-details-content');
         if (detailsContent) {
+            let childAgesLine = '';
+            if (children > 0 && pendingBooking && pendingBooking.childrenAges && pendingBooking.childrenAges.length > 0) {
+                const ageTags = pendingBooking.childrenAges.map((a, idx) => {
+                    const ageNum = parseInt(a, 10);
+                    return `Child ${idx + 1}: ${ageNum === 0 ? 'Infant (under 1)' : `${ageNum} yr${ageNum > 1 ? 's' : ''} old`}`;
+                }).join(', ');
+                childAgesLine = `
+                    <div class="flex justify-between items-center text-[11px] pt-1.5 border-t border-gray-100 text-slate-600">
+                        <span class="text-gray-500 font-medium"><i class="fas fa-child text-brand-blue mr-1"></i>Child Ages:</span>
+                        <strong class="text-gray-800 font-semibold">${ageTags}</strong>
+                    </div>
+                `;
+            }
+
             detailsContent.innerHTML = `
                 <div class="p-4 bg-white border border-gray-200 rounded-2xl space-y-2.5 text-xs shadow-xs">
                     <div class="flex justify-between items-center">
@@ -274,6 +368,7 @@ async function initiateBooking(roomId, options = {}) {
                         <span class="text-gray-500">Guests:</span>
                         <strong class="text-gray-900 font-semibold">${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''})</strong>
                     </div>
+                    ${childAgesLine}
                     ${roomsCount > 1 ? `<div class="flex justify-between text-blue-700 font-semibold pt-1 border-t border-gray-100"><span>Multi-Room Booking:</span> <span>${roomsCount} Rooms &times; ₱${room.price.toFixed(2)}/night</span></div>` : ''}
                     <div class="flex justify-between text-emerald-700 font-bold mt-2 pt-2 border-t border-gray-100">
                         <span>Inventory Status:</span>
@@ -305,25 +400,14 @@ async function initiateBooking(roomId, options = {}) {
             }
         }
 
-        // Enforce 24-hour rule for Pay at Hotel
-        const checkInDateObj = new Date(checkIn + 'T14:00:00');
-        const now = new Date();
-        const diffHours = (checkInDateObj.getTime() - now.getTime()) / (1000 * 60 * 60);
-        const isWithin24Hours = (diffHours <= 30);
-
+        // Pay at Hotel with 20% online security deposit is available for all dates
         const hotelCard = document.getElementById('label-payment-hotel');
         const lockedNotice = document.getElementById('pay-at-hotel-locked-notice');
         const hotelRadio = document.getElementById('input-payment-hotel');
 
-        if (isWithin24Hours) {
-            if (hotelCard) hotelCard.classList.remove('hidden');
-            if (lockedNotice) lockedNotice.classList.add('hidden');
-            if (hotelRadio) hotelRadio.disabled = false;
-        } else {
-            if (hotelCard) hotelCard.classList.add('hidden');
-            if (lockedNotice) lockedNotice.classList.remove('hidden');
-            if (hotelRadio) hotelRadio.disabled = true;
-        }
+        if (hotelCard) hotelCard.classList.remove('hidden');
+        if (lockedNotice) lockedNotice.classList.add('hidden');
+        if (hotelRadio) hotelRadio.disabled = false;
 
         // Default selection to Option 1: PayMongo Online
         const paymongoRadio = document.querySelector('input[name="payment"][value="paymongo"]');
@@ -337,6 +421,64 @@ async function initiateBooking(roomId, options = {}) {
         console.error('Booking init error:', error);
         window.showToast('Unable to verify availability. Please try again.', 'error');
     }
+}
+
+/**
+ * Adjusts the number of reserved dormitory beds for Room 5 (Shared Dormitory).
+ * Clamps between 1 and the remaining beds available on the selected dates.
+ * Recalculates nightly bed subtotal, total bill with taxes, and payment amounts.
+ * 
+ * @param {number} delta - (+1 or -1)
+ */
+function updateDormBedCount(delta) {
+    const activeBooking = window.pendingBooking || pendingBooking;
+    if (!activeBooking || !activeBooking.isDorm) return;
+
+    const remaining = (activeBooking.remainingBeds !== undefined) ? parseInt(activeBooking.remainingBeds, 10) : 8;
+    let currentBeds = activeBooking.bedsCount || 1;
+    let newBeds = currentBeds + delta;
+
+    if (newBeds < 1) newBeds = 1;
+    if (newBeds > remaining) {
+        newBeds = remaining;
+        if (typeof window.showToast === 'function') {
+            window.showToast(`Only ${remaining} bed(s) available in Room 5 for your chosen dates.`, 'warning');
+        }
+    }
+
+    activeBooking.bedsCount = newBeds;
+    activeBooking.guests = newBeds;
+    activeBooking.adults = newBeds;
+    activeBooking.children = 0;
+
+    const bedPrice = activeBooking.bedPrice || 460.00;
+    activeBooking.pricePerNight = newBeds * bedPrice;
+    activeBooking.total = (activeBooking.pricePerNight * activeBooking.nights) + 15.00;
+    pendingBooking = activeBooking;
+    window.pendingBooking = activeBooking;
+
+    // Update Form Inputs and Displays
+    const countDisplay = document.getElementById('dorm-bed-count-display');
+    const countInput = document.getElementById('dorm-beds-count-input');
+    const subtotalHint = document.getElementById('dorm-bed-subtotal-hint');
+    const minusBtn = document.getElementById('btn-dorm-bed-minus');
+    const plusBtn = document.getElementById('btn-dorm-bed-plus');
+    const summaryDormBeds = document.getElementById('summary-dorm-beds');
+    const summaryPrice = document.getElementById('summary-price');
+    const summaryTotal = document.getElementById('summary-total');
+
+    if (countDisplay) countDisplay.textContent = `${newBeds} Bed${newBeds > 1 ? 's' : ''}`;
+    if (countInput) countInput.value = newBeds;
+    if (subtotalHint) subtotalHint.textContent = `${newBeds} bed${newBeds > 1 ? 's' : ''} × ₱460.00 = ₱${(newBeds * bedPrice).toFixed(2)} / night`;
+    if (minusBtn) minusBtn.disabled = (newBeds <= 1);
+    if (plusBtn) plusBtn.disabled = (newBeds >= remaining);
+    if (summaryDormBeds) summaryDormBeds.textContent = `${newBeds} Bed${newBeds > 1 ? 's' : ''} (₱460.00/bed)`;
+    if (summaryPrice) summaryPrice.textContent = `₱${(newBeds * bedPrice).toFixed(2)} (${newBeds} Bed${newBeds > 1 ? 's' : ''} @ ₱460.00)`;
+    if (summaryTotal) summaryTotal.textContent = '₱' + activeBooking.total.toFixed(2);
+
+    // Re-evaluate payment amounts (upfront vs balance)
+    const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'paymongo';
+    handlePaymentMethodChange(selectedPayment);
 }
 
 /**
@@ -423,25 +565,68 @@ async function handleSummaryDateChange() {
             return;
         }
 
-        if (!availData.is_currently_available) {
-            if (statusBadge) {
-                statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
+        const isDorm = (parseInt(activeBooking.roomId) === 5 || activeBooking.isDorm || (availData.room && availData.room.type === 'Dorm'));
+
+        if (isDorm) {
+            const dormRemaining = (availData.remaining_beds !== undefined) ? parseInt(availData.remaining_beds, 10) : 8;
+            activeBooking.remainingBeds = dormRemaining;
+            activeBooking.isDorm = true;
+
+            if (dormRemaining <= 0) {
+                if (statusBadge) statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
+                if (statusBadgeText) statusBadgeText.textContent = 'All Beds Occupied';
+                if (statusMsg) {
+                    statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> All 8 beds in Room 5 are occupied on selected dates.';
+                    statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
+                }
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                if (typeof window.showToast === 'function') {
+                    window.showToast('All beds in Room 5 are occupied for these dates. Please choose different dates.', 'error');
+                }
+                return;
             }
-            if (statusBadgeText) {
-                statusBadgeText.textContent = 'Unavailable';
+
+            // Clamp bedsCount to remaining beds
+            if (!activeBooking.bedsCount || activeBooking.bedsCount < 1) activeBooking.bedsCount = 1;
+            if (activeBooking.bedsCount > dormRemaining) {
+                activeBooking.bedsCount = dormRemaining;
+                if (typeof window.showToast === 'function') {
+                    window.showToast(`Selected beds adjusted to ${dormRemaining} to match remaining availability.`, 'info');
+                }
             }
-            if (statusMsg) {
-                statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> Occupied on selected dates. Please choose another date.';
-                statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
+
+            const bedPrice = 460.00;
+            activeBooking.bedPrice = bedPrice;
+            activeBooking.pricePerNight = activeBooking.bedsCount * bedPrice;
+        } else {
+            if (!availData.is_currently_available) {
+                if (statusBadge) {
+                    statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
+                }
+                if (statusBadgeText) {
+                    statusBadgeText.textContent = 'Unavailable';
+                }
+                if (statusMsg) {
+                    statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> Occupied on selected dates. Please choose another date.';
+                    statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
+                }
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Room is occupied on these dates. Please adjust your stay dates.', 'error');
+                }
+                return;
             }
-            if (confirmBtn) {
-                confirmBtn.disabled = true;
-                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Update room price if returned from server
+            if (availData.room && availData.room.price) {
+                activeBooking.pricePerNight = parseFloat(availData.room.price);
             }
-            if (typeof window.showToast === 'function') {
-                window.showToast('Room is occupied on these dates. Please adjust your stay dates.', 'error');
-            }
-            return;
         }
 
         // Room is available! Re-enable confirm button
@@ -450,14 +635,11 @@ async function handleSummaryDateChange() {
             confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
 
-        // Update room price if returned from server
-        if (availData.room && availData.room.price) {
-            activeBooking.pricePerNight = parseFloat(availData.room.price);
-        }
-
         // Recalculate duration & new total
         const nights = Math.max(1, Math.ceil((new Date(newCheckOut) - new Date(newCheckIn)) / (24*60*60*1000)));
-        const total = (activeBooking.pricePerNight * nights * (activeBooking.roomsCount || 1)) + 15;
+        const total = activeBooking.isDorm 
+            ? ((activeBooking.pricePerNight * nights) + 15.00)
+            : ((activeBooking.pricePerNight * nights * (activeBooking.roomsCount || 1)) + 15.00);
 
         // Update active booking context
         activeBooking.checkIn = newCheckIn;
@@ -477,6 +659,29 @@ async function handleSummaryDateChange() {
         if (summaryStayNightsText) summaryStayNightsText.textContent = nightsLabel;
         if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
 
+        // Update Dorm Bed Controls if Room 5
+        if (activeBooking.isDorm) {
+            const dormRemainingBadge = document.getElementById('dorm-remaining-beds-badge');
+            const dormBedCountDisplay = document.getElementById('dorm-bed-count-display');
+            const dormBedsInput = document.getElementById('dorm-beds-count-input');
+            const dormBedSubtotalHint = document.getElementById('dorm-bed-subtotal-hint');
+            const btnDormMinus = document.getElementById('btn-dorm-bed-minus');
+            const btnDormPlus = document.getElementById('btn-dorm-bed-plus');
+            const summaryDormBeds = document.getElementById('summary-dorm-beds');
+            const summaryPrice = document.getElementById('summary-price');
+
+            if (dormRemainingBadge) {
+                dormRemainingBadge.textContent = `${activeBooking.remainingBeds} Bed${activeBooking.remainingBeds > 1 ? 's' : ''} Available (${availData.occupied_beds || (8 - activeBooking.remainingBeds)} Occupied / 8 Total)`;
+            }
+            if (dormBedCountDisplay) dormBedCountDisplay.textContent = `${activeBooking.bedsCount} Bed${activeBooking.bedsCount > 1 ? 's' : ''}`;
+            if (dormBedsInput) dormBedsInput.value = activeBooking.bedsCount;
+            if (dormBedSubtotalHint) dormBedSubtotalHint.textContent = `${activeBooking.bedsCount} bed${activeBooking.bedsCount > 1 ? 's' : ''} × ₱460.00 = ₱${(activeBooking.bedsCount * 460.00).toFixed(2)} / night`;
+            if (btnDormMinus) btnDormMinus.disabled = (activeBooking.bedsCount <= 1);
+            if (btnDormPlus) btnDormPlus.disabled = (activeBooking.bedsCount >= activeBooking.remainingBeds);
+            if (summaryDormBeds) summaryDormBeds.textContent = `${activeBooking.bedsCount} Bed${activeBooking.bedsCount > 1 ? 's' : ''} (₱460.00/bed)`;
+            if (summaryPrice) summaryPrice.textContent = `₱${(activeBooking.bedsCount * 460.00).toFixed(2)} (${activeBooking.bedsCount} Bed${activeBooking.bedsCount > 1 ? 's' : ''} @ ₱460.00)`;
+        }
+
         // Update badges
         if (statusBadge) {
             statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
@@ -489,33 +694,14 @@ async function handleSummaryDateChange() {
             statusMsg.className = 'text-[11px] text-emerald-600 font-medium flex items-center gap-1';
         }
 
-        // Re-evaluate 24-hour rule for Pay at Hotel
-        const checkInDateObj = new Date(newCheckIn + 'T14:00:00');
-        const now = new Date();
-        const diffHours = (checkInDateObj.getTime() - now.getTime()) / (1000 * 60 * 60);
-        const isWithin24Hours = (diffHours <= 30);
-
+        // Pay at Hotel with 20% online security deposit is always available
         const hotelCard = document.getElementById('label-payment-hotel');
         const lockedNotice = document.getElementById('pay-at-hotel-locked-notice');
         const hotelRadio = document.getElementById('input-payment-hotel');
 
-        if (isWithin24Hours) {
-            if (hotelCard) hotelCard.classList.remove('hidden');
-            if (lockedNotice) lockedNotice.classList.add('hidden');
-            if (hotelRadio) hotelRadio.disabled = false;
-        } else {
-            if (hotelCard) hotelCard.classList.add('hidden');
-            if (lockedNotice) lockedNotice.classList.remove('hidden');
-            if (hotelRadio) hotelRadio.disabled = true;
-
-            const currentPayment = document.querySelector('input[name="payment"]:checked')?.value;
-            if (currentPayment === 'pay_at_hotel') {
-                const paymongoRadio = document.querySelector('input[name="payment"][value="paymongo"]');
-                if (paymongoRadio) {
-                    paymongoRadio.checked = true;
-                }
-            }
-        }
+        if (hotelCard) hotelCard.classList.remove('hidden');
+        if (lockedNotice) lockedNotice.classList.add('hidden');
+        if (hotelRadio) hotelRadio.disabled = false;
 
         // Re-apply payment amounts (updates upfront and balance)
         const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value || 'paymongo';
@@ -558,6 +744,10 @@ function handlePaymentMethodChange(method) {
     const upfrontEl = document.getElementById('summary-upfront-amount');
     const balanceEl = document.getElementById('summary-balance-amount');
     const paymongoAmountEl = document.getElementById('paymongo-amount-display');
+    const paymongoLabelEl = document.getElementById('paymongo-amount-label');
+    const paymongoSubtextEl = document.getElementById('paymongo-amount-subtext');
+    const paymongoBadgeEl = document.getElementById('paymongo-section-badge');
+    const paymongoTitleEl = document.getElementById('paymongo-section-title');
     const timerHintEl = document.getElementById('summary-timer-hint');
     const btnText = document.getElementById('btn-confirm-text');
 
@@ -565,6 +755,8 @@ function handlePaymentMethodChange(method) {
     if (!activeBooking) return;
 
     const total = activeBooking.total;
+    const deposit = Math.round(total * 0.20 * 100) / 100;
+    const balance = Math.round((total - deposit) * 100) / 100;
 
     // Reset card highlight styles
     [paymongoCard, hotelCard].forEach(card => {
@@ -579,15 +771,19 @@ function handlePaymentMethodChange(method) {
             hotelCard.classList.add('border-brand-blue', 'bg-blue-50/40', 'shadow-sm');
             hotelCard.classList.remove('border-gray-200', 'bg-white');
         }
-        if (paymongoSection) paymongoSection.classList.add('hidden');
+        if (paymongoSection) paymongoSection.classList.remove('hidden');
         if (arrivalSection) arrivalSection.classList.remove('hidden');
 
-        const upfront = 0.00;
-        const balance = total;
-        if (upfrontEl) upfrontEl.textContent = '₱0.00';
-        if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
-        if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-clock text-purple-600"></i> <span>Held strictly until expected arrival time + 1 hour.</span>';
-        if (btnText) btnText.innerHTML = '<i class="fas fa-store mr-1"></i> Lock Room Hold (Pay at Hotel)';
+        if (paymongoTitleEl) paymongoTitleEl.textContent = 'PayMongo 20% Deposit Checkout';
+        if (paymongoBadgeEl) paymongoBadgeEl.innerHTML = '<i class="fas fa-shield-alt text-xs"></i> 20% Security Deposit';
+        if (paymongoLabelEl) paymongoLabelEl.textContent = '20% Security Deposit (Paid Online):';
+        if (paymongoAmountEl) paymongoAmountEl.textContent = '₱' + deposit.toFixed(2);
+        if (paymongoSubtextEl) paymongoSubtextEl.textContent = `Pay 20% deposit online now to secure against no-show. Remaining 80% balance (₱${balance.toFixed(2)}) is payable at the hotel front desk upon check-in.`;
+
+        if (upfrontEl) upfrontEl.textContent = '₱' + deposit.toFixed(2) + ' (20% Deposit)';
+        if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2) + ' (80% at Hotel)';
+        if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-shield-alt text-purple-600"></i> <span>20% online deposit secures your room hold against no-shows.</span>';
+        if (btnText) btnText.innerHTML = '<i class="fas fa-lock mr-1"></i> Pay 20% Deposit Online (₱' + deposit.toFixed(2) + ') &rarr;';
     } else {
         // Default to PayMongo instant checkout
         if (paymongoCard) {
@@ -597,13 +793,16 @@ function handlePaymentMethodChange(method) {
         if (paymongoSection) paymongoSection.classList.remove('hidden');
         if (arrivalSection) arrivalSection.classList.add('hidden');
 
-        const upfront = total;
-        const balance = 0.00;
-        if (upfrontEl) upfrontEl.textContent = '₱' + upfront.toFixed(2);
-        if (balanceEl) balanceEl.textContent = '₱' + balance.toFixed(2);
-        if (paymongoAmountEl) paymongoAmountEl.textContent = '₱' + upfront.toFixed(2);
+        if (paymongoTitleEl) paymongoTitleEl.textContent = 'PayMongo Secure Checkout';
+        if (paymongoBadgeEl) paymongoBadgeEl.innerHTML = '<i class="fas fa-bolt text-xs"></i> Instant Confirmation';
+        if (paymongoLabelEl) paymongoLabelEl.textContent = 'Amount to pay via PayMongo (100%):';
+        if (paymongoAmountEl) paymongoAmountEl.textContent = '₱' + total.toFixed(2);
+        if (paymongoSubtextEl) paymongoSubtextEl.textContent = 'Full online settlement with ₱0.00 balance upon check-in.';
+
+        if (upfrontEl) upfrontEl.textContent = '₱' + total.toFixed(2);
+        if (balanceEl) balanceEl.textContent = '₱0.00';
         if (timerHintEl) timerHintEl.innerHTML = '<i class="fas fa-bolt text-emerald-500"></i> <span>Automated online payment & instant confirmation.</span>';
-        if (btnText) btnText.innerHTML = '<i class="fas fa-bolt mr-1"></i> Proceed to PayMongo Checkout &rarr;';
+        if (btnText) btnText.innerHTML = '<i class="fas fa-bolt mr-1"></i> Proceed to PayMongo Checkout (₱' + total.toFixed(2) + ') &rarr;';
     }
 }
 
@@ -774,9 +973,21 @@ function initBookingForm() {
         }
         formData.append('room_id', activeBooking.roomId);
         formData.append('rooms_count', activeBooking.roomsCount || 1);
-        formData.append('guests', activeBooking.guests || 1);
-        formData.append('adults', activeBooking.adults || 1);
-        formData.append('children', activeBooking.children || 0);
+        if (activeBooking.isDorm || activeBooking.roomId == 5) {
+            const dormBeds = parseInt(document.getElementById('dorm-beds-count-input')?.value || activeBooking.bedsCount || 1, 10);
+            activeBooking.bedsCount = dormBeds;
+            formData.append('beds_count', dormBeds);
+            formData.append('guests', dormBeds);
+            formData.append('adults', dormBeds);
+            formData.append('children', 0);
+            formData.append('children_ages', '[]');
+        } else {
+            formData.append('beds_count', 1);
+            formData.append('guests', activeBooking.guests || 1);
+            formData.append('adults', activeBooking.adults || 1);
+            formData.append('children', activeBooking.children || 0);
+            formData.append('children_ages', JSON.stringify(activeBooking.childrenAges || []));
+        }
         formData.append('check_in', activeBooking.checkIn);
         formData.append('check_out', activeBooking.checkOut);
         formData.append('nights', activeBooking.nights);
@@ -799,11 +1010,12 @@ function initBookingForm() {
         }
 
         const confirmBtn = document.getElementById('btn-confirm-booking');
+        const deposit = Math.round((activeBooking.total || 0) * 0.20 * 100) / 100;
         if (confirmBtn) {
             confirmBtn.disabled = true;
-            confirmBtn.innerHTML = paymentMethod === 'paymongo' 
-                ? '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing PayMongo Checkout...' 
-                : '<i class="fas fa-spinner fa-spin mr-2"></i> Processing Reservation...';
+            confirmBtn.innerHTML = paymentMethod === 'pay_at_hotel' 
+                ? '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing 20% Deposit Checkout...' 
+                : '<i class="fas fa-spinner fa-spin mr-2"></i> Initializing PayMongo Checkout...';
         }
 
         try {
@@ -815,7 +1027,10 @@ function initBookingForm() {
 
             if (data.success) {
                 if (data.checkout_url) {
-                    window.showToast(`Reservation Created! Ref: ${data.ref_id}. Redirecting to PayMongo Checkout...`, 'success');
+                    const noticeText = (paymentMethod === 'pay_at_hotel' || data.is_deposit)
+                        ? `Reservation Created! Ref: ${data.ref_id}. Redirecting to PayMongo to pay 20% deposit (₱${parseFloat(data.deposit_amount || deposit).toFixed(2)})...`
+                        : `Reservation Created! Ref: ${data.ref_id}. Redirecting to PayMongo Checkout...`;
+                    window.showToast(noticeText, 'success');
                     setTimeout(() => {
                         window.location.href = data.checkout_url;
                     }, 700);
@@ -835,9 +1050,9 @@ function initBookingForm() {
         } finally {
             if (confirmBtn) {
                 confirmBtn.disabled = false;
-                confirmBtn.innerHTML = paymentMethod === 'paymongo'
-                    ? '<i class="fas fa-bolt mr-2"></i> <span id="btn-confirm-text">Proceed to PayMongo Checkout &rarr;</span>'
-                    : '<i class="fas fa-lock mr-2"></i> <span id="btn-confirm-text">Confirm Reservation</span>';
+                confirmBtn.innerHTML = paymentMethod === 'pay_at_hotel'
+                    ? '<i class="fas fa-lock mr-2"></i> <span id="btn-confirm-text">Pay 20% Deposit Online (₱' + deposit.toFixed(2) + ') &rarr;</span>'
+                    : '<i class="fas fa-bolt mr-2"></i> <span id="btn-confirm-text">Proceed to PayMongo Checkout &rarr;</span>';
             }
         }
     });
@@ -863,4 +1078,5 @@ window.handleReceiptPreview = handleReceiptPreview;
 window.removeReceiptFile = removeReceiptFile;
 window.initBookingForm = initBookingForm;
 window.handleSummaryDateChange = handleSummaryDateChange;
+window.updateDormBedCount = updateDormBedCount;
 

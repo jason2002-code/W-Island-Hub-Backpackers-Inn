@@ -47,7 +47,273 @@ function toggleGuestDropdown(scope) {
  * Closes the guest dropdown popover for a given scope ('home' or 'rooms').
  * @param {'home'|'rooms'} scope
  */
+let currentChildAges = [];
+
+/**
+ * Retrieves the currently selected child ages from state or hidden inputs.
+ * @returns {Array<number|string>}
+ */
+function getChildAges() {
+    if (!currentChildAges || !Array.isArray(currentChildAges) || currentChildAges.length === 0) {
+        try {
+            const raw = document.getElementById('children-ages')?.value || document.getElementById('home-children-ages')?.value || '[]';
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                currentChildAges = parsed;
+            }
+        } catch (e) {
+            currentChildAges = [];
+        }
+    }
+    return currentChildAges;
+}
+
+/**
+ * Synchronizes child ages count with the stepper value.
+ * Expands or truncates the array as children are added or removed.
+ * @param {number} targetCount
+ */
+function adjustChildAgesCount(targetCount) {
+    const ages = getChildAges();
+    while (ages.length < targetCount) {
+        ages.push(''); // new child requires age selection
+    }
+    if (ages.length > targetCount) {
+        ages.splice(targetCount);
+    }
+    currentChildAges = ages;
+    syncChildAgesInputs();
+}
+
+/**
+ * Persists current child ages JSON string into hidden inputs across both scopes.
+ */
+function syncChildAgesInputs() {
+    const jsonStr = JSON.stringify(currentChildAges || []);
+    const roomsInput = document.getElementById('children-ages');
+    const homeInput = document.getElementById('home-children-ages');
+    if (roomsInput) roomsInput.value = jsonStr;
+    if (homeInput) homeInput.value = jsonStr;
+}
+
+/**
+ * Generates options HTML for the child age dropdown (0 to 17 years old).
+ * @param {number|string} selectedVal
+ * @returns {string}
+ */
+function getChildAgeOptionsHtml(selectedVal) {
+    const isValSet = (selectedVal !== '' && selectedVal !== undefined && selectedVal !== null);
+    let html = `<option value="" disabled ${!isValSet ? 'selected' : ''}>Select age (0 to 17)</option>`;
+    html += `<option value="0" ${(isValSet && parseInt(selectedVal, 10) === 0) ? 'selected' : ''}>0 years old (Infant / under 1)</option>`;
+    for (let age = 1; age <= 17; age++) {
+        const isSel = (isValSet && parseInt(selectedVal, 10) === age);
+        html += `<option value="${age}" ${isSel ? 'selected' : ''}>${age} year${age > 1 ? 's' : ''} old</option>`;
+    }
+    return html;
+}
+
+/**
+ * Renders dynamic child age dropdown selectors for a specific scope.
+ * @param {'home'|'rooms'} scope
+ * @param {number} childrenCount
+ */
+function renderChildAgesUI(scope, childrenCount) {
+    const container = document.getElementById(`${scope}-child-ages-container`);
+    const list = document.getElementById(`${scope}-child-ages-list`);
+    if (!container || !list) return;
+
+    if (childrenCount <= 0) {
+        container.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+    }
+
+    container.classList.remove('hidden');
+
+    const ages = getChildAges();
+    const isHome = scope === 'home';
+    const focusRing = isHome ? 'focus:border-amber-500 focus:ring-amber-500/20' : 'focus:border-brand-blue focus:ring-brand-blue/20';
+    const activeBorder = isHome ? 'hover:border-amber-300' : 'hover:border-sky-300';
+    const labelColor = isHome ? 'text-slate-700' : 'text-gray-700';
+
+    let html = '';
+    for (let i = 0; i < childrenCount; i++) {
+        const val = ages[i];
+        const isSelected = (val !== '' && val !== undefined && val !== null);
+        const colSpan = (childrenCount === 1) ? 'col-span-2' : 'col-span-1';
+
+        let badgeHtml = '';
+        if (isSelected) {
+            const ageNum = parseInt(val, 10);
+            const badgeText = ageNum === 0 ? 'Infant (0)' : `${ageNum} yr${ageNum > 1 ? 's' : ''}`;
+            const badgeClass = isHome ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-blue-100 text-brand-blue border-blue-200';
+            badgeHtml = `<span id="${scope}-child-age-badge-${i}" class="text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeClass} border">${badgeText}</span>`;
+        } else {
+            badgeHtml = `<span id="${scope}-child-age-badge-${i}" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">Age needed</span>`;
+        }
+
+        html += `
+            <div class="${colSpan} bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/90 transition hover:bg-white hover:border-slate-300 shadow-2xs">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label for="${scope}-child-age-${i}" class="text-[11px] font-bold ${labelColor} flex items-center gap-1">
+                        <i class="fas fa-child ${isHome ? 'text-amber-500' : 'text-brand-blue'}"></i>
+                        <span>Child ${i + 1}</span>
+                    </label>
+                    ${badgeHtml}
+                </div>
+                <div class="relative">
+                    <select id="${scope}-child-age-${i}"
+                            onchange="updateChildAge(${i}, this.value, '${scope}')"
+                            class="w-full appearance-none bg-white border ${isSelected ? 'border-slate-200' : 'border-rose-300 bg-rose-50/20'} ${activeBorder} ${focusRing} focus:ring-2 rounded-lg px-2.5 py-1.5 pr-7 text-xs font-semibold text-slate-800 transition outline-none cursor-pointer shadow-2xs">
+                        ${getChildAgeOptionsHtml(val)}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                        <i class="fas fa-chevron-down text-[9px]"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    list.innerHTML = html;
+}
+
+/**
+ * Handles age changes on child dropdown selects and synchronizes across scopes.
+ * @param {number} index - Index of child (0-based)
+ * @param {string|number} ageValue - Selected age (0-17)
+ * @param {'home'|'rooms'} sourceScope - Source triggering the update
+ */
+function updateChildAge(index, ageValue, sourceScope) {
+    const age = (ageValue === '' || ageValue === null || ageValue === undefined) ? '' : parseInt(ageValue, 10);
+    const ages = getChildAges();
+    ages[index] = age;
+    currentChildAges = ages;
+    syncChildAgesInputs();
+
+    // Synchronize the other scope's dropdown element if rendered
+    const otherScope = sourceScope === 'home' ? 'rooms' : 'home';
+    const otherSelect = document.getElementById(`${otherScope}-child-age-${index}`);
+    if (otherSelect && otherSelect.value !== String(ageValue)) {
+        otherSelect.value = String(ageValue);
+    }
+
+    // Refresh badges and select border states in both scopes
+    ['home', 'rooms'].forEach(s => {
+        const select = document.getElementById(`${s}-child-age-${index}`);
+        const badge = document.getElementById(`${s}-child-age-badge-${index}`);
+        const isH = s === 'home';
+        if (select) {
+            if (age !== '') {
+                select.classList.remove('border-rose-300', 'bg-rose-50/20');
+                select.classList.add('border-slate-200');
+            } else {
+                select.classList.add('border-rose-300', 'bg-rose-50/20');
+                select.classList.remove('border-slate-200');
+            }
+        }
+        if (badge) {
+            if (age !== '') {
+                const ageNum = parseInt(age, 10);
+                const badgeText = ageNum === 0 ? 'Infant (0)' : `${ageNum} yr${ageNum > 1 ? 's' : ''}`;
+                badge.className = `text-[10px] font-bold px-1.5 py-0.5 rounded ${isH ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-blue-100 text-brand-blue border-blue-200'} border`;
+                badge.textContent = badgeText;
+            } else {
+                badge.className = 'text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200';
+                badge.textContent = 'Age needed';
+            }
+        }
+    });
+
+    // Update guest summary texts for both scopes
+    updateGuestSummaryText('home');
+    updateGuestSummaryText('rooms');
+}
+
+/**
+ * Updates guest summary text label and total badge.
+ * @param {'home'|'rooms'} scope
+ */
+function updateGuestSummaryText(scope) {
+    const prefix = scope === 'home' ? 'home-' : '';
+    const adultsInput = document.getElementById(prefix ? `${prefix}adults-count` : 'adults-count');
+    const childrenInput = document.getElementById(prefix ? `${prefix}children-count` : 'children-count');
+    const summaryText = document.getElementById(`${scope}-guest-summary-text`);
+    const totalBadge = document.getElementById(`${scope}-total-guest-badge`);
+
+    const adults = parseInt(adultsInput?.value || '1', 10) || 1;
+    const children = parseInt(childrenInput?.value || '0', 10) || 0;
+    const totalGuests = adults + children;
+
+    const ages = getChildAges().slice(0, children);
+    const validAges = ages.filter(a => a !== '' && a !== undefined && a !== null);
+
+    let summaryStr = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}`;
+    if (children > 0) {
+        summaryStr += `, ${children} Child${children > 1 ? 'ren' : ''}`;
+        if (validAges.length === children && children > 0) {
+            summaryStr += `: ${validAges.map(a => a === 0 ? '0' : a).join(', ')}y`;
+        }
+    }
+    summaryStr += ')';
+
+    if (summaryText) summaryText.textContent = summaryStr;
+    if (totalBadge) totalBadge.textContent = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'}`;
+}
+
+/**
+ * Validates whether all children have had their ages selected.
+ * @param {'home'|'rooms'} scope
+ * @returns {boolean}
+ */
+function validateChildAges(scope) {
+    const prefix = scope === 'home' ? 'home-' : '';
+    const children = parseInt(document.getElementById(prefix ? `${prefix}children-count` : 'children-count')?.value || '0', 10);
+    if (children <= 0) return true;
+
+    const ages = getChildAges().slice(0, children);
+    const unselectedIdx = ages.findIndex(a => a === '' || a === undefined || a === null);
+    if (unselectedIdx !== -1) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(`Please select the age for Child ${unselectedIdx + 1} at check-in.`, 'warning');
+        }
+        const dropdown = document.getElementById(`${scope}-guest-dropdown`);
+        if (dropdown && dropdown.classList.contains('hidden')) {
+            toggleGuestDropdown(scope);
+        }
+        const select = document.getElementById(`${scope}-child-age-${unselectedIdx}`);
+        if (select) {
+            if (typeof select.focus === 'function') select.focus();
+            select.classList.add('ring-2', 'ring-rose-400');
+        }
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Closes the guest dropdown popover for a given scope ('home' or 'rooms').
+ * Validates that all children have ages selected if user clicks Done.
+ * @param {'home'|'rooms'} scope
+ */
 function closeGuestDropdown(scope) {
+    const prefix = scope === 'home' ? 'home-' : '';
+    const children = parseInt(document.getElementById(prefix ? `${prefix}children-count` : 'children-count')?.value || '0', 10);
+    if (children > 0) {
+        const ages = getChildAges().slice(0, children);
+        const unselectedIdx = ages.findIndex(a => a === '' || a === undefined || a === null);
+        if (unselectedIdx !== -1) {
+            if (typeof window.showToast === 'function') {
+                window.showToast(`Please select the age for Child ${unselectedIdx + 1}.`, 'info');
+            }
+            const select = document.getElementById(`${scope}-child-age-${unselectedIdx}`);
+            if (select) {
+                if (typeof select.focus === 'function') select.focus();
+                select.classList.add('ring-2', 'ring-rose-400');
+            }
+            return;
+        }
+    }
+
     const dropdown = document.getElementById(`${scope}-guest-dropdown`);
     const chevron = document.getElementById(`${scope}-guest-chevron`);
     if (dropdown) dropdown.classList.add('hidden');
@@ -133,18 +399,14 @@ function applyGuestValuesToScope(scope, adults, children, totalGuests) {
     if (adultsMinus) adultsMinus.disabled = adults <= 1;
     if (childrenMinus) childrenMinus.disabled = children <= 0;
 
-    // Summary text
-    const summaryText = document.getElementById(`${scope}-guest-summary-text`);
-    const totalBadge = document.getElementById(`${scope}-total-guest-badge`);
-    
-    let summaryStr = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'} (${adults} Adult${adults > 1 ? 's' : ''}`;
-    if (children > 0) {
-        summaryStr += `, ${children} Child${children > 1 ? 'ren' : ''}`;
-    }
-    summaryStr += ')';
+    // Synchronize child ages count
+    adjustChildAgesCount(children);
 
-    if (summaryText) summaryText.textContent = summaryStr;
-    if (totalBadge) totalBadge.textContent = `${totalGuests} ${totalGuests === 1 ? 'Guest' : 'Guests'}`;
+    // Render dynamic child age dropdowns for this scope
+    renderChildAgesUI(scope, children);
+
+    // Update summary text
+    updateGuestSummaryText(scope);
 
     // Live capacity warning inside dropdown stepper
     const hotelCap = getTotalHotelCapacity();
@@ -231,9 +493,13 @@ function renderRooms(filterDate = null) {
             statusBadge = `<span class="room-status-badge ${statusClass} text-xs font-bold px-2 py-1 rounded uppercase ml-2">${room.status}</span>`;
         }
         
-        const formattedPrice = room.price.toFixed ? room.price.toFixed(2) : parseFloat(room.price).toFixed(2);
+        const isDorm = (parseInt(room.id) === 5 || (room.type && room.type.toLowerCase().includes('dorm')));
+        const dormTotalPrice = 3680.00;
+        const dormBedPrice = 460.00;
+        const formattedPrice = isDorm ? dormTotalPrice.toFixed(2) : (room.price.toFixed ? room.price.toFixed(2) : parseFloat(room.price).toFixed(2));
+        const roomMaxCap = isDorm ? 8 : (room.max_capacity || room.capacity || 2);
         return `
-        <div class="room-card bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 flex flex-col" data-room-id="${room.id}" data-capacity="${room.capacity}" data-max-capacity="${room.max_capacity || room.capacity}">
+        <div class="room-card bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 flex flex-col" data-room-id="${room.id}" data-capacity="${room.capacity}" data-max-capacity="${roomMaxCap}" data-is-dorm="${isDorm ? '1' : '0'}">
             <div class="h-48 overflow-hidden relative cursor-pointer group" onclick="openRoomInfoModal(${room.id})" title="Click to view full room information">
                  <img src="${room.image}" alt="${room.name}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
                  <div class="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -243,7 +509,7 @@ function renderRooms(filterDate = null) {
                  </div>
                  <div class="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 shadow-md flex items-center gap-1.5 border border-white/60">
                     <i class="fas fa-star text-amber-400 text-xs"></i>
-                    <span>${room.rating.toFixed(1)}</span>
+                    <span class="rating-badge-value" data-room-id="${room.id}">${room.rating.toFixed(1)}</span>
                     <span class="text-slate-400 text-[10px] font-medium">/ 5</span>
                  </div>
             </div>
@@ -258,53 +524,49 @@ function renderRooms(filterDate = null) {
                 <p class="text-gray-500 text-sm mb-4 line-clamp-2">${room.desc}</p>
                 
                 <div class="flex flex-wrap gap-2 mb-4">
-                    <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${room.max_capacity || room.capacity || 2} Guest${(room.max_capacity || room.capacity || 2) > 1 ? 's' : ''}</span>
+                    ${isDorm ? `
+                        <span class="text-xs text-brand-blue bg-blue-50 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 room-capacity-pill" data-room-id="${room.id}">
+                            <i class="fas fa-bed text-[11px] text-brand-blue"></i>
+                            <span class="room-beds-text"><strong class="room-avail-beds">${room.capacity || 8}</strong> Beds Available</span>
+                            <span class="text-slate-400 font-normal text-[11px]">(8 Beds Total)</span>
+                        </span>
+                    ` : `
+                        <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${roomMaxCap} Guest${roomMaxCap > 1 ? 's' : ''}</span>
+                    `}
                     ${room.amenities.slice(0,3).map(a => `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${a}</span>`).join('')}
                 </div>
                 
-                <!-- Reviews Section -->
-                <details class="reviews-section group mt-4 border-t border-slate-100 pt-4">
-                    <summary class="cursor-pointer font-semibold text-slate-700 py-2 px-3.5 bg-slate-50 hover:bg-slate-100 rounded-2xl flex items-center justify-between transition-all duration-200 border border-slate-200/60 select-none">
-                        <div class="flex items-center gap-2 text-xs font-bold">
+                <!-- Reviews Quick Action Button (Opens Horizontal Reviews in Modal) -->
+                <div class="mt-3">
+                    <button type="button" onclick="openRoomInfoModal(${room.id}, 'reviews')" class="w-full text-left py-2 px-3.5 bg-slate-50 hover:bg-amber-50/70 rounded-xl flex items-center justify-between transition-colors border border-slate-200/60 group/rev cursor-pointer" title="View all guest reviews">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-slate-700">
                             <i class="fas fa-star text-amber-400"></i>
                             <span>Guest Reviews</span>
-                            <span class="reviews-count text-[11px] font-bold bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full">(0)</span>
+                            <span class="reviews-count text-[11px] font-bold bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full" data-room-id="${room.id}">(${room.reviews_count || 0})</span>
                         </div>
-                        <i class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-300 group-open:rotate-180"></i>
-                    </summary>
-                    
-                    <div class="reviews-content space-y-3 mt-3" id="reviews-${room.id}">
-                        <!-- Dynamic content loaded by reviews module -->
-                    </div>
-
-                    ${isLoggedIn ? `
-                    <div class="submit-review-section mt-4 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/70" data-room-id="${room.id}">
-                        <h4 class="font-bold text-slate-900 text-xs mb-3 flex items-center gap-1.5">
-                            <i class="fas fa-pen-fancy text-amber-500"></i>
-                            Write Your Review
-                        </h4>
-                        <div class="star-picker mb-3 flex items-center gap-1" data-room-id="${room.id}">
-                            ${[1,2,3,4,5].map(i => `
-                                <i class="review-star far fa-star text-xl text-slate-300 hover:text-amber-300 cursor-pointer transition-all duration-200" data-rating="${i}" title="Rate ${i} star${i > 1 ? 's' : ''}"></i>
-                            `).join('')}
-                            <span class="ml-2 font-medium text-xs text-slate-500 selected-rating">Select rating</span>
-                        </div>
-                        <textarea id="review-comment-${room.id}" placeholder="Share your experience with this room... What did you like? Any suggestions?" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none resize-vertical min-h-[80px]" maxlength="500"></textarea>
-                        <div class="text-right mt-1 text-[11px] text-slate-400">Max 500 characters</div>
-                        <button class="submit-review-btn mt-3 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto shadow-sm" disabled>
-                            <span class="btn-text">Submit Review</span>
-                            <i class="fas fa-spinner fa-spin hidden ml-2"></i>
-                        </button>
-                        <div class="submit-message mt-2 hidden text-xs"></div>
-                    </div>
-                    ` : ''}
-                </details>
+                        <span class="text-xs font-semibold text-brand-blue group-hover/rev:text-amber-600 flex items-center gap-1">
+                            Read Reviews <i class="fas fa-arrow-right text-[10px] group-hover/rev:translate-x-0.5 transition-transform"></i>
+                        </span>
+                    </button>
+                </div>
 
                 <div class="mt-auto pt-4 border-t flex justify-between items-center gap-2">
-                    <div>
-                        <span class="text-2xl font-bold text-brand-blue">₱${formattedPrice}</span>
-                        <span class="text-gray-400 text-sm">/ night</span>
-                    </div>
+                    ${isDorm ? `
+                        <div>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-2xl font-bold text-brand-blue">₱${dormTotalPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                <span class="text-gray-400 text-xs">/ night (8 Beds)</span>
+                            </div>
+                            <div class="text-xs font-semibold text-emerald-600 flex items-center gap-1 mt-0.5">
+                                <i class="fas fa-bed text-[10px]"></i> ₱460.00 / bed / night
+                            </div>
+                        </div>
+                    ` : `
+                        <div>
+                            <span class="text-2xl font-bold text-brand-blue">₱${formattedPrice}</span>
+                            <span class="text-gray-400 text-sm">/ night</span>
+                        </div>
+                    `}
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="openRoomInfoModal(${room.id})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 px-3 py-2 rounded-lg font-semibold transition text-sm flex items-center gap-1.5 border border-slate-200 shadow-sm" title="View Room Details">
                             <i class="fas fa-info-circle text-brand-blue text-xs"></i>
@@ -391,19 +653,33 @@ function initDateConstraints() {
 }
 
 /**
- * Initializes outside-click listener for the unified guest selectors.
+ * Initializes outside-click listener for the unified guest selectors
+ * and prepares initial child age selectors if children exist.
  */
 function initGuestSelector() {
     document.addEventListener('click', (e) => {
         ['home', 'rooms'].forEach(scope => {
             const container = document.getElementById(scope === 'home' ? 'home-guest-box-container' : 'rooms-guest-box-container');
             const dropdown = document.getElementById(`${scope}-guest-dropdown`);
+            const chevron = document.getElementById(`${scope}-guest-chevron`);
             if (container && dropdown && !dropdown.classList.contains('hidden')) {
                 if (!container.contains(e.target)) {
-                    closeGuestDropdown(scope);
+                    dropdown.classList.add('hidden');
+                    if (chevron) chevron.classList.remove('rotate-180');
                 }
             }
         });
+    });
+
+    // Check initial child counts on page load and initialize dynamic child age selectors
+    ['home', 'rooms'].forEach(scope => {
+        const prefix = scope === 'home' ? 'home-' : '';
+        const children = parseInt(document.getElementById(prefix ? `${prefix}children-count` : 'children-count')?.value || '0', 10);
+        if (children > 0) {
+            adjustChildAgesCount(children);
+            renderChildAgesUI(scope, children);
+            updateGuestSummaryText(scope);
+        }
     });
 }
 
@@ -416,6 +692,11 @@ function initGuestSelector() {
 function searchFromHome(e) {
     if (e && e.preventDefault) e.preventDefault();
     
+    // Validate child ages before redirecting
+    if (!validateChildAges('home')) {
+        return;
+    }
+
     const homeCheckIn = document.getElementById('home-check-in-date')?.value;
     const homeCheckOut = document.getElementById('home-check-out-date')?.value;
     const homeAdults = parseInt(document.getElementById('home-adults-count')?.value || '1', 10) || 1;
@@ -429,7 +710,7 @@ function searchFromHome(e) {
         document.getElementById('check-out-date').value = homeCheckOut;
     }
     
-    // Sync guest counters into rooms scope
+    // Sync guest counters and child ages into rooms scope
     applyGuestValuesToScope('rooms', homeAdults, homeChildren, homeGuests);
 
     window.router('rooms');
@@ -450,6 +731,12 @@ function initAvailabilityForm() {
 
     availabilityForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // Validate child ages
+        if (!validateChildAges('rooms')) {
+            return;
+        }
+
         const todayStr = getLocalDateString(new Date());
         let checkIn = document.getElementById('check-in-date').value;
         let checkOut = document.getElementById('check-out-date').value;
@@ -635,12 +922,24 @@ function initAvailabilityForm() {
                         const existingBadge = roomEl.querySelector('.room-rec-card-badge');
                         if (existingBadge) existingBadge.remove();
 
-                        // Add dynamic badge: Recommended multi-room or Direct Fit
+                        // If dorm, update capacity pill to show live remaining beds and occupied count
+                        const isDormRoom = (data.is_dorm || parseInt(roomId) === 5 || roomEl.dataset.isDorm === '1');
+                        if (isDormRoom && data.remaining_beds !== undefined) {
+                            const dormPill = roomEl.querySelector('.room-capacity-pill');
+                            if (dormPill) {
+                                dormPill.innerHTML = `<i class="fas fa-bed text-[11px] text-brand-blue"></i> <span class="room-beds-text"><strong class="room-avail-beds">${data.remaining_beds}</strong> Beds Available</span> <span class="text-slate-400 font-normal text-[11px]">(${data.occupied_beds || (8 - data.remaining_beds)} Occupied / 8 Total)</span>`;
+                            }
+                        }
+
+                        // Add dynamic badge: Recommended multi-room, Dorm Beds, or Direct Fit
                         const descEl = roomEl.querySelector('p.line-clamp-2') || roomEl.querySelector('.room-card > div.p-6');
                         if (descEl && descEl.parentNode) {
                             const badgeDiv = document.createElement('div');
                             badgeDiv.className = 'room-rec-card-badge mt-2 mb-2 p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5';
-                            if (isTwoCapRecommendation) {
+                            if (isDormRoom && data.remaining_beds !== undefined) {
+                                badgeDiv.className += ' bg-teal-50 border border-teal-200 text-teal-900';
+                                badgeDiv.innerHTML = `<i class="fas fa-bed text-teal-600"></i><span><strong>${data.remaining_beds} Beds Available</strong> (${data.occupied_beds || (8 - data.remaining_beds)} Occupied / 8 Total) &bull; <strong>₱460.00</strong> / bed</span>`;
+                            } else if (isTwoCapRecommendation) {
                                 const needed = Math.ceil(guests / roomMaxCapacity);
                                 badgeDiv.className += ' bg-amber-50 border border-amber-200 text-amber-900';
                                 badgeDiv.innerHTML = `<i class="fas fa-lightbulb text-amber-500"></i><span>Capacity: 2 &bull; <strong>Recommended: Book ${needed} Rooms</strong> to fit your ${guests} guests</span>`;
@@ -876,6 +1175,46 @@ function ensureRoomInfoModalInDom() {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Guest Reviews & Ratings Section (Horizontal Scrollable) -->
+                    <div id="modal-reviews-section" class="border-t border-slate-100 pt-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                                    <i class="fas fa-star text-amber-500"></i> Guest Reviews & Ratings
+                                </h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex items-center text-amber-400 text-xs" id="modal-reviews-stars">
+                                        <!-- Dynamic Stars -->
+                                    </div>
+                                    <span id="modal-reviews-avg-rating" class="font-bold text-slate-800 text-sm">5.0</span>
+                                    <span class="text-slate-400 text-xs">&bull;</span>
+                                    <span id="modal-reviews-count-text" class="text-xs text-slate-500 font-medium">0 verified reviews</span>
+                                </div>
+                            </div>
+                            <!-- Horizontal Scroll Left/Right Arrow Controls -->
+                            <div class="flex items-center gap-1.5" id="modal-reviews-nav-controls" style="display: none;">
+                                <button type="button" onclick="scrollModalReviews('left')" class="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition shadow-xs cursor-pointer" title="Previous reviews" aria-label="Previous reviews">
+                                    <i class="fas fa-chevron-left text-xs"></i>
+                                </button>
+                                <button type="button" onclick="scrollModalReviews('right')" class="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition shadow-xs cursor-pointer" title="Next reviews" aria-label="Next reviews">
+                                    <i class="fas fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Horizontal Scrollable Container -->
+                        <div id="modal-reviews-scroll-container" 
+                             class="flex gap-3.5 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory scroll-smooth"
+                             style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; -webkit-overflow-scrolling: touch;">
+                            <div class="text-center py-6 w-full text-xs text-slate-400">Loading reviews...</div>
+                        </div>
+
+                        <!-- Review Form Trigger & Collapsible Form -->
+                        <div id="modal-review-form-wrapper" class="mt-3">
+                            <!-- Filled dynamically by reviews module -->
+                        </div>
+                    </div>
                 </div>
                 <div class="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4 flex-shrink-0">
                     <div>
@@ -906,7 +1245,7 @@ function ensureRoomInfoModalInDom() {
  * 
  * @param {Object} room - The room data object.
  */
-function populateAndShowRoomModal(room) {
+function populateAndShowRoomModal(room, scrollToSection = null) {
     ensureRoomInfoModalInDom();
 
     const modal = document.getElementById('room-info-modal');
@@ -932,23 +1271,27 @@ function populateAndShowRoomModal(room) {
     if (ratingEl) ratingEl.textContent = ratingVal.toFixed(1);
 
     // Capacity
-    const capacityVal = parseInt(room.max_capacity || room.capacity, 10) || 2;
-    const capText = `Up to ${capacityVal} Guest${capacityVal > 1 ? 's' : ''}`;
+    const isDorm = (parseInt(room.id) === 5 || (room.type && room.type.toLowerCase().includes('dorm')));
+    const capacityVal = isDorm ? 8 : (parseInt(room.max_capacity || room.capacity, 10) || 2);
+    const capText = isDorm ? '8 Beds (Shared Dormitory)' : `Up to ${capacityVal} Guest${capacityVal > 1 ? 's' : ''}`;
     const capEl = document.getElementById('modal-room-capacity');
     if (capEl) capEl.textContent = capText;
 
     const highlightCapEl = document.getElementById('modal-highlight-capacity');
-    if (highlightCapEl) highlightCapEl.textContent = `${capacityVal} Guest${capacityVal > 1 ? 's' : ''}`;
+    if (highlightCapEl) highlightCapEl.textContent = isDorm ? '8 Beds Total' : `${capacityVal} Guest${capacityVal > 1 ? 's' : ''}`;
 
     // Price
-    const priceVal = parseFloat(room.price) || 0;
-    const formattedPrice = '₱' + priceVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
     const highlightPriceEl = document.getElementById('modal-highlight-price');
-    if (highlightPriceEl) highlightPriceEl.textContent = formattedPrice;
-
     const footerPriceEl = document.getElementById('modal-footer-price');
-    if (footerPriceEl) footerPriceEl.textContent = formattedPrice;
+    if (isDorm) {
+        if (highlightPriceEl) highlightPriceEl.innerHTML = `₱3,680.00 <span class="text-xs font-normal text-slate-500 block sm:inline">(₱460.00 / bed)</span>`;
+        if (footerPriceEl) footerPriceEl.innerHTML = `₱3,680.00 <span class="text-xs text-gray-400 font-normal">/ night (8 Beds) &bull; ₱460.00/bed</span>`;
+    } else {
+        const priceVal = parseFloat(room.price) || 0;
+        const formattedPrice = '₱' + priceVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (highlightPriceEl) highlightPriceEl.textContent = formattedPrice;
+        if (footerPriceEl) footerPriceEl.textContent = formattedPrice;
+    }
 
     // Status Badge
     const statusEl = document.getElementById('modal-room-status');
@@ -1032,6 +1375,22 @@ function populateAndShowRoomModal(room) {
         dialogBox.classList.remove('scale-95');
         dialogBox.classList.add('scale-100');
     }
+
+    // Automatically load verified guest reviews into modal
+    if (typeof window.loadModalReviews === 'function') {
+        window.loadModalReviews(room.id);
+    }
+
+    // Scroll to section if specified
+    if (scrollToSection === 'reviews') {
+        setTimeout(() => {
+            const revSection = document.getElementById('modal-reviews-section');
+            if (revSection) {
+                revSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 300);
+    }
+
     document.body.style.overflow = 'hidden';
 }
 
@@ -1070,8 +1429,9 @@ function closeRoomInfoModal(e) {
  * Looks up room from state, preloaded server data, or fetches from API as fallback.
  * 
  * @param {number|string} roomId - The ID of the room.
+ * @param {string|null} [scrollToSection=null] - Section ID to scroll to (e.g., 'reviews').
  */
-async function openRoomInfoModal(roomId) {
+async function openRoomInfoModal(roomId, scrollToSection = null) {
     let room = getRoomById(roomId);
 
     if (!room) {
@@ -1118,7 +1478,7 @@ async function openRoomInfoModal(roomId) {
         return;
     }
 
-    populateAndShowRoomModal(room);
+    populateAndShowRoomModal(room, scrollToSection);
 }
 
 // Global keydown listener for Escape key to close modals
@@ -1389,5 +1749,9 @@ window.closeRoomRecommendationModal = closeRoomRecommendationModal;
 window.proceedMultiRoomBooking = proceedMultiRoomBooking;
 window.proceedSwitchRoomBooking = proceedSwitchRoomBooking;
 window.proceedSingleRoomAnyway = proceedSingleRoomAnyway;
+window.updateChildAge = updateChildAge;
+window.getChildAges = getChildAges;
+window.renderChildAgesUI = renderChildAgesUI;
+window.validateChildAges = validateChildAges;
 
 

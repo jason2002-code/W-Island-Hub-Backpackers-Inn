@@ -141,6 +141,11 @@
                         <div class="text-base font-mono font-bold text-brand-blue" id="modal-ref-id">-</div>
                     </div>
 
+                    <div class="border-t border-gray-100 pt-2">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Accommodation / Beds</span>
+                        <div class="text-xs font-semibold text-gray-800" id="modal-room-info">-</div>
+                    </div>
+
                     <div class="border-t border-gray-100 pt-2 grid grid-cols-2 gap-2">
                         <div>
                             <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Guest Name</span>
@@ -369,13 +374,14 @@ function renderBookings(bookings) {
                     <div class="font-bold text-gray-800 text-xs">${b.guestName}</div>
                     <div class="text-[11px] text-gray-500">${b.guestEmail || '-'}</div>
                     <div class="text-[10px] text-gray-400 font-mono">${b.guestPhone || ''}</div>
-                    <div class="text-[10px] text-slate-500 font-medium mt-0.5"><i class="fas fa-users text-amber-500 mr-1"></i>${(b.adults || 1) + (b.children || 0)} Guests (${b.adults || 1}A, ${b.children || 0}C)</div>
+                    <div class="text-[10px] text-slate-500 font-medium mt-0.5"><i class="fas fa-users text-amber-500 mr-1"></i>${(b.adults || 1) + (b.children || 0)} Guests (${b.adults || 1}A, ${b.children || 0}C${Array.isArray(b.childrenAges) && b.childrenAges.length > 0 ? ` · Ages: ${b.childrenAges.map(a => a == 0 ? '0' : a).join(', ')}` : ''})</div>
                 </td>
 
                 <!-- Room & Stay -->
                 <td class="p-3.5">
-                    <div class="font-semibold text-gray-800 flex items-center gap-1.5">
+                    <div class="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
                         ${b.roomsCount > 1 ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-200">${b.roomsCount} Rooms</span>` : ''}
+                        ${(b.roomId === 5 || (b.roomType && b.roomType.toLowerCase().includes('dorm')) || (b.roomName && b.roomName.toLowerCase().includes('room 5'))) ? `<span class="bg-teal-50 text-teal-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-teal-200"><i class="fas fa-bed mr-0.5 text-teal-600"></i>${b.bedsCount || 1} Bed${(b.bedsCount || 1) > 1 ? 's' : ''} (Dorm)</span>` : ''}
                         <span>${b.roomName}</span>
                     </div>
                     <div class="text-[11px] text-gray-500">${formatDate(b.checkIn)} &rarr; ${formatDate(b.checkOut)} (${b.nights}n)</div>
@@ -452,6 +458,13 @@ function openReceiptModal(bookingId) {
     if (!booking) return;
 
     activeModalBooking = booking;
+
+    const isDorm = (booking.roomId === 5 || (booking.roomType && booking.roomType.toLowerCase().includes('dorm')) || (booking.roomName && booking.roomName.toLowerCase().includes('room 5')));
+    const dormBedText = isDorm ? ` (${booking.bedsCount || 1} Bed${(booking.bedsCount || 1) > 1 ? 's' : ''} in Dormitory)` : (booking.roomsCount > 1 ? ` (${booking.roomsCount} Rooms)` : '');
+    const roomInfoEl = document.getElementById('modal-room-info');
+    if (roomInfoEl) {
+        roomInfoEl.textContent = (booking.roomName || 'Room') + dormBedText;
+    }
 
     document.getElementById('modal-ref-id').textContent = booking.ref_id;
     document.getElementById('modal-guest-name').textContent = booking.guestName;
@@ -691,6 +704,7 @@ function printAdminInvoice(bookingId) {
                             <div class="font-bold text-gray-800 text-base">${guestName}</div>
                             <div class="text-gray-600">${guestEmail}</div>
                             <div class="text-gray-500 font-mono text-xs">${booking.guestPhone || ''}</div>
+                            <div class="text-gray-600 text-xs mt-1">Guests: ${(booking.adults || 1) + (booking.children || 0)} (${booking.adults || 1} Adult${(booking.adults || 1) > 1 ? 's' : ''}${booking.children > 0 ? `, ${booking.children} Child${booking.children > 1 ? 'ren' : ''}` : ''}${Array.isArray(booking.childrenAges) && booking.childrenAges.length > 0 ? ` · Ages: ${booking.childrenAges.map(a => a == 0 ? '0' : a).join(', ')}` : ''})</div>
                         </div>
                         <div class="text-right">
                             <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Pathway:</h4>

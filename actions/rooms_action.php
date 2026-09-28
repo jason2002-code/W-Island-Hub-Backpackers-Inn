@@ -25,7 +25,7 @@ if ($method === 'GET') {
     exit;
 }
 
-// Retrieves all rooms from rooms table, ordered by created_at DESC
+// Retrieves all rooms from rooms table, ordered by created_at DESC with dynamic ratings from reviews
 function getRooms() {
     $pdo = getDB();
     if (!$pdo) {
@@ -33,9 +33,22 @@ function getRooms() {
         exit;
     }
     try {
-        $stmt = $pdo->prepare("SELECT * FROM rooms ORDER BY created_at DESC");
+        $stmt = $pdo->prepare("
+            SELECT r.*, 
+                   COALESCE(ROUND(AVG(rev.rating), 1), r.rating, 5.0) AS avg_rating,
+                   COUNT(rev.id) AS total_reviews
+            FROM rooms r
+            LEFT JOIN reviews rev ON rev.room_id = r.id AND rev.status = 'approved' AND rev.visible = 1
+            GROUP BY r.id
+            ORDER BY r.created_at DESC
+        ");
         $stmt->execute();
         $rooms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rooms as &$room) {
+            $room['rating'] = floatval($room['avg_rating'] ?? $room['rating'] ?? 5.0);
+            $room['reviews_count'] = intval($room['total_reviews'] ?? 0);
+        }
+        unset($room);
         echo json_encode(['success' => true, 'rooms' => $rooms]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Query failed']);
@@ -155,7 +168,12 @@ function updateRoom() {
         $pdo->prepare("
             UPDATE rooms r
             SET r.capacity = GREATEST(0, COALESCE(r.max_capacity, r.capacity) - (
-                SELECT COUNT(*)
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN r.type = 'Dorm' THEN GREATEST(1, COALESCE(b.beds_count, b.adults, 1))
+                        ELSE 1 
+                    END
+                ), 0)
                 FROM bookings b
                 WHERE b.room_id = r.id
                   AND b.status IN ('Pending', 'Confirmed')

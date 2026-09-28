@@ -136,9 +136,10 @@
                     <input type="hidden" id="home-guest-count" name="guest_count" value="1">
                     <input type="hidden" id="home-adults-count" name="adults" value="1">
                     <input type="hidden" id="home-children-count" name="children" value="0">
+                    <input type="hidden" id="home-children-ages" name="children_ages" value="[]">
 
                     <!-- Dropdown Popover (Same Box) -->
-                    <div id="home-guest-dropdown" class="hidden absolute left-0 right-0 sm:right-auto sm:w-80 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 space-y-4">
+                    <div id="home-guest-dropdown" class="hidden absolute left-0 right-0 sm:right-auto sm:w-80 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 space-y-4 max-h-[85vh] overflow-y-auto">
                         <div class="flex justify-between items-center pb-2 border-b border-slate-100">
                             <div>
                                 <h4 class="text-xs font-bold uppercase text-slate-700 tracking-wider">Select Guests</h4>
@@ -170,7 +171,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="font-bold text-slate-800 text-sm">Children</div>
-                                <div class="text-[11px] text-slate-400 font-medium">Ages 17 &amp; below</div>
+                                <div class="text-[11px] text-slate-400 font-medium">Ages 0 to 17</div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button type="button" onclick="updateGuestStepper('home', 'children', -1)" class="w-8 h-8 rounded-full border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold transition disabled:opacity-30 disabled:cursor-not-allowed" id="home-children-minus" disabled>
@@ -183,10 +184,24 @@
                             </div>
                         </div>
 
+                        <!-- Dynamic Child Age Selection (0 - 17 years old) -->
+                        <div id="home-child-ages-container" class="hidden space-y-2 pt-2 border-t border-slate-100">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                    <i class="fas fa-child text-amber-500"></i> Child Ages at Check-In
+                                </span>
+                                <span class="text-[10px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">Ages 0 – 17</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Please select the age of each child:</p>
+                            <div id="home-child-ages-list" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                                <!-- Populated dynamically based on child count -->
+                            </div>
+                        </div>
+
                         <!-- Age Guidance Badge -->
                         <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-2">
                             <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-                            <span>Age 18+ counts as Adult. Age 17 and below counts as Child.</span>
+                            <span>Age 18+ counts as Adult. Ages 0 to 17 count as Children.</span>
                         </div>
 
                         <!-- Capacity Overlimit Warning in Dropdown -->

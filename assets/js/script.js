@@ -65,8 +65,10 @@ async function init() {
                             roomsCount: parseInt(b.rooms_count || 1),
                             total: parseFloat(b.total_amount || b.total_price)
                         }, {
-                            paid_amount: parseFloat(b.paid_amount || b.total_amount),
-                            balance_due: 0
+                            payment_method: b.payment_method,
+                            booking_status: b.booking_status,
+                            paid_amount: parseFloat(b.paid_amount !== undefined ? b.paid_amount : b.total_amount),
+                            balance_due: parseFloat(b.balance_due !== undefined ? b.balance_due : 0)
                         });
                     }
                 }).catch(err => console.error('Error opening voucher:', err));

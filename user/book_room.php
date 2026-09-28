@@ -46,9 +46,10 @@ if ($pdo) {
                             <input type="hidden" id="guest-count" name="guest_count" value="1">
                             <input type="hidden" id="adults-count" name="adults" value="1">
                             <input type="hidden" id="children-count" name="children" value="0">
+                            <input type="hidden" id="children-ages" name="children_ages" value="[]">
 
                             <!-- Dropdown Popover (Same Box) -->
-                            <div id="rooms-guest-dropdown" class="hidden absolute left-0 right-0 sm:right-auto sm:w-80 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50 space-y-4">
+                            <div id="rooms-guest-dropdown" class="hidden absolute left-0 right-0 sm:right-auto sm:w-80 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50 space-y-4 max-h-[85vh] overflow-y-auto">
                                 <div class="flex justify-between items-center pb-2 border-b border-gray-100">
                                     <div>
                                         <h4 class="text-xs font-bold uppercase text-gray-700 tracking-wider">Select Guests</h4>
@@ -79,7 +80,7 @@ if ($pdo) {
                                 <div class="flex items-center justify-between">
                                     <div>
                                         <div class="font-bold text-gray-800 text-sm">Children</div>
-                                        <div class="text-[11px] text-gray-400 font-medium">Ages 17 &amp; below</div>
+                                        <div class="text-[11px] text-gray-400 font-medium">Ages 0 to 17</div>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <button type="button" onclick="updateGuestStepper('rooms', 'children', -1)" class="w-8 h-8 rounded-full border border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold transition disabled:opacity-30 disabled:cursor-not-allowed" id="rooms-children-minus" disabled>
@@ -92,10 +93,24 @@ if ($pdo) {
                                     </div>
                                 </div>
 
+                                <!-- Dynamic Child Age Selection (0 - 17 years old) -->
+                                <div id="rooms-child-ages-container" class="hidden space-y-2 pt-2 border-t border-gray-100">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                                            <i class="fas fa-child text-brand-blue"></i> Child Ages at Check-In
+                                        </span>
+                                        <span class="text-[10px] text-brand-blue font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">Ages 0 – 17</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-500">Please select the age of each child:</p>
+                                    <div id="rooms-child-ages-list" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                                        <!-- Populated dynamically based on child count -->
+                                    </div>
+                                </div>
+
                                 <!-- Age Guidance Badge -->
                                 <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 flex items-start gap-2">
                                     <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
-                                    <span>Age 18+ counts as Adult. Age 17 and below counts as Child.</span>
+                                    <span>Age 18+ counts as Adult. Ages 0 to 17 count as Children.</span>
                                 </div>
 
                                 <!-- Capacity Overlimit Warning in Dropdown -->
@@ -223,6 +238,37 @@ if ($pdo) {
                                 </div>
                             </div>
                             
+                            <!-- Dormitory Bed Selection (Visible ONLY for Room 5) -->
+                            <div id="dorm-bed-selector-container" class="hidden p-5 bg-teal-50/70 border border-teal-200 rounded-2xl mb-4 shadow-xs">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-teal-900 flex items-center gap-1.5">
+                                        <i class="fas fa-bed text-teal-600"></i> Select Number of Beds (Dormitory)
+                                    </span>
+                                    <span id="dorm-remaining-beds-badge" class="text-xs font-bold bg-teal-100 text-teal-800 px-2.5 py-0.5 rounded-full border border-teal-200">
+                                        8 Beds Available
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between gap-4 p-3 bg-white rounded-xl border border-teal-100 shadow-2xs">
+                                    <div>
+                                        <div class="text-xs text-gray-500">Rate per bed: <strong class="text-teal-700">₱460.00 / night</strong></div>
+                                        <div class="text-[11px] text-gray-400" id="dorm-bed-subtotal-hint">1 bed &times; ₱460.00 = ₱460.00 / night</div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button type="button" onclick="updateDormBedCount(-1)" id="btn-dorm-bed-minus" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition border border-slate-300">
+                                            <i class="fas fa-minus text-xs"></i>
+                                        </button>
+                                        <span id="dorm-bed-count-display" class="w-16 text-center font-bold text-base text-gray-800">1 Bed</span>
+                                        <button type="button" onclick="updateDormBedCount(1)" id="btn-dorm-bed-plus" class="w-9 h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold flex items-center justify-center transition shadow-xs">
+                                            <i class="fas fa-plus text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="dorm-beds-count-input" name="beds_count" value="1">
+                                <p class="text-[11px] text-teal-700 mt-2 flex items-center gap-1">
+                                    <i class="fas fa-info-circle"></i> Room 5 is a shared dormitory (8 beds total). You can choose how many beds to reserve.
+                                </p>
+                            </div>
+
                             <!-- Guest Information Form -->
                             <form id="booking-form" class="space-y-6">
                                 <div>
@@ -268,19 +314,19 @@ if ($pdo) {
                                     </div>
 
                                     <div class="space-y-3" id="payment-options-container">
-                                        <!-- Option 1: Instant Online Payment (PayMongo - Recommended) -->
+                                        <!-- Option 1: Instant Online Payment (PayMongo - 100% Full Payment) -->
                                         <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-brand-blue bg-blue-50/40 cursor-pointer hover:border-brand-blue transition shadow-sm" id="label-payment-paymongo">
                                             <input type="radio" name="payment" value="paymongo" checked onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
                                             <div class="flex-1">
                                                 <div class="flex items-center justify-between flex-wrap gap-1">
                                                     <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                                        <i class="fas fa-bolt text-amber-500 text-base"></i> Online Payment (PayMongo)
+                                                        <i class="fas fa-bolt text-amber-500 text-base"></i> Option 1: Full Online Payment (100%)
                                                     </span>
                                                     <span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                        <i class="fas fa-check-circle text-[10px]"></i> Instant Confirmation
+                                                        <i class="fas fa-check-circle text-[10px]"></i> Instant Confirmation &bull; ₱0 Balance
                                                     </span>
                                                 </div>
-                                                <p class="text-xs text-gray-500 mt-1">Pay instantly via Credit/Debit Cards, GCash, Maya, or GrabPay. 100% automated &mdash; no receipt upload needed.</p>
+                                                <p class="text-xs text-gray-500 mt-1">Pay 100% in full instantly via Credit/Debit Cards, GCash, Maya, or GrabPay. Zero balance due upon check-in.</p>
                                                 <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-blue-100/70 text-[11px] text-gray-600 flex-wrap">
                                                     <span class="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-gray-200 font-semibold text-blue-700">
                                                         <i class="fab fa-cc-visa text-sm"></i> Visa
@@ -301,31 +347,32 @@ if ($pdo) {
                                             </div>
                                         </label>
 
-                                        <!-- Option 2: Strict "Pay at Hotel" (Conditional) -->
+                                        <!-- Option 2: Pay at Hotel (20% Online Deposit, 80% Full Payment at Hotel) -->
                                         <div id="option-c-wrapper">
                                             <label class="payment-option-card relative flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-200 bg-white cursor-pointer hover:border-brand-blue transition" id="label-payment-hotel">
                                                 <input type="radio" name="payment" value="pay_at_hotel" id="input-payment-hotel" onchange="handlePaymentMethodChange(this.value)" class="mt-1 text-brand-blue focus:ring-brand-blue">
                                                 <div class="flex-1">
-                                                    <div class="flex items-center justify-between">
+                                                    <div class="flex items-center justify-between flex-wrap gap-1">
                                                         <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                                            <i class="fas fa-store text-purple-600 text-base"></i> Option 2: Strict "Pay at Hotel"
+                                                            <i class="fas fa-store text-purple-600 text-base"></i> Option 2: Pay at Hotel (20% Online Deposit)
                                                         </span>
-                                                        <span class="text-xs font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Same-Day / &le;24h Only</span>
+                                                        <span class="text-[11px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                            <i class="fas fa-shield-alt text-[10px]"></i> 20% Deposit Online &bull; 80% at Hotel
+                                                        </span>
                                                     </div>
-                                                    <p class="text-xs text-gray-500 mt-1">Available strictly for bookings with check-in within 24 hours. Room is held strictly until your arrival time + 1 hour.</p>
+                                                    <p class="text-xs text-gray-500 mt-1">Pay 20% deposit online now via PayMongo (GCash, Cards, Maya) to secure and guarantee your reservation against no-show. The remaining 80% balance is paid at the hotel upon check-in.</p>
+                                                    <div class="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-purple-100/70 text-[11px] text-purple-700 flex-wrap">
+                                                        <span class="inline-flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-semibold">
+                                                            <i class="fas fa-shield-alt text-purple-600"></i> Secures your room hold if customer does not show up at check-in time
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </label>
-
-                                            <!-- Notice shown when Pay at Hotel is unavailable due to >24hr rule -->
-                                            <div id="pay-at-hotel-locked-notice" class="hidden p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-500 flex items-center gap-2 mt-1">
-                                                <i class="fas fa-lock text-gray-400"></i>
-                                                <span><strong>Pay at Hotel</strong> is locked because your check-in date is more than 24 hours away. Please proceed with PayMongo Online.</span>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- PayMongo Information Section (Active by default) -->
+                                <!-- PayMongo Information Section -->
                                 <div id="paymongo-payment-section" class="bg-gradient-to-br from-slate-50 to-blue-50/60 p-6 rounded-2xl border border-blue-200/80 space-y-4 shadow-sm">
                                     <div class="flex items-center justify-between border-b border-blue-100 pb-3">
                                         <div class="flex items-center gap-2.5">
@@ -333,11 +380,11 @@ if ($pdo) {
                                                 <i class="fas fa-lock"></i>
                                             </div>
                                             <div>
-                                                <h4 class="font-bold text-gray-800 text-sm">PayMongo Secure Checkout</h4>
+                                                <h4 class="font-bold text-gray-800 text-sm" id="paymongo-section-title">PayMongo Secure Checkout</h4>
                                                 <p class="text-[11px] text-gray-500">PCI-DSS Encrypted &bull; 3D Secure / OTP Protected</p>
                                             </div>
                                         </div>
-                                        <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                        <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full flex items-center gap-1" id="paymongo-section-badge">
                                             <i class="fas fa-bolt"></i> Instant Hold
                                         </span>
                                     </div>
@@ -346,8 +393,8 @@ if ($pdo) {
                                         <div class="p-3 bg-white rounded-xl border border-gray-100 flex items-start gap-2 shadow-xs">
                                             <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
                                             <div>
-                                                <strong class="text-gray-800 block">Zero Receipt Uploads</strong>
-                                                <span class="text-gray-500 text-[11px]">System automatically verifies your transaction within seconds.</span>
+                                                <strong class="text-gray-800 block">Instant Automated Hold</strong>
+                                                <span class="text-gray-500 text-[11px]">Direct automated checkout with GCash, Cards, Maya, or GrabPay.</span>
                                             </div>
                                         </div>
                                         <div class="p-3 bg-white rounded-xl border border-gray-100 flex items-start gap-2 shadow-xs">
@@ -360,23 +407,24 @@ if ($pdo) {
                                     </div>
 
                                     <div class="p-3 bg-blue-50/70 rounded-xl text-xs text-brand-dark border border-blue-100 flex items-center justify-between">
-                                        <span class="text-gray-600">Amount to pay via PayMongo:</span>
+                                        <span class="text-gray-600" id="paymongo-amount-label">Amount to pay via PayMongo:</span>
                                         <strong class="text-base font-bold text-brand-blue" id="paymongo-amount-display">₱0.00</strong>
                                     </div>
+                                    <p class="text-[11px] text-gray-500 italic" id="paymongo-amount-subtext">Automated receipt voucher generated immediately upon payment.</p>
                                 </div>
 
-                                <!-- Expected Arrival Time Section (Required for Pay at Hotel) -->
+                                <!-- Expected Arrival Time Section (for Pay at Hotel) -->
                                 <div id="arrival-time-section" class="hidden bg-purple-50/70 p-5 rounded-2xl border border-purple-200 space-y-3">
                                     <div class="flex items-center justify-between">
                                         <label class="block text-xs font-bold text-purple-900 uppercase tracking-wide">
-                                            <i class="fas fa-clock mr-1 text-purple-600"></i> Mandatory Expected Arrival Time <span class="text-rose-500">*</span>
+                                            <i class="fas fa-clock mr-1 text-purple-600"></i> Expected Arrival Time <span class="text-purple-600 font-normal">(Check-in from 2:00 PM)</span>
                                         </label>
-                                        <span class="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">Required for Hold</span>
+                                        <span class="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">Arrival Details</span>
                                     </div>
                                     <input type="time" id="book-arrival-time" class="w-full border border-purple-300 bg-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none font-semibold text-gray-800" value="14:00">
-                                    <div class="p-3 bg-white/80 rounded-xl text-xs text-purple-900 border border-purple-100 flex items-start gap-2">
-                                        <i class="fas fa-exclamation-triangle text-amber-500 mt-0.5"></i>
-                                        <span><strong>Strict Hold Condition:</strong> Your room reservation will be held strictly until your expected arrival time <strong>+ 1 hour (cutoff)</strong>. If you do not arrive or contact us, the hold automatically expires and releases the room.</span>
+                                    <div class="p-3 bg-white/90 rounded-xl text-xs text-purple-900 border border-purple-100 flex items-start gap-2">
+                                        <i class="fas fa-shield-alt text-purple-600 mt-0.5 flex-shrink-0"></i>
+                                        <span id="arrival-time-notice"><strong>No-Show Security Policy:</strong> Your 20% online deposit secures your room hold if you do not arrive during check-in time. The remaining full payment of <strong>80% balance</strong> is paid upon arrival at the hotel front desk.</span>
                                     </div>
                                 </div>
 
@@ -410,6 +458,10 @@ if ($pdo) {
                                     <div class="flex justify-between text-gray-600 hidden" id="summary-rooms-count-row">
                                         <span>Rooms Reserved</span>
                                         <span id="summary-rooms-count" class="font-semibold text-brand-blue">1 Room</span>
+                                    </div>
+                                    <div class="flex justify-between text-gray-600 hidden" id="summary-dorm-beds-row">
+                                        <span>Beds Reserved</span>
+                                        <span id="summary-dorm-beds" class="font-semibold text-teal-600">1 Bed (&times; ₱460.00)</span>
                                     </div>
                                     <div class="flex justify-between text-gray-600">
                                         <span>Stay Duration</span>

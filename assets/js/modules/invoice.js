@@ -20,17 +20,22 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
     const paymentMethodVal = apiResponse.payment_method || (paymentMethodEl ? paymentMethodEl.value : 'paymongo');
     const dateNow = new Date().toLocaleDateString();
 
-    let paymentLabel = 'Online Payment (PayMongo)';
-    let statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Confirmed (Instant Online)</span>';
-    let paidAmount = apiResponse.paid_amount !== undefined ? apiResponse.paid_amount : bookingDetails.total;
-    let balanceDue = apiResponse.balance_due !== undefined ? apiResponse.balance_due : 0;
+    const isDorm = bookingDetails.isDorm || (bookingDetails.roomId == 5) || (bookingDetails.roomName && bookingDetails.roomName.toLowerCase().includes('room 5'));
+    const bedsCount = bookingDetails.bedsCount || apiResponse.beds_count || (isDorm ? (bookingDetails.adults || 1) : 1);
 
-    if (paymentMethodVal === 'pay_at_hotel' || (typeof paymentMethodVal === 'string' && paymentMethodVal.toLowerCase().includes('hotel'))) {
-        paymentLabel = 'Strict Pay at Hotel (Conditional)';
-        statusBadge = '<span class="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full font-bold text-xs">Pending Arrival (Strict Hold)</span>';
+    const isHotelPayment = (paymentMethodVal === 'pay_at_hotel' || (typeof paymentMethodVal === 'string' && (paymentMethodVal.toLowerCase().includes('hotel') || paymentMethodVal.toLowerCase().includes('deposit'))) || apiResponse.booking_status === 'deposit_paid' || apiResponse.is_deposit);
+    
+    let paymentLabel = 'Online Payment (PayMongo Full)';
+    let statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Confirmed (100% Paid)</span>';
+    let paidAmount = apiResponse.paid_amount !== undefined ? apiResponse.paid_amount : (isHotelPayment ? Math.round(bookingDetails.total * 0.20 * 100) / 100 : bookingDetails.total);
+    let balanceDue = apiResponse.balance_due !== undefined ? apiResponse.balance_due : (isHotelPayment ? Math.round((bookingDetails.total - paidAmount) * 100) / 100 : 0);
+
+    if (isHotelPayment) {
+        paymentLabel = 'Pay at Hotel (20% Deposit Online)';
+        statusBadge = '<span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full font-bold text-xs"><i class="fas fa-shield-alt mr-1"></i> Confirmed (20% Deposit Paid)</span>';
     } else {
-        paymentLabel = 'Online Payment (PayMongo)';
-        statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Confirmed (Instant Online)</span>';
+        paymentLabel = 'Online Payment (PayMongo Full)';
+        statusBadge = '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs"><i class="fas fa-check-circle mr-1"></i> Confirmed (100% Paid)</span>';
     }
 
     modal.innerHTML = `
@@ -72,7 +77,10 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Guest Information:</span>
                         <strong class="text-gray-800 text-sm block">${document.getElementById('book-name')?.value || apiResponse.guest_name || bookingDetails.guestName || 'Guest'}</strong>
                         <span class="text-gray-500 block">${document.getElementById('book-email')?.value || apiResponse.guest_email || bookingDetails.guestEmail || ''}</span>
-                        <div class="text-[11px] text-brand-blue font-semibold mt-1"><i class="fas fa-users mr-1"></i>${bookingDetails.guests || 1} Guests (${bookingDetails.adults || 1} Adult${(bookingDetails.adults || 1) > 1 ? 's' : ''}${bookingDetails.children > 0 ? `, ${bookingDetails.children} Child${bookingDetails.children > 1 ? 'ren' : ''}` : ''})</div>
+                        <div class="text-[11px] text-brand-blue font-semibold mt-1">
+                            <i class="fas ${isDorm ? 'fa-bed' : 'fa-users'} mr-1"></i>
+                            ${isDorm ? `${bedsCount} Bed${bedsCount > 1 ? 's' : ''} in Shared Dormitory` : `${bookingDetails.guests || 1} Guests (${bookingDetails.adults || 1} Adult${(bookingDetails.adults || 1) > 1 ? 's' : ''}${bookingDetails.children > 0 ? `, ${bookingDetails.children} Child${bookingDetails.children > 1 ? 'ren' : ''}` : ''}${bookingDetails.childrenAges && bookingDetails.childrenAges.length > 0 ? ` · Ages: ${bookingDetails.childrenAges.map(a => a == 0 ? '0' : a).join(', ')}` : ''})`}
+                        </div>
                     </div>
                     <div class="text-right">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Payment Pathway:</span>
@@ -81,13 +89,23 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                     </div>
                 </div>
 
+                ${isHotelPayment ? `
+                    <div class="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl text-xs text-brand-dark flex items-start gap-2.5">
+                        <i class="fas fa-shield-alt text-brand-blue text-sm mt-0.5 shrink-0"></i>
+                        <div>
+                            <span class="font-bold block text-blue-900">20% Online Deposit Verified &bull; Reservation Secured Against No-Show</span>
+                            <span class="text-[11px] text-blue-800">Your room is guaranteed. Please pay the remaining 80% balance (₱${parseFloat(balanceDue).toFixed(2)}) upon arrival at the hotel front desk.</span>
+                        </div>
+                    </div>
+                ` : ''}
+
                 <div>
                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Reservation Stay:</span>
                     <div class="bg-white rounded-2xl p-4 border border-gray-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                         <div>
-                            <span class="text-gray-400 block text-[10px]">Room</span>
-                            <strong class="text-gray-800">${bookingDetails.roomsCount > 1 ? `${bookingDetails.roomsCount}x ` : ''}${bookingDetails.roomName}</strong>
-                            ${bookingDetails.roomsCount > 1 ? `<span class="text-[10px] text-brand-blue block font-semibold">(${bookingDetails.roomsCount} Rooms)</span>` : ''}
+                            <span class="text-gray-400 block text-[10px]">Room / Beds</span>
+                            <strong class="text-gray-800">${!isDorm && bookingDetails.roomsCount > 1 ? `${bookingDetails.roomsCount}x ` : ''}${bookingDetails.roomName}</strong>
+                            ${isDorm ? `<span class="text-[10px] text-teal-600 block font-semibold">(${bedsCount} Bed${bedsCount > 1 ? 's' : ''} Reserved)</span>` : (bookingDetails.roomsCount > 1 ? `<span class="text-[10px] text-brand-blue block font-semibold">(${bookingDetails.roomsCount} Rooms)</span>` : '')}
                         </div>
                         <div>
                             <span class="text-gray-400 block text-[10px]">Duration</span>
@@ -114,10 +132,10 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                     <tbody>
                         <tr class="border-b border-gray-100">
                             <td class="py-3">
-                                <div class="font-bold text-gray-800">Room Accommodation Rate</div>
-                                <div class="text-[10px] text-gray-400">₱${bookingDetails.pricePerNight.toFixed(2)} x ${bookingDetails.nights} night(s)${bookingDetails.roomsCount > 1 ? ` x ${bookingDetails.roomsCount} rooms` : ''}</div>
+                                <div class="font-bold text-gray-800">${isDorm ? 'Dormitory Bed Accommodation Rate' : 'Room Accommodation Rate'}</div>
+                                <div class="text-[10px] text-gray-400">${isDorm ? `₱460.00 × ${bedsCount} bed(s) × ${bookingDetails.nights} night(s)` : `₱${bookingDetails.pricePerNight.toFixed(2)} x ${bookingDetails.nights} night(s)${bookingDetails.roomsCount > 1 ? ` x ${bookingDetails.roomsCount} rooms` : ''}`}</div>
                             </td>
-                            <td class="py-3 text-right font-semibold text-gray-700">₱${(bookingDetails.pricePerNight * bookingDetails.nights * (bookingDetails.roomsCount || 1)).toFixed(2)}</td>
+                            <td class="py-3 text-right font-semibold text-gray-700">₱${(isDorm ? (460.00 * bedsCount * bookingDetails.nights) : (bookingDetails.pricePerNight * bookingDetails.nights * (bookingDetails.roomsCount || 1))).toFixed(2)}</td>
                         </tr>
                         <tr class="border-b border-gray-100">
                             <td class="py-3">
@@ -132,11 +150,11 @@ function showInvoiceModal(refId, bookingDetails, apiResponse = {}) {
                             <td class="py-3 font-bold text-base text-gray-900 text-right">₱${bookingDetails.total.toFixed(2)}</td>
                         </tr>
                         <tr class="bg-emerald-50/50">
-                            <td class="py-2 font-bold text-xs text-emerald-800 text-right pr-4">Paid / Deposit Proof:</td>
+                            <td class="py-2 font-bold text-xs text-emerald-800 text-right pr-4">${isHotelPayment ? 'Paid Online (20% Security Deposit):' : 'Paid in Full Online (100%):'}</td>
                             <td class="py-2 font-bold text-sm text-emerald-600 text-right">₱${parseFloat(paidAmount).toFixed(2)}</td>
                         </tr>
                         <tr class="bg-blue-50/50">
-                            <td class="py-2 font-bold text-xs text-brand-blue text-right pr-4">Remaining Balance at Front Desk:</td>
+                            <td class="py-2 font-bold text-xs text-brand-blue text-right pr-4">${isHotelPayment ? 'Remaining Balance at Hotel (80%):' : 'Remaining Balance at Front Desk:'}</td>
                             <td class="py-2 font-bold text-sm text-brand-blue text-right">₱${parseFloat(balanceDue).toFixed(2)}</td>
                         </tr>
                     </tfoot>

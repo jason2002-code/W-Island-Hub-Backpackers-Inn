@@ -111,7 +111,7 @@ class PayMongoService {
      * @return array
      */
     public static function createCheckoutSession(array $bookingData, string $successUrl, string $cancelUrl): array {
-        $amount = (float) ($bookingData['total_amount'] ?? $bookingData['total'] ?? 0.00);
+        $amount = (float) ($bookingData['amount_to_pay'] ?? $bookingData['total_amount'] ?? $bookingData['total'] ?? 0.00);
         if ($amount <= 0) {
             return ['success' => false, 'error' => 'Invalid booking amount.'];
         }
@@ -123,15 +123,26 @@ class PayMongoService {
         $guestName = $bookingData['guest_name'] ?? 'Guest';
         $guestEmail = $bookingData['guest_email'] ?? 'guest@wislandhub.ph';
         $guestPhone = $bookingData['guest_phone'] ?? '';
+        $isDeposit  = !empty($bookingData['is_deposit']);
+        $depositAmount = (float) ($bookingData['deposit_amount'] ?? $amount);
+        $balanceDue = (float) ($bookingData['balance_due'] ?? 0.00);
+
+        $lineItemTitle = $isDeposit
+            ? "W Island Hub: {$roomName} (20% Security Deposit)"
+            : "W Island Hub: {$roomName} ({$nights} Night" . ($nights > 1 ? 's' : '') . ")";
+
+        $lineItemDesc = $isDeposit
+            ? "Booking Ref: {$refId} • 20% Online Deposit (₱" . number_format($depositAmount, 2) . ") • Remaining 80% balance (₱" . number_format($balanceDue, 2) . ") payable at hotel upon check-in"
+            : "Booking Ref: {$refId} • {$roomsCount} Room(s) • Check-in: " . ($bookingData['check_in'] ?? 'Pending');
 
         // Line items breakdown
         $lineItems = [
             [
                 'currency'    => 'PHP',
                 'amount'      => self::toCentavos($amount),
-                'name'        => "W Island Hub: {$roomName} ({$nights} Night" . ($nights > 1 ? 's' : '') . ")",
+                'name'        => $lineItemTitle,
                 'quantity'    => 1,
-                'description' => "Booking Ref: {$refId} • {$roomsCount} Room(s) • Check-in: " . ($bookingData['check_in'] ?? 'Pending')
+                'description' => $lineItemDesc
             ]
         ];
 
@@ -156,17 +167,22 @@ class PayMongoService {
                         'paymaya',
                         'grab_pay'
                     ],
-                    'description'         => "Reservation #{$refId} - {$roomName} at W Island Hub Backpackers Inn",
+                    'description'         => $isDeposit 
+                        ? "Reservation #{$refId} (20% Online Security Deposit) - {$roomName} at W Island Hub Backpackers Inn"
+                        : "Reservation #{$refId} - {$roomName} at W Island Hub Backpackers Inn",
                     'send_email_receipt'  => true,
                     'show_description'    => true,
                     'show_line_items'     => true,
                     'success_url'         => $successUrl,
                     'cancel_url'          => $cancelUrl,
                     'metadata'            => [
-                        'ref_id'      => $refId,
-                        'booking_id'  => $bookingData['id'] ?? null,
-                        'room_id'     => $bookingData['room_id'] ?? null,
-                        'user_id'     => $bookingData['user_id'] ?? null
+                        'ref_id'         => $refId,
+                        'booking_id'     => $bookingData['id'] ?? null,
+                        'room_id'        => $bookingData['room_id'] ?? null,
+                        'user_id'        => $bookingData['user_id'] ?? null,
+                        'is_deposit'     => $isDeposit ? '1' : '0',
+                        'deposit_amount' => $depositAmount,
+                        'balance_due'    => $balanceDue
                     ]
                 ]
             ]

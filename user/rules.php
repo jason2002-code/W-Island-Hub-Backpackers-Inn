@@ -60,7 +60,7 @@
                 </div>
                 <h4 class="font-bold text-slate-900 text-sm mb-1">Official Payments</h4>
                 <p class="text-xs text-slate-500 leading-relaxed">
-                    <strong>GCash (100% Priority Lock)</strong> or strict <strong>Pay-at-Hotel</strong> for check-ins within 24 hours.
+                    <strong>100% Online Payment</strong> (Instant Lock) or <strong>Pay-at-Hotel (20% Online Deposit)</strong> to secure against no-shows.
                 </p>
             </div>
         </div>
@@ -134,18 +134,18 @@
 
                     <div class="space-y-4">
                         <div class="flex items-start gap-3 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
-                            <i class="fas fa-qrcode text-blue-600 text-base mt-0.5 flex-shrink-0"></i>
+                            <i class="fas fa-credit-card text-blue-600 text-base mt-0.5 flex-shrink-0"></i>
                             <div>
-                                <strong class="text-slate-900 block font-semibold text-xs uppercase tracking-wide">Option A: Full GCash Payment (Priority Lock)</strong>
-                                <span class="text-xs leading-relaxed text-slate-600">100% full payment sent to official GCash account (<strong>0975-361-4030 / MA*K JA**N C.</strong>). Accompanied by a 2-hour hold timer while verification is finalized with zero front-desk balance.</span>
+                                <strong class="text-slate-900 block font-semibold text-xs uppercase tracking-wide">Option A: 100% Full Payment (Instant Priority Lock)</strong>
+                                <span class="text-xs leading-relaxed text-slate-600">Pay 100% online via PayMongo (GCash, Maya, GrabPay, Credit/Debit Cards). Your reservation is instantly fully confirmed with zero balance due upon check-in.</span>
                             </div>
                         </div>
 
                         <div class="flex items-start gap-3 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
-                            <i class="fas fa-store text-purple-600 text-base mt-0.5 flex-shrink-0"></i>
+                            <i class="fas fa-hotel text-emerald-600 text-base mt-0.5 flex-shrink-0"></i>
                             <div>
-                                <strong class="text-slate-900 block font-semibold text-xs uppercase tracking-wide">Option B: Strict "Pay at Hotel" (≤24h Only)</strong>
-                                <span class="text-xs leading-relaxed text-slate-600">Available strictly for same-day reservations arriving within 24 hours. A mandatory expected arrival time is required. Rooms are held strictly until your expected arrival time <strong>+ 1 hour cutoff</strong>.</span>
+                                <strong class="text-slate-900 block font-semibold text-xs uppercase tracking-wide">Option B: Pay at Hotel (20% Online Deposit)</strong>
+                                <span class="text-xs leading-relaxed text-slate-600">Secure your room by paying a <strong>20% online deposit</strong> via PayMongo at booking time to protect against no-shows. The remaining <strong>80% balance</strong> is settled at the front desk upon check-in.</span>
                             </div>
                         </div>
                     </div>
@@ -331,8 +331,8 @@
                     </div>
                     <div class="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 text-center">
                         <span class="text-xs uppercase font-bold text-rose-700 block mb-1">&lt;24 Hours / No-Show</span>
-                        <strong class="text-2xl font-bold text-rose-900 block mb-1">100% Charge</strong>
-                        <p class="text-xs text-rose-700">Non-refundable; room released for rebooking</p>
+                        <strong class="text-2xl font-bold text-rose-900 block mb-1">Non-Refundable</strong>
+                        <p class="text-xs text-rose-700">Online payments & 20% deposits forfeited; room released</p>
                     </div>
                 </div>
 

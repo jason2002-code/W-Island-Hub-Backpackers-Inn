@@ -42,22 +42,7 @@ function createDirectBooking($data) {
 
     try {
         // Check for overlapping active bookings
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) FROM bookings 
-            WHERE room_id = ? 
-            AND status IN ('Pending', 'Confirmed')
-            AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
-            AND COALESCE(check_in_date, check_in) < ?
-            AND COALESCE(check_out_date, check_out) > ?
-        ");
-        $stmt->execute([$roomId, $checkOut, $checkIn]);
-        if ((int)$stmt->fetchColumn() > 0) {
-            echo json_encode(['success' => false, 'message' => 'Room is already booked on the selected dates. Please choose another date or room.']);
-            exit;
-        }
-
-        // Get room price
-        $stmt = $pdo->prepare("SELECT price FROM rooms WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
         $stmt->execute([$roomId]);
         $room = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -66,43 +51,111 @@ function createDirectBooking($data) {
             exit;
         }
 
-        $guests = max(1, intval($data['guests'] ?? 1));
-        $roomMaxCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 2));
-        if ($guests > $roomMaxCap) {
-            echo json_encode([
-                'success' => false,
-                'message' => "The hotel does not accommodate {$guests} guests for this room. The room is limited to {$roomMaxCap} guests."
-            ]);
-            exit;
-        }
-        
-        // Calculate nights and total
+        $isDorm = ($room['type'] === 'Dorm' || (int)$roomId === 5);
         $checkInDate = new DateTime($checkIn);
         $checkOutDate = new DateTime($checkOut);
         $nights = $checkOutDate->diff($checkInDate)->days;
-        $totalPrice = $room['price'] * $nights;
-        
-        // Generate reference ID
-        $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
-        
-        // Insert booking
-        $stmt = $pdo->prepare("
-            INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, payment_method, status, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
-        ");
-        $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $totalPrice, $paymentMethod]);
-        
-        echo json_encode([
-            'success' => true, 
-            'message' => 'Booking created successfully',
-            'booking' => [
-                'ref_id' => $refId,
-                'check_in' => $checkIn,
-                'check_out' => $checkOut,
-                'nights' => $nights,
-                'total' => $totalPrice
-            ]
-        ]);
+        if ($nights < 1) $nights = 1;
+
+        if ($isDorm) {
+            $totalBeds = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 8));
+            $requestedBeds = max(1, min($totalBeds, intval($data['beds_count'] ?? $data['beds'] ?? $data['guests'] ?? 1)));
+            $bedPrice = 460.00;
+
+            $stmtDorm = $pdo->prepare("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN b.beds_count > 0 THEN b.beds_count
+                        ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                    END
+                ), 0) as occupied_beds
+                FROM bookings b
+                WHERE b.room_id = ?
+                  AND b.status IN ('Pending', 'Confirmed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                  AND COALESCE(b.check_in_date, b.check_in) < ?
+                  AND COALESCE(b.check_out_date, b.check_out) > ?
+            ");
+            $stmtDorm->execute([$roomId, $checkOut, $checkIn]);
+            $occupiedBeds = (int)$stmtDorm->fetchColumn();
+            $remainingBeds = max(0, $totalBeds - $occupiedBeds);
+
+            if ($requestedBeds > $remainingBeds) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => "Only {$remainingBeds} bed(s) available in Room 5 for selected dates. You requested {$requestedBeds} bed(s)."
+                ]);
+                exit;
+            }
+
+            $totalPrice = $bedPrice * $requestedBeds * $nights;
+            $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, beds_count, adults, total_price, total_amount, payment_method, status, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+            ");
+            $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $requestedBeds, $requestedBeds, $totalPrice, $totalPrice, $paymentMethod]);
+
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Booking created successfully',
+                'booking' => [
+                    'ref_id' => $refId,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                    'nights' => $nights,
+                    'beds_count' => $requestedBeds,
+                    'total' => $totalPrice
+                ]
+            ]);
+            exit;
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) FROM bookings 
+                WHERE room_id = ? 
+                AND status IN ('Pending', 'Confirmed')
+                AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                AND COALESCE(check_in_date, check_in) < ?
+                AND COALESCE(check_out_date, check_out) > ?
+            ");
+            $stmt->execute([$roomId, $checkOut, $checkIn]);
+            if ((int)$stmt->fetchColumn() > 0) {
+                echo json_encode(['success' => false, 'message' => 'Room is already booked on the selected dates. Please choose another date or room.']);
+                exit;
+            }
+
+            $guests = max(1, intval($data['guests'] ?? 1));
+            $roomMaxCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 2));
+            if ($guests > $roomMaxCap) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => "The hotel does not accommodate {$guests} guests for this room. The room is limited to {$roomMaxCap} guests."
+                ]);
+                exit;
+            }
+            
+            $totalPrice = $room['price'] * $nights;
+            $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO bookings (ref_id, user_id, room_id, guest_name, check_in, check_out, nights, total_price, total_amount, payment_method, status, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+            ");
+            $stmt->execute([$refId, $userId, $roomId, $guestName, $checkIn, $checkOut, $nights, $totalPrice, $totalPrice, $paymentMethod]);
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Booking created successfully',
+                'booking' => [
+                    'ref_id' => $refId,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                    'nights' => $nights,
+                    'total' => $totalPrice
+                ]
+            ]);
+        }
         
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
@@ -151,18 +204,6 @@ function checkAvailability($data) {
     }
     
     try {
-        // Check for overlapping active bookings (excluding cancelled_expired, no_show, and completed)
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as count FROM bookings 
-            WHERE room_id = ? 
-            AND status IN ('Pending', 'Confirmed')
-            AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
-            AND COALESCE(check_in_date, check_in) < ?
-            AND COALESCE(check_out_date, check_out) > ?
-        ");
-        $stmt->execute([$roomId, $checkOut, $checkIn]);
-        $overlapCount = (int)$stmt->fetchColumn();
-        
         // Get room details
         $stmt = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
         $stmt->execute([$roomId]);
@@ -177,15 +218,78 @@ function checkAvailability($data) {
             ]);
             exit;
         }
-        
-        $requestedGuests = max(1, intval($data['guests'] ?? 1));
-        $roomLimit = (int)($room['max_capacity'] ?? $room['capacity'] ?? 1);
-        
-        $isBooked = ($overlapCount > 0);
-        $isMaintenance = ($room['status'] === 'Maintenance');
-        $isCapacityMatch = ($roomLimit >= $requestedGuests);
 
-        // A room is available ONLY IF it is not booked, not in maintenance, and fits requested guests
+        $isDorm = ($room['type'] === 'Dorm' || (int)$room['id'] === 5);
+        $isMaintenance = ($room['status'] === 'Maintenance');
+        $requestedGuests = max(1, intval($data['guests'] ?? 1));
+
+        if ($isDorm) {
+            $totalBeds = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 8));
+            $bedPrice = 460.00;
+
+            $stmtDorm = $pdo->prepare("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN b.beds_count > 0 THEN b.beds_count
+                        ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                    END
+                ), 0) as occupied_beds
+                FROM bookings b
+                WHERE b.room_id = ?
+                  AND b.status IN ('Pending', 'Confirmed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                  AND COALESCE(b.check_in_date, b.check_in) < ?
+                  AND COALESCE(b.check_out_date, b.check_out) > ?
+            ");
+            $stmtDorm->execute([$roomId, $checkOut, $checkIn]);
+            $occupiedBeds = (int)$stmtDorm->fetchColumn();
+            $remainingBeds = max(0, $totalBeds - $occupiedBeds);
+
+            $isBooked = ($remainingBeds <= 0);
+            $isCapacityMatch = ($remainingBeds >= $requestedGuests);
+            $isAvailable = (!$isMaintenance) && (!$isBooked) && $isCapacityMatch;
+
+            if ($isMaintenance) {
+                $message = 'Room is under maintenance';
+            } elseif ($isBooked) {
+                $message = 'All 8 beds in Room 5 are occupied for selected dates';
+            } elseif (!$isCapacityMatch) {
+                $message = "Only {$remainingBeds} bed(s) available for selected dates (requested {$requestedGuests})";
+            } else {
+                $message = "Room 5 is available ({$remainingBeds} bed" . ($remainingBeds > 1 ? 's' : '') . " available)";
+            }
+
+            echo json_encode([
+                'success' => true,
+                'available' => $isAvailable,
+                'is_booked' => $isBooked,
+                'room' => $room,
+                'is_dorm' => true,
+                'total_beds' => $totalBeds,
+                'occupied_beds' => $occupiedBeds,
+                'remaining_beds' => $remainingBeds,
+                'remaining_capacity' => $remainingBeds,
+                'bed_price' => $bedPrice,
+                'message' => $message
+            ]);
+            exit;
+        }
+
+        // Check for overlapping active bookings for standard room
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count FROM bookings 
+            WHERE room_id = ? 
+            AND status IN ('Pending', 'Confirmed')
+            AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+            AND COALESCE(check_in_date, check_in) < ?
+            AND COALESCE(check_out_date, check_out) > ?
+        ");
+        $stmt->execute([$roomId, $checkOut, $checkIn]);
+        $overlapCount = (int)$stmt->fetchColumn();
+        
+        $roomLimit = (int)($room['max_capacity'] ?? $room['capacity'] ?? 1);
+        $isBooked = ($overlapCount > 0);
+        $isCapacityMatch = ($roomLimit >= $requestedGuests);
         $isAvailable = (!$isBooked) && (!$isMaintenance) && $isCapacityMatch;
         
         if ($isMaintenance) {
@@ -305,6 +409,52 @@ function getRoomAvailability($data) {
                 ];
             }
 
+            $isDorm = ($room['type'] === 'Dorm' || (int)$room['id'] === 5);
+            $totalBeds = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 8));
+            $bedPrice = 460.00;
+
+            if ($isDorm) {
+                $stmtDorm = $pdo->prepare("
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN b.beds_count > 0 THEN b.beds_count
+                            ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                        END
+                    ), 0) as occupied_beds
+                    FROM bookings b
+                    WHERE b.room_id = ?
+                      AND b.status IN ('Pending', 'Confirmed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                      AND COALESCE(b.check_in_date, b.check_in) < ?
+                      AND COALESCE(b.check_out_date, b.check_out) > ?
+                ");
+                $stmtDorm->execute([$roomId, $checkOut, $checkIn]);
+                $occupiedBeds = (int)$stmtDorm->fetchColumn();
+                $remainingBeds = max(0, $totalBeds - $occupiedBeds);
+                $isAvailable = ($remainingBeds > 0);
+
+                if (!$isAvailable && !empty($overlaps)) {
+                    $lastCheckout = end($overlaps)['check_out'];
+                    $nextVacant = (new DateTime($lastCheckout))->modify('+1 day')->format('Y-m-d');
+                }
+
+                echo json_encode([
+                    'success' => true,
+                    'room' => $room ?? ['name' => 'Room ' . $roomId],
+                    'occupied_ranges' => $occupiedRanges,
+                    'next_vacant' => $isAvailable ? null : $nextVacant,
+                    'is_currently_available' => $isAvailable,
+                    'available' => $isAvailable,
+                    'is_dorm' => true,
+                    'total_beds' => $totalBeds,
+                    'occupied_beds' => $occupiedBeds,
+                    'remaining_beds' => $remainingBeds,
+                    'bed_price' => $bedPrice,
+                    'message' => $isAvailable ? "Room 5 available ({$remainingBeds} bed" . ($remainingBeds > 1 ? 's' : '') . " available)" : 'Room 5 has no available beds on overlapping dates'
+                ]);
+                return;
+            }
+
             $isAvailable = empty($overlaps);
 
             if (!$isAvailable) {
@@ -361,6 +511,46 @@ function getRoomAvailability($data) {
             $nextVacant = $nextVacantDate;
         }
 
+        $isDorm = ($room['type'] === 'Dorm' || (int)$room['id'] === 5);
+        $totalBeds = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 8));
+        $bedPrice = 460.00;
+
+        if ($isDorm) {
+            $stmtDormToday = $pdo->prepare("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN b.beds_count > 0 THEN b.beds_count
+                        ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                    END
+                ), 0) as occupied_beds
+                FROM bookings b
+                WHERE b.room_id = ?
+                  AND b.status IN ('Pending', 'Confirmed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                  AND COALESCE(b.check_in_date, b.check_in) <= ?
+                  AND COALESCE(b.check_out_date, b.check_out) > ?
+            ");
+            $stmtDormToday->execute([$roomId, $today, $today]);
+            $occupiedBedsToday = (int)$stmtDormToday->fetchColumn();
+            $remainingBedsToday = max(0, $totalBeds - $occupiedBedsToday);
+            $isOpenNow = ($remainingBedsToday > 0);
+
+            echo json_encode([
+                'success' => true,
+                'room' => $room ?? ['name' => 'Room ' . $roomId],
+                'occupied_ranges' => $occupiedRanges,
+                'next_vacant' => $nextVacant,
+                'is_currently_available' => $isOpenNow,
+                'is_dorm' => true,
+                'total_beds' => $totalBeds,
+                'occupied_beds' => $occupiedBedsToday,
+                'remaining_beds' => $remainingBedsToday,
+                'bed_price' => $bedPrice,
+                'message' => $isOpenNow ? "Room 5 available now ({$remainingBedsToday} bed" . ($remainingBedsToday > 1 ? 's' : '') . " available)" : 'All beds in Room 5 are occupied today'
+            ]);
+            return;
+        }
+
         echo json_encode([
             'success' => true,
             'room' => $room ?? ['name' => 'Room ' . $roomId],
@@ -413,6 +603,7 @@ function checkHotelCapacity($data) {
             $roomId = (int)$room['id'];
             $roomCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 1));
             $isMaintenance = ($room['status'] === 'Maintenance');
+            $isDorm = ($room['type'] === 'Dorm' || $roomId === 5);
 
             if (!$isMaintenance) {
                 $totalHotelCapacity += $roomCap;
@@ -424,7 +615,49 @@ function checkHotelCapacity($data) {
                 continue;
             }
 
-            // Check if this room is booked between check_in and check_out
+            if ($isDorm) {
+                $totalBeds = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? 8));
+                $stmtDorm = $pdo->prepare("
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN b.beds_count > 0 THEN b.beds_count
+                            ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                        END
+                    ), 0) as occupied_beds
+                    FROM bookings b
+                    WHERE b.room_id = ?
+                      AND b.status IN ('Pending', 'Confirmed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                      AND COALESCE(b.check_in_date, b.check_in) < ?
+                      AND COALESCE(b.check_out_date, b.check_out) > ?
+                ");
+                $stmtDorm->execute([$roomId, $checkOut, $checkIn]);
+                $occupiedBeds = (int)$stmtDorm->fetchColumn();
+                $remainingBeds = max(0, $totalBeds - $occupiedBeds);
+
+                if ($remainingBeds <= 0) {
+                    $bookedRooms[] = $room;
+                } else {
+                    $totalAvailableCapacity += $remainingBeds;
+                    $availableRooms[] = [
+                        'id' => $roomId,
+                        'name' => $room['name'],
+                        'type' => $room['type'],
+                        'price' => (float)$room['price'],
+                        'capacity' => $remainingBeds,
+                        'max_capacity' => $totalBeds,
+                        'remaining_beds' => $remainingBeds,
+                        'total_beds' => $totalBeds,
+                        'occupied_beds' => $occupiedBeds,
+                        'bed_price' => 460.00,
+                        'is_dorm' => true,
+                        'status' => $room['status']
+                    ];
+                }
+                continue;
+            }
+
+            // Check if standard room is booked between check_in and check_out
             $stmtOverlap = $pdo->prepare("
                 SELECT COUNT(*) FROM bookings 
                 WHERE room_id = ? 

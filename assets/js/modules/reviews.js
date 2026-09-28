@@ -5,30 +5,75 @@
  */
 
 /**
+ * Escapes HTML characters to prevent XSS in review comments and author names
+ */
+function escapeReviewText(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
+ * Generates HTML star icons with fractional support (full, half, empty)
+ */
+function generateStarsHtml(ratingVal, sizeClass = 'text-xs') {
+    const val = Math.max(0, Math.min(5, parseFloat(ratingVal) || 0));
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        if (val >= i) {
+            stars += `<i class="fas fa-star text-amber-400 ${sizeClass}"></i>`;
+        } else if (val >= i - 0.5) {
+            stars += `<i class="fas fa-star-half-alt text-amber-400 ${sizeClass}"></i>`;
+        } else {
+            stars += `<i class="far fa-star text-slate-300 ${sizeClass}"></i>`;
+        }
+    }
+    return stars;
+}
+
+/**
  * Initializes and fetches guest reviews for an individual room card in the accommodations catalog.
  * Populates average star ratings, review counters, and customer comments.
  * 
  * @param {number|string} roomId - The ID of the target room.
  */
 async function initReviewsSection(roomId) {
+    const countEls = document.querySelectorAll(`.reviews-count[data-room-id="${roomId}"]`);
+    const ratingBadgeEl = document.querySelector(`.rating-badge-value[data-room-id="${roomId}"]`);
     const content = document.getElementById(`reviews-${roomId}`);
-    if (!content) return;
 
     try {
         const res = await fetch(`actions/reviews_action.php?action=get_reviews&room_id=${roomId}`);
         const data = await res.json();
 
         if (data.success) {
-            const countEl = document.querySelector(`.room-card[data-room-id="${roomId}"] .reviews-count`);
-            if (countEl) countEl.textContent = `(${data.total_reviews})`;
+            const total = parseInt(data.total_reviews, 10) || 0;
+            const avgRating = (total > 0) ? parseFloat(data.avg_rating || 5.0) : 5.0;
+            const avgVal = avgRating.toFixed(1);
 
-            const avg = Math.max(0, Math.min(5, Math.round(data.avg_rating || 0)));
-            const avgVal = parseFloat(data.avg_rating || 5.0).toFixed(1);
+            countEls.forEach(el => { el.textContent = `(${total})`; });
+            if (ratingBadgeEl) ratingBadgeEl.textContent = avgVal;
 
-            let starsHtml = '';
-            for (let i = 0; i < 5; i++) {
-                starsHtml += `<i class="fas fa-star ${i < avg ? 'text-amber-400' : 'text-slate-200'}"></i>`;
+            // Sync in appState
+            if (window.appState && Array.isArray(window.appState.rooms)) {
+                const target = window.appState.rooms.find(r => String(r.id) === String(roomId));
+                if (target) {
+                    target.rating = avgRating;
+                    target.reviews_count = total;
+                }
             }
+            if (window.serverRoomsData && window.serverRoomsData[roomId]) {
+                window.serverRoomsData[roomId].rating = avgRating;
+                window.serverRoomsData[roomId].reviews_count = total;
+            }
+
+            if (!content) return;
+
+            const starsHtml = generateStarsHtml(avgRating, 'text-xs');
 
             const headerHtml = `
                 <div class="p-4 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/40 rounded-2xl border border-amber-100 flex items-center justify-between shadow-sm">
@@ -456,9 +501,334 @@ if (!window._reviewsListenersBound) {
     });
 }
 
+/**
+ * Loads reviews into the Customer Room Information Modal with HORIZONTAL scrolling cards
+ * 
+ * @param {number|string} roomId - Room ID.
+ */
+async function loadModalReviews(roomId) {
+    const scrollContainer = document.getElementById('modal-reviews-scroll-container');
+    const starsContainer = document.getElementById('modal-reviews-stars');
+    const avgRatingEl = document.getElementById('modal-reviews-avg-rating');
+    const countTextEl = document.getElementById('modal-reviews-count-text');
+    const modalRatingBadge = document.getElementById('modal-room-rating');
+    const formWrapper = document.getElementById('modal-review-form-wrapper');
+    const navControls = document.getElementById('modal-reviews-nav-controls');
+
+    if (!scrollContainer) return;
+
+    scrollContainer.innerHTML = `
+        <div class="w-full text-center py-6 text-xs text-slate-400 flex items-center justify-center gap-2">
+            <i class="fas fa-spinner fa-spin text-amber-500"></i> Loading verified reviews...
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`actions/reviews_action.php?action=get_reviews&room_id=${roomId}`);
+        const data = await res.json();
+
+        if (data && data.success) {
+            const totalReviews = parseInt(data.total_reviews, 10) || 0;
+            const avgRating = (totalReviews > 0) ? parseFloat(data.avg_rating || 5.0) : 5.0;
+            const avgFormatted = avgRating.toFixed(1);
+
+            // Update stats displays
+            if (starsContainer) starsContainer.innerHTML = generateStarsHtml(avgRating, 'text-xs');
+            if (avgRatingEl) avgRatingEl.textContent = avgFormatted;
+            if (countTextEl) countTextEl.textContent = `${totalReviews} verified guest review${totalReviews === 1 ? '' : 's'}`;
+            if (modalRatingBadge) modalRatingBadge.textContent = avgFormatted;
+
+            // Sync rating and reviews count on corresponding room card
+            const cardRatingEl = document.querySelector(`.rating-badge-value[data-room-id="${roomId}"]`);
+            if (cardRatingEl) cardRatingEl.textContent = avgFormatted;
+
+            const cardCountEls = document.querySelectorAll(`.reviews-count[data-room-id="${roomId}"]`);
+            cardCountEls.forEach(el => { el.textContent = `(${totalReviews})`; });
+
+            // Sync in appState
+            if (window.appState && Array.isArray(window.appState.rooms)) {
+                const target = window.appState.rooms.find(r => String(r.id) === String(roomId));
+                if (target) {
+                    target.rating = avgRating;
+                    target.reviews_count = totalReviews;
+                }
+            }
+            if (window.serverRoomsData && window.serverRoomsData[roomId]) {
+                window.serverRoomsData[roomId].rating = avgRating;
+                window.serverRoomsData[roomId].reviews_count = totalReviews;
+            }
+
+            // Render Horizontal Reviews
+            const reviews = Array.isArray(data.reviews) ? data.reviews : [];
+
+            if (navControls) {
+                navControls.style.display = (reviews.length > 1) ? 'flex' : 'none';
+            }
+
+            if (reviews.length > 0) {
+                scrollContainer.innerHTML = reviews.map(rev => {
+                    const uName = rev.user_name || 'Guest';
+                    const initial = uName.charAt(0).toUpperCase();
+                    const revRating = parseFloat(rev.rating) || 5.0;
+                    const rStarsHtml = generateStarsHtml(revRating, 'text-[11px]');
+
+                    return `
+                        <div class="min-w-[270px] sm:min-w-[310px] max-w-[320px] flex-shrink-0 snap-start bg-slate-50 hover:bg-white border border-slate-200/90 hover:border-amber-300 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between select-none">
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-2.5">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold text-xs shadow-xs flex-shrink-0">
+                                            ${initial}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-slate-800 text-xs flex items-center gap-1 truncate">
+                                                <span class="truncate">${escapeReviewText(uName)}</span>
+                                                <i class="fas fa-check-circle text-emerald-500 text-[10px] flex-shrink-0" title="Verified Guest"></i>
+                                            </div>
+                                            <div class="text-[10px] text-slate-400">${escapeReviewText(rev.formatted_date || 'Recent Stay')}</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-0.5 flex-shrink-0">
+                                        ${rStarsHtml}
+                                    </div>
+                                </div>
+                                <p class="text-slate-600 text-xs leading-relaxed line-clamp-4 italic">
+                                    "${escapeReviewText(rev.comment)}"
+                                </p>
+                            </div>
+                            ${rev.admin_reply ? `
+                                <div class="mt-3 p-2.5 bg-amber-50/70 border-l-2 border-amber-500 rounded-r-xl text-[11px]">
+                                    <strong class="text-slate-800 block text-[10px] font-bold"><i class="fas fa-reply mr-1 text-amber-600"></i> Host Response:</strong>
+                                    <span class="text-slate-600 line-clamp-2">${escapeReviewText(rev.admin_reply)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                scrollContainer.innerHTML = `
+                    <div class="w-full flex-shrink-0 py-8 px-4 bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-center">
+                        <div class="w-10 h-10 mx-auto rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-base mb-2">
+                            <i class="fas fa-comment-dots"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-700">No guest reviews yet</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Be the first guest to share your experience with this room!</p>
+                    </div>
+                `;
+            }
+
+            // Render Review Submission Section in Modal
+            if (formWrapper) {
+                const currentUser = (window.appState && window.appState.currentUser) ? window.appState.currentUser : null;
+                const isLoggedIn = !!(currentUser || (window.CURRENT_USER && window.CURRENT_USER.id));
+
+                if (isLoggedIn) {
+                    formWrapper.innerHTML = `
+                        <div class="border-t border-slate-100 pt-3">
+                            <button type="button" onclick="toggleModalReviewForm()" class="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1.5 transition cursor-pointer">
+                                <i class="fas fa-pen-fancy text-[11px]"></i>
+                                <span id="modal-review-toggle-text">Write a Review for this Room</span>
+                                <i class="fas fa-chevron-down text-[10px] ml-1 transition-transform" id="modal-review-toggle-icon"></i>
+                            </button>
+                            
+                            <form id="modal-review-form" onsubmit="submitModalReview(event, ${roomId})" class="hidden mt-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+                                <div class="mb-3">
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Your Rating</label>
+                                    <div class="flex items-center gap-1.5" id="modal-star-picker">
+                                        ${[1, 2, 3, 4, 5].map(i => `
+                                            <i class="modal-star far fa-star text-xl text-slate-300 hover:text-amber-400 cursor-pointer transition-all duration-150" data-value="${i}" onclick="setModalStarRating(${roomId}, ${i})"></i>
+                                        `).join('')}
+                                        <span id="modal-star-desc" class="ml-2 text-xs font-semibold text-slate-500">Tap to rate</span>
+                                    </div>
+                                    <input type="hidden" id="modal-review-rating-input" value="0">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Your Experience</label>
+                                    <textarea id="modal-review-comment-input" rows="3" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none resize-none" placeholder="How was your stay? Cleanliness, comfort, amenities, or staff experience..." required maxlength="500"></textarea>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] text-slate-400">Reviews are verified after stay</span>
+                                    <button type="submit" id="modal-review-submit-btn" class="bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold text-xs py-2 px-4 rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                                        <span>Submit Review</span>
+                                        <i class="fas fa-paper-plane text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    `;
+                } else {
+                    formWrapper.innerHTML = `
+                        <div class="mt-2 text-center py-2 px-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <span class="text-xs text-slate-500">Have you stayed in this room? <a href="login.php" class="text-amber-600 font-bold hover:underline">Log in</a> to write a review.</span>
+                        </div>
+                    `;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("loadModalReviews error:", err);
+        if (scrollContainer) {
+            scrollContainer.innerHTML = '<div class="w-full text-center py-4 text-xs text-red-500">Could not load reviews at this time.</div>';
+        }
+    }
+}
+
+/**
+ * Scrolls the modal reviews container left or right
+ * 
+ * @param {'left'|'right'} direction
+ */
+function scrollModalReviews(direction) {
+    const container = document.getElementById('modal-reviews-scroll-container');
+    if (!container) return;
+    const scrollAmount = 300;
+    if (direction === 'left') {
+        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+}
+
+/**
+ * Toggles review form visibility inside modal
+ */
+function toggleModalReviewForm() {
+    const form = document.getElementById('modal-review-form');
+    const icon = document.getElementById('modal-review-toggle-icon');
+    const text = document.getElementById('modal-review-toggle-text');
+    if (!form) return;
+    const isHidden = form.classList.contains('hidden');
+    if (isHidden) {
+        form.classList.remove('hidden');
+        if (icon) icon.classList.add('rotate-180');
+        if (text) text.textContent = 'Cancel Review';
+    } else {
+        form.classList.add('hidden');
+        if (icon) icon.classList.remove('rotate-180');
+        if (text) text.textContent = 'Write a Review for this Room';
+    }
+}
+
+/**
+ * Sets star rating in modal review form
+ * 
+ * @param {number|string} roomId
+ * @param {number} rating
+ */
+function setModalStarRating(roomId, rating) {
+    const ratingInput = document.getElementById('modal-review-rating-input');
+    const descEl = document.getElementById('modal-star-desc');
+    const stars = document.querySelectorAll('#modal-star-picker .modal-star');
+    if (ratingInput) ratingInput.value = rating;
+
+    const descriptions = {
+        1: '1 Star - Poor',
+        2: '2 Stars - Fair',
+        3: '3 Stars - Good',
+        4: '4 Stars - Very Good',
+        5: '5 Stars - Exceptional!'
+    };
+    if (descEl) descEl.textContent = descriptions[rating] || `${rating} Stars`;
+
+    stars.forEach((star, idx) => {
+        const val = idx + 1;
+        if (val <= rating) {
+            star.className = 'modal-star fas fa-star text-xl text-amber-400 cursor-pointer transform scale-110 transition-all';
+        } else {
+            star.className = 'modal-star far fa-star text-xl text-slate-300 hover:text-amber-300 cursor-pointer transition-all';
+        }
+    });
+}
+
+/**
+ * Submits review from modal
+ * 
+ * @param {Event} event
+ * @param {number|string} roomId
+ */
+async function submitModalReview(event, roomId) {
+    if (event && event.preventDefault) event.preventDefault();
+    const ratingInput = document.getElementById('modal-review-rating-input');
+    const commentInput = document.getElementById('modal-review-comment-input');
+    const submitBtn = document.getElementById('modal-review-submit-btn');
+
+    const rating = ratingInput ? parseInt(ratingInput.value, 10) : 0;
+    const comment = commentInput ? commentInput.value.trim() : '';
+
+    if (!rating || rating < 1) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Please select a star rating between 1 and 5.', 'warning');
+        } else {
+            alert('Please select a star rating.');
+        }
+        return;
+    }
+
+    if (!comment) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Please write a short comment about your stay.', 'warning');
+        } else {
+            alert('Please write a comment.');
+        }
+        return;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Submitting...';
+    }
+
+    try {
+        const res = await fetch('actions/reviews_action.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'submit_review',
+                room_id: roomId,
+                rating: rating,
+                comment: comment
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Thank you for your review! It is now live.', 'success');
+            } else {
+                alert('Thank you for your review! It is now live.');
+            }
+            toggleModalReviewForm();
+            await loadModalReviews(roomId);
+        } else {
+            if (typeof window.showToast === 'function') {
+                window.showToast(data.message || 'Could not submit review.', 'error');
+            } else {
+                alert(data.message || 'Could not submit review.');
+            }
+        }
+    } catch (err) {
+        console.error("submitModalReview error:", err);
+        if (typeof window.showToast === 'function') {
+            window.showToast('Network error while submitting review.', 'error');
+        }
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>Submit Review</span> <i class="fas fa-paper-plane text-[10px]"></i>';
+        }
+    }
+}
+
 // Global window bindings for inline HTML and cross-module access
 window.initReviewsSection = initReviewsSection;
 window.checkSubmitReady = checkSubmitReady;
 window.loadRoomReviews = loadRoomReviews;
 window.submitRoomReview = submitRoomReview;
+window.loadModalReviews = loadModalReviews;
+window.scrollModalReviews = scrollModalReviews;
+window.toggleModalReviewForm = toggleModalReviewForm;
+window.setModalStarRating = setModalStarRating;
+window.submitModalReview = submitModalReview;
+window.generateStarsHtml = generateStarsHtml;
+window.escapeReviewText = escapeReviewText;
 

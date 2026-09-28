@@ -2,7 +2,11 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-require_once 'config/db.php';
+if (file_exists(__DIR__ . '/../config/db.php')) {
+    require_once __DIR__ . '/../config/db.php';
+} else {
+    require_once 'config/db.php';
+}
 
 $pdo = getDB();
 $rooms = [];
@@ -10,7 +14,15 @@ $error = '';
 
 if ($pdo) {
     try {
-        $stmt = $pdo->query("SELECT * FROM rooms ORDER BY created_at DESC");
+        $stmt = $pdo->query("
+            SELECT r.*, 
+                   COALESCE(ROUND(AVG(rev.rating), 1), r.rating, 5.0) AS avg_rating,
+                   COUNT(rev.id) AS total_reviews
+            FROM rooms r
+            LEFT JOIN reviews rev ON rev.room_id = r.id AND rev.status = 'approved' AND rev.visible = 1
+            GROUP BY r.id
+            ORDER BY r.created_at DESC
+        ");
         $rooms = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $error = 'Failed to load rooms: ' . $e->getMessage();
@@ -36,15 +48,22 @@ if ($pdo) {
             if (!is_array($amenities)) {
                 $amenities = array_map('trim', explode(',', $room['amenities'] ?? ''));
             }
-            $rating = floatval($room['rating'] ?? 5.0);
+            $rating = floatval($room['avg_rating'] ?? $room['rating'] ?? 5.0);
+            $reviews_count = intval($room['total_reviews'] ?? 0);
             $stars = round($rating);
             $room_id = intval($room['id']);
         ?>
             <?php 
                 $room_capacity = intval($room['capacity'] ?? 2); 
                 $room_max_capacity = intval($room['max_capacity'] ?? $room_capacity);
+                $is_dorm = ($room['type'] === 'Dorm' || $room_id === 5);
+                if ($is_dorm) {
+                    $room_max_capacity = 8;
+                    $dorm_bed_price = 460.00;
+                    $dorm_total_price = 3680.00;
+                }
             ?>
-            <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col" data-room-id="<?php echo $room_id; ?>" data-capacity="<?php echo $room_capacity; ?>" data-max-capacity="<?php echo $room_max_capacity; ?>">
+            <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col" data-room-id="<?php echo $room_id; ?>" data-capacity="<?php echo $room_capacity; ?>" data-max-capacity="<?php echo $room_max_capacity; ?>" data-is-dorm="<?php echo $is_dorm ? '1' : '0'; ?>">
                 <div class="h-48 overflow-hidden relative cursor-pointer group" onclick="openRoomInfoModal(<?php echo $room_id; ?>)" title="Click to view full room information">
                     <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['name']); ?>" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
                     <div class="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -54,7 +73,7 @@ if ($pdo) {
                     </div>
                     <div class="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 shadow-md flex items-center gap-1.5 border border-white/60">
                         <i class="fas fa-star text-amber-400 text-xs"></i>
-                        <span><?php echo number_format($rating, 1); ?></span>
+                        <span class="rating-badge-value" data-room-id="<?php echo $room_id; ?>"><?php echo number_format($rating, 1); ?></span>
                         <span class="text-slate-400 text-[10px] font-medium">/ 5</span>
                     </div>
                 </div>
@@ -68,55 +87,53 @@ if ($pdo) {
                     <p class="text-gray-500 text-sm mb-4 line-clamp-2"><?php echo htmlspecialchars($room['description']); ?></p>
                     
                     <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to <?php echo $room_max_capacity; ?> Guest<?php echo $room_max_capacity > 1 ? 's' : ''; ?></span>
+                        <?php if ($is_dorm): ?>
+                            <span class="text-xs text-brand-blue bg-blue-50 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 room-capacity-pill" data-room-id="<?php echo $room_id; ?>">
+                                <i class="fas fa-bed text-[11px] text-brand-blue"></i> 
+                                <span class="room-beds-text"><strong class="room-avail-beds"><?php echo $room_capacity; ?></strong> Beds Available</span> 
+                                <span class="text-slate-400 font-normal text-[11px]">(8 Beds Total)</span>
+                            </span>
+                        <?php else: ?>
+                            <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1">
+                                <i class="fas fa-user-friends text-[10px]"></i> Up to <?php echo $room_max_capacity; ?> Guest<?php echo $room_max_capacity > 1 ? 's' : ''; ?>
+                            </span>
+                        <?php endif; ?>
                         <?php foreach (array_slice($amenities, 0, 3) as $amenity): ?>
                             <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded"><?php echo htmlspecialchars($amenity); ?></span>
                         <?php endforeach; ?>
                     </div>
                     
-                    <!-- Reviews Section -->
-                    <details class="reviews-section group mt-4 border-t border-slate-100 pt-4">
-                        <summary class="cursor-pointer font-semibold text-slate-700 py-2 px-3.5 bg-slate-50 hover:bg-slate-100 rounded-2xl flex items-center justify-between transition-all duration-200 border border-slate-200/60 select-none">
-                            <div class="flex items-center gap-2 text-xs font-bold">
+                    <!-- Reviews Quick Action Button (Opens Horizontal Reviews in Modal) -->
+                    <div class="mt-3">
+                        <button type="button" onclick="openRoomInfoModal(<?php echo $room_id; ?>, 'reviews')" class="w-full text-left py-2 px-3.5 bg-slate-50 hover:bg-amber-50/70 rounded-xl flex items-center justify-between transition-colors border border-slate-200/60 group/rev cursor-pointer" title="View all guest reviews">
+                            <div class="flex items-center gap-2 text-xs font-semibold text-slate-700">
                                 <i class="fas fa-star text-amber-400"></i>
                                 <span>Guest Reviews</span>
-                                <span class="reviews-count text-[11px] font-bold bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full">(Loading...)</span>
+                                <span class="reviews-count text-[11px] font-bold bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full" data-room-id="<?php echo $room_id; ?>">(<?php echo $reviews_count; ?>)</span>
                             </div>
-                            <i class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-300 group-open:rotate-180"></i>
-                        </summary>
-                        
-                        <div class="reviews-content space-y-3 mt-3" id="reviews-<?php echo $room_id; ?>">
-                            <!-- Dynamic content loaded by JS -->
-                        </div>
-
-                        <?php if (isset($_SESSION['user_id'])): ?>
-                        <div class="submit-review-section mt-4 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/70" data-room-id="<?php echo $room_id; ?>">
-                            <h4 class="font-bold text-slate-900 text-xs mb-3 flex items-center gap-1.5">
-                                <i class="fas fa-pen-fancy text-amber-500"></i>
-                                Write Your Review
-                            </h4>
-                            <div class="star-picker mb-3 flex items-center gap-1" data-room-id="<?php echo $room_id; ?>">
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <i class="review-star far fa-star text-xl text-slate-300 hover:text-amber-300 cursor-pointer transition-all duration-200" data-rating="<?php echo $i; ?>" title="Rate <?php echo $i; ?> star<?php echo $i > 1 ? 's' : ''; ?>"></i>
-                                <?php endfor; ?>
-                                <span class="ml-2 font-medium text-xs text-slate-500 selected-rating">Select rating</span>
-                            </div>
-                            <textarea id="review-comment-<?php echo $room_id; ?>" placeholder="Share your experience with this room... What did you like? Any suggestions?" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none resize-vertical min-h-[80px]" maxlength="500"></textarea>
-                            <div class="text-right mt-1 text-[11px] text-slate-400">Max 500 characters</div>
-                            <button class="submit-review-btn mt-3 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto shadow-sm" disabled>
-                                <span class="btn-text">Submit Review</span>
-                                <i class="fas fa-spinner fa-spin hidden ml-2"></i>
-                            </button>
-                            <div class="submit-message mt-2 hidden text-xs"></div>
-                        </div>
-                        <?php endif; ?>
-                    </details>
+                            <span class="text-xs font-semibold text-brand-blue group-hover/rev:text-amber-600 flex items-center gap-1">
+                                Read Reviews <i class="fas fa-arrow-right text-[10px] group-hover/rev:translate-x-0.5 transition-transform"></i>
+                            </span>
+                        </button>
+                    </div>
 
                     <div class="mt-auto pt-4 border-t flex justify-between items-center gap-2">
-                        <div>
-                            <span class="text-2xl font-bold text-brand-blue">₱<?php echo number_format($room['price'], 2); ?></span>
-                            <span class="text-gray-400 text-sm">/ night</span>
-                        </div>
+                        <?php if ($is_dorm): ?>
+                            <div>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-2xl font-bold text-brand-blue">₱<?php echo number_format($dorm_total_price, 2); ?></span>
+                                    <span class="text-gray-400 text-xs">/ night (8 Beds)</span>
+                                </div>
+                                <div class="text-xs font-semibold text-emerald-600 flex items-center gap-1 mt-0.5">
+                                    <i class="fas fa-bed text-[10px]"></i> ₱460.00 / bed / night
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div>
+                                <span class="text-2xl font-bold text-brand-blue">₱<?php echo number_format($room['price'], 2); ?></span>
+                                <span class="text-gray-400 text-sm">/ night</span>
+                            </div>
+                        <?php endif; ?>
                         <div class="flex items-center gap-2">
                             <button type="button" onclick="openRoomInfoModal(<?php echo $room_id; ?>)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 px-3 py-2 rounded-lg font-semibold transition text-sm flex items-center gap-1.5 border border-slate-200 shadow-sm" title="View Room Details">
                                 <i class="fas fa-info-circle text-brand-blue text-xs"></i>
@@ -244,6 +261,46 @@ if ($pdo) {
                 </div>
             </div>
 
+            <!-- Guest Reviews & Ratings Section (Horizontal Scrollable) -->
+            <div id="modal-reviews-section" class="border-t border-slate-100 pt-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <i class="fas fa-star text-amber-500"></i> Guest Reviews & Ratings
+                        </h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <div class="flex items-center text-amber-400 text-xs" id="modal-reviews-stars">
+                                <!-- Dynamic Stars -->
+                            </div>
+                            <span id="modal-reviews-avg-rating" class="font-bold text-slate-800 text-sm">5.0</span>
+                            <span class="text-slate-400 text-xs">&bull;</span>
+                            <span id="modal-reviews-count-text" class="text-xs text-slate-500 font-medium">0 verified reviews</span>
+                        </div>
+                    </div>
+                    <!-- Horizontal Scroll Left/Right Arrow Controls -->
+                    <div class="flex items-center gap-1.5" id="modal-reviews-nav-controls" style="display: none;">
+                        <button type="button" onclick="scrollModalReviews('left')" class="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition shadow-xs cursor-pointer" title="Previous reviews" aria-label="Previous reviews">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
+                        <button type="button" onclick="scrollModalReviews('right')" class="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition shadow-xs cursor-pointer" title="Next reviews" aria-label="Next reviews">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Horizontal Scrollable Container -->
+                <div id="modal-reviews-scroll-container" 
+                     class="flex gap-3.5 overflow-x-auto pb-3 pt-1 snap-x snap-mandatory scroll-smooth"
+                     style="scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; -webkit-overflow-scrolling: touch;">
+                    <div class="text-center py-6 w-full text-xs text-slate-400">Loading reviews...</div>
+                </div>
+
+                <!-- Review Form Trigger & Collapsible Form -->
+                <div id="modal-review-form-wrapper" class="mt-3">
+                    <!-- Filled dynamically by reviews module -->
+                </div>
+            </div>
+
         </div>
         
         <!-- Modal Footer Actions Bar -->
@@ -279,18 +336,27 @@ window.serverRoomsData = window.serverRoomsData || {};
             $r_amenities = array_map('trim', explode(',', $r['amenities'] ?? ''));
         }
     ?>
+    <?php 
+        $r_is_dorm = (intval($r['id']) === 5 || $r['type'] === 'Dorm');
+    ?>
     window.serverRoomsData[<?php echo intval($r['id']); ?>] = <?php echo json_encode([
         'id' => intval($r['id']),
         'name' => $r['name'],
         'type' => $r['type'],
-        'price' => floatval($r['price']),
+        'price' => $r_is_dorm ? 3680.00 : floatval($r['price']),
         'capacity' => intval($r['capacity'] ?? 2),
+        'max_capacity' => $r_is_dorm ? 8 : intval($r['max_capacity'] ?? $r['capacity'] ?? 2),
         'image' => $r['image'] ?? 'assets/image/background.jpg',
         'desc' => $r['description'] ?? '',
         'description' => $r['description'] ?? '',
         'amenities' => $r_amenities,
-        'rating' => floatval($r['rating'] ?? 5.0),
-        'status' => $r['status'] ?? 'Available'
+        'rating' => floatval($r['avg_rating'] ?? $r['rating'] ?? 5.0),
+        'reviews_count' => intval($r['total_reviews'] ?? 0),
+        'status' => $r['status'] ?? 'Available',
+        'is_dorm' => $r_is_dorm,
+        'bed_price' => 460.00,
+        'total_beds' => 8,
+        'remaining_beds' => intval($r['capacity'] ?? 8)
     ]); ?>;
     <?php endforeach; ?>
 <?php endif; ?>
