@@ -1,5 +1,5 @@
 <?php
-require_once '../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 header('Content-Type: application/json');
 
@@ -7,13 +7,16 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Handle requests
-$action = $_GET['action'] ?? '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($action)) {
-    $input = json_decode(file_get_contents('php://input'), true);
-    $action = $input['action'] ?? '';
+$rawInput = file_get_contents('php://input');
+$jsonInput = !empty($rawInput) ? json_decode($rawInput, true) : [];
+if (!is_array($jsonInput)) {
+    $jsonInput = [];
 }
-$room_id = $_GET['room_id'] ?? null;
+$requestData = array_merge($_POST, $jsonInput);
+
+// Handle requests
+$action = $_GET['action'] ?? ($requestData['action'] ?? '');
+$room_id = $_GET['room_id'] ?? ($requestData['room_id'] ?? null);
 
 switch ($action) {
     case 'get_reviews':
@@ -21,7 +24,7 @@ switch ($action) {
         break;
     case 'submit_review':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            submitReview();
+            submitReview($requestData);
         } else {
             http_response_code(405);
             echo json_encode(['success' => false, 'message' => 'Method not allowed']);
@@ -83,61 +86,118 @@ function getReviews($room_id = null) {
     }
 }
 
-function submitReview() {
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
-    error_log("DEBUG submitReview input: " . print_r($input, true));
-    error_log("DEBUG SESSION user_id: " . ($_SESSION['user_id'] ?? 'NOT SET'));
+function submitReview($input = null) {
+    if ($input === null) {
+        $rawInput = file_get_contents('php://input');
+        $jsonInput = !empty($rawInput) ? json_decode($rawInput, true) : [];
+        if (!is_array($jsonInput)) {
+            $jsonInput = [];
+        }
+        $input = array_merge($_POST, $jsonInput);
+    }
     
     $userId = !empty($input['user_id']) ? intval($input['user_id']) : ($_SESSION['user_id'] ?? null);
+    if (!$userId && !empty($_SESSION['user_id'])) {
+        $userId = intval($_SESSION['user_id']);
+    }
+
     if (!$userId) {
-        echo json_encode(['success' => false, 'message' => 'Please login to submit a review']);
+        echo json_encode(['success' => false, 'message' => 'Please log in to submit a review.']);
         return;
     }
+
+    $roomId = intval($input['room_id'] ?? 0);
     $rating = floatval($input['rating'] ?? 0);
     $comment = trim($input['comment'] ?? '');
-    $roomId = intval($input['room_id'] ?? 0);
-    
-    error_log("DEBUG Parsed: userId=$userId, roomId=$roomId, rating=$rating, comment_len=" . strlen($comment));
-    
+
     if (!$roomId) {
-        echo json_encode(['success' => false, 'message' => 'Room ID required']);
+        echo json_encode(['success' => false, 'message' => 'Please select a room to review.']);
         return;
     }
     if ($rating < 1 || $rating > 5) {
-        echo json_encode(['success' => false, 'message' => 'Rating must be between 1 and 5']);
+        echo json_encode(['success' => false, 'message' => 'Please select a rating between 1 and 5 stars.']);
         return;
     }
     if (empty($comment)) {
-        echo json_encode(['success' => false, 'message' => 'Comment is required']);
+        echo json_encode(['success' => false, 'message' => 'Please enter your review comments.']);
         return;
     }
 
     $pdo = getDB();
     if (!$pdo) {
-        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        echo json_encode(['success' => false, 'message' => 'Database connection failed. Please try again later.']);
         return;
     }
-    
-    // Check if the user has a past confirmed booking for this room
-    $bookingCheckSql = "SELECT COUNT(*) FROM bookings WHERE user_id = ? AND room_id = ? AND status = 'Confirmed' AND check_out <= CURDATE()";
-    $bookingCheckStmt = $pdo->prepare($bookingCheckSql);
-    $bookingCheckStmt->execute([$userId, $roomId]);
-    $hasPastBooking = $bookingCheckStmt->fetchColumn();
 
-    if ($hasPastBooking == 0) {
-        echo json_encode(['success' => false, 'message' => 'You can only review rooms after your stay has ended.']);
+    // Get user's email to cross-reference bookings
+    $userEmail = '';
+    try {
+        $uStmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+        $uStmt->execute([$userId]);
+        $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+        if ($uRow && !empty($uRow['email'])) {
+            $userEmail = trim($uRow['email']);
+        }
+    } catch (PDOException $e) {
+        // Continue if query fails
+    }
+
+    // Check if the user has any valid bookings for this room
+    $bookingSql = "
+        SELECT id, status, booking_status,
+               COALESCE(check_out_date, check_out) as end_date,
+               COALESCE(check_in_date, check_in) as start_date
+        FROM bookings
+        WHERE (user_id = ? OR (? != '' AND guest_email = ?))
+          AND room_id = ?
+          AND status != 'Cancelled'
+          AND booking_status NOT IN ('cancelled_expired', 'no_show')
+        ORDER BY COALESCE(check_out_date, check_out) DESC
+    ";
+    $bookingStmt = $pdo->prepare($bookingSql);
+    $bookingStmt->execute([$userId, $userEmail, $userEmail, $roomId]);
+    $userBookings = $bookingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($userBookings)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'You can only review rooms that you have booked and stayed in.'
+        ]);
+        return;
+    }
+
+    // Check if at least one stay is completed or checkout date has arrived
+    $today = date('Y-m-d');
+    $hasCompletedStay = false;
+    foreach ($userBookings as $b) {
+        $bEnd = $b['end_date'];
+        $bStatus = strtolower($b['booking_status'] ?? '');
+        $status = strtolower($b['status'] ?? '');
+
+        if ($bStatus === 'completed' || $status === 'completed' || (!empty($bEnd) && $bEnd <= $today)) {
+            $hasCompletedStay = true;
+            break;
+        }
+    }
+
+    if (!$hasCompletedStay) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'You can only review this room after your stay has ended. Thank you for your patience!'
+        ]);
         return;
     }
 
     try {
-        // Check spam
+        // Spam prevention: Check if user has reviewed this room within last 7 days
         $checkSql = "SELECT id FROM reviews WHERE user_id = ? AND room_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)";
         $checkStmt = $pdo->prepare($checkSql);
         $checkStmt->execute([$userId, $roomId]);
-        $spamCount = $checkStmt->rowCount();
-        error_log("DEBUG Spam check: $spamCount existing reviews");
-        if ($spamCount > 0) {
-            echo json_encode(['success' => false, 'message' => 'You can only submit one review per room per week']);
+        if ($checkStmt->rowCount() > 0) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'You have already submitted a review for this room recently. Thank you for your feedback!'
+            ]);
             return;
         }
 
@@ -146,7 +206,6 @@ function submitReview() {
             VALUES (?, ?, ?, ?, 'approved', 1)
         ");
         $success = $stmt->execute([$userId, $roomId, $rating, $comment]);
-        error_log("DEBUG INSERT success: " . ($success ? 'YES' : 'NO'));
 
         if ($success) {
             $insertId = $pdo->lastInsertId();
@@ -156,11 +215,11 @@ function submitReview() {
                 'id' => $insertId
             ]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to submit review - check logs']);
+            echo json_encode(['success' => false, 'message' => 'Failed to submit review. Please try again.']);
         }
     } catch (PDOException $e) {
         error_log("Review submit ERROR for user {$userId}, room {$roomId}: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Database error occurred while saving your review.']);
     }
 }
 ?>

@@ -30,16 +30,31 @@ if (!empty($user['travel_preferences'])) {
     $preferences = json_decode($user['travel_preferences'], true) ?: [];
 }
 
-// Fetch Booking History with Room info
+// Fetch Booking History with Room info (matching user_id or guest_email)
 $bookingStmt = $pdo->prepare("
     SELECT b.*, r.name as room_name, r.type as room_type, r.image as room_image 
     FROM bookings b 
     LEFT JOIN rooms r ON b.room_id = r.id 
-    WHERE b.user_id = ? 
+    WHERE b.user_id = ? OR (b.guest_email IS NOT NULL AND b.guest_email != '' AND b.guest_email = ?)
     ORDER BY b.created_at DESC
 ");
-$bookingStmt->execute([$_SESSION['user_id']]);
+$bookingStmt->execute([$_SESSION['user_id'], $user['email'] ?? '']);
 $bookings = $bookingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Auto-link any matching bookings that had NULL user_id
+if (!empty($bookings)) {
+    $unlinkedIds = [];
+    foreach ($bookings as $b) {
+        if (empty($b['user_id'])) {
+            $unlinkedIds[] = (int)$b['id'];
+        }
+    }
+    if (!empty($unlinkedIds)) {
+        $inClause = implode(',', array_fill(0, count($unlinkedIds), '?'));
+        $linkStmt = $pdo->prepare("UPDATE bookings SET user_id = ? WHERE id IN ($inClause)");
+        $linkStmt->execute(array_merge([$_SESSION['user_id']], $unlinkedIds));
+    }
+}
 
 // Map DB columns to JS expected format
 $jsBookings = array_map(function($b) {
@@ -56,8 +71,10 @@ $jsBookings = array_map(function($b) {
         'roomImage' => $b['room_image'] ?? 'assets/image/background.jpg',
         'checkIn' => $b['check_in_date'] ?: ($b['check_in'] ?? ''),
         'checkOut' => $b['check_out_date'] ?: ($b['check_out'] ?? ''),
+        'expectedArrivalTime' => !empty($b['expected_arrival_time']) ? $b['expected_arrival_time'] : '14:00:00',
         'nights' => (int)($b['nights'] ?? 1),
         'dateBooked' => $b['created_at'] ?? '',
+        'createdAt' => $b['created_at'] ?? '',
         'total' => $total,
         'paidAmount' => $paid,
         'balanceDue' => max(0, $balance),
@@ -68,7 +85,11 @@ $jsBookings = array_map(function($b) {
         'paymongoSessionId' => $b['paymongo_session_id'] ?? null,
         'paymongoPaymentId' => $b['paymongo_payment_id'] ?? null,
         'userId' => $b['user_id'],
-        'guestName' => $b['guest_name'] ?? ''
+        'guestName' => $b['guest_name'] ?? '',
+        'guestEmail' => $b['guest_email'] ?? '',
+        'guestPhone' => $b['guest_phone'] ?? '',
+        'expiresAt' => $b['expires_at'] ?? null,
+        'specialRequests' => $b['special_requests'] ?? ''
     ];
 }, $bookings);
 
@@ -97,16 +118,26 @@ $cancelledBookings = 0;
 $totalSpent = 0;
 
 foreach ($bookings as $b) {
-    if ($b['status'] === 'Confirmed') {
-        if ($b['check_out'] >= $todayStr) {
-            $upcomingBookings++;
-        } else {
-            $completedBookings++;
-        }
-        $totalSpent += (float)$b['total_price'];
-    } elseif ($b['status'] === 'Cancelled') {
+    $bStatus = $b['booking_status'] ?? 'pending_verification';
+    $status = $b['status'] ?? 'Pending';
+    $checkIn  = $b['check_in_date']  ?: ($b['check_in']  ?? '');
+    $checkOut = $b['check_out_date'] ?: ($b['check_out'] ?? '');
+    $isCancelled = in_array($bStatus, ['cancelled_expired', 'no_show']) || $status === 'Cancelled';
+
+    if ($isCancelled) {
         $cancelledBookings++;
+    } elseif ($bStatus === 'completed' || ($status === 'Confirmed' && $checkOut < $todayStr)) {
+        $completedBookings++;
+        $totalSpent += (float)($b['paid_amount'] > 0 ? $b['paid_amount'] : ($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0)));
+    } elseif (!$isCancelled && $checkIn > $todayStr) {
+        // Only count as upcoming if check-in is STRICTLY in the future (after today)
+        $upcomingBookings++;
+        if ($status === 'Confirmed' || $bStatus === 'deposit_paid') {
+            $totalSpent += (float)($b['paid_amount'] > 0 ? $b['paid_amount'] : ($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0)));
+        }
     }
+    // Bookings where check_in_date == today or is in the past but not yet completed
+    // are considered "active today" and are NOT counted in upcoming
 }
 ?>
 
@@ -131,12 +162,7 @@ foreach ($bookings as $b) {
                         <?php endif; ?>
                     </div>
                     <div>
-                        <div class="flex items-center gap-2">
-                            <h1 id="header-user-name" class="text-2xl sm:text-3xl font-bold tracking-tight"><?php echo htmlspecialchars($user['name']); ?></h1>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                <i class="fas fa-shield-alt mr-1 text-[10px]"></i> Verified Guest
-                            </span>
-                        </div>
+                        <h1 id="header-user-name" class="text-2xl sm:text-3xl font-bold tracking-tight"><?php echo htmlspecialchars($user['name']); ?></h1>
                         <p class="text-slate-300 text-xs sm:text-sm mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <span id="header-user-email"><i class="far fa-envelope mr-1 text-teal-400"></i> <?php echo htmlspecialchars($user['email']); ?></span>
                             <?php if (!empty($user['phone'])): ?>
@@ -447,11 +473,14 @@ foreach ($bookings as $b) {
                     <button onclick="filterBookings('all')" data-filter="all" class="booking-filter-pill px-4 py-1.5 rounded-full text-xs font-bold transition bg-gray-900 text-white shadow-sm">
                         All (<?php echo count($bookings); ?>)
                     </button>
+                    <button onclick="filterBookings('Upcoming')" data-filter="Upcoming" class="booking-filter-pill px-4 py-1.5 rounded-full text-xs font-bold transition text-gray-600 hover:bg-gray-100">
+                        Upcoming (<?php echo $upcomingBookings; ?>)
+                    </button>
                     <button onclick="filterBookings('Confirmed')" data-filter="Confirmed" class="booking-filter-pill px-4 py-1.5 rounded-full text-xs font-bold transition text-gray-600 hover:bg-gray-100">
-                        Confirmed (<?php echo $upcomingBookings + $completedBookings; ?>)
+                        Confirmed (<?php echo count(array_filter($bookings, fn($b) => ($b['status'] ?? '') === 'Confirmed' || in_array($b['booking_status'] ?? '', ['confirmed', 'deposit_paid']))); ?>)
                     </button>
                     <button onclick="filterBookings('Pending')" data-filter="Pending" class="booking-filter-pill px-4 py-1.5 rounded-full text-xs font-bold transition text-gray-600 hover:bg-gray-100">
-                        Pending
+                        Pending (<?php echo count(array_filter($bookings, fn($b) => ($b['status'] ?? '') === 'Pending' && !in_array($b['booking_status'] ?? '', ['cancelled_expired', 'no_show']))); ?>)
                     </button>
                     <button onclick="filterBookings('Cancelled')" data-filter="Cancelled" class="booking-filter-pill px-4 py-1.5 rounded-full text-xs font-bold transition text-gray-600 hover:bg-gray-100">
                         Cancelled (<?php echo $cancelledBookings; ?>)
@@ -627,6 +656,112 @@ foreach ($bookings as $b) {
                 Close
             </button>
         </div>
+    </div>
+</div>
+
+<!-- ================= MODAL: REPORT LATE ARRIVAL ================= -->
+<div id="late-arrival-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 border border-gray-100 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start pb-4 border-b border-gray-100 mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-lg flex-shrink-0">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Report Late Arrival</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Protect your room reservation from no-show cancellation</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeLateArrivalModal()" class="text-gray-400 hover:text-gray-600 text-lg p-1 rounded-lg">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Reservation Preview Card -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-4">
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Reservation</span>
+                    <h4 id="late-modal-room-name" class="font-bold text-slate-800 text-sm">Room Name</h4>
+                    <p id="late-modal-ref-id" class="text-xs font-mono text-slate-500">Ref: WIH-0000</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Scheduled Check-in</span>
+                    <p id="late-modal-checkin-date" class="font-bold text-brand-blue text-xs">Today</p>
+                    <p id="late-modal-current-time" class="text-[11px] text-purple-700 font-semibold">2:00 PM</p>
+                </div>
+            </div>
+        </div>
+
+        <form id="late-arrival-form" onsubmit="submitLateArrival(event)" class="space-y-4">
+            <input type="hidden" id="late-arrival-booking-id">
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                    New Estimated Arrival Time <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="time" id="late-arrival-new-time" required 
+                           class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition cursor-pointer">
+                </div>
+                <p class="text-[11px] text-gray-500 mt-1">
+                    <i class="fas fa-info-circle text-amber-500 mr-1"></i> Front desk will extend your room hold window until this time.
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                    Reason for Delay <span class="text-rose-500">*</span>
+                </label>
+                <select id="late-arrival-reason" required 
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition">
+                    <option value="Flight Delay / Rescheduled">Flight Delay / Rescheduled</option>
+                    <option value="Ferry / Sea Boat Transit Delay">Ferry / Sea Boat Transit Delay</option>
+                    <option value="Road Traffic / Van Transfer Delay">Road Traffic / Van Transfer Delay</option>
+                    <option value="Tour / Island Activity Overrun">Tour / Island Activity Overrun</option>
+                    <option value="Weather / Heavy Rain">Weather / Heavy Rain</option>
+                    <option value="Late Departure / Personal Delay">Late Departure / Personal Delay</option>
+                    <option value="Other Travel Delay">Other Travel Delay</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                    Contact Phone / WhatsApp <span class="text-rose-500">*</span>
+                </label>
+                <input type="tel" id="late-arrival-contact-phone" required placeholder="e.g. +63 912 345 6789" 
+                       class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wide">
+                    Additional Details / Travel Notes (Optional)
+                </label>
+                <textarea id="late-arrival-notes" rows="3" placeholder="e.g., Flight #PR 2871 arriving at airport, van transfer booked; estimated arrival at hotel reception around 5:30 PM..." 
+                          class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition"></textarea>
+            </div>
+
+            <!-- Guarantee Notice Box -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
+                <i class="fas fa-shield-alt text-amber-600 text-sm mt-0.5 flex-shrink-0"></i>
+                <span>Submitting this form immediately alerts our front desk team and updates your expected arrival window so your reservation hold is maintained safely against no-show release.</span>
+            </div>
+
+            <div class="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <button type="button" onclick="closeLateArrivalModal()" class="flex-1 bg-white border border-gray-200 text-gray-700 font-bold text-xs py-3 rounded-xl hover:bg-gray-50 transition text-center">
+                    Cancel
+                </button>
+                <button type="submit" id="btn-submit-late-arrival" class="flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white font-bold text-xs py-3 rounded-xl shadow-md transition text-center flex items-center justify-center gap-2">
+                    <i class="fas fa-paper-plane"></i> Send Arrival Notice
+                </button>
+            </div>
+
+            <div class="text-center pt-1 border-t border-slate-100">
+                <a href="tel:+639456882266" class="text-xs text-amber-700 hover:text-amber-800 font-bold inline-flex items-center gap-1.5">
+                    <i class="fas fa-phone-alt"></i> Urgent? Call Front Desk Directly: +63 945 688 2266
+                </a>
+            </div>
+        </form>
     </div>
 </div>
 

@@ -59,6 +59,22 @@ function runMigrations() {
         $pdo->exec("UPDATE `bookings` SET `booking_status` = 'cancelled_expired' WHERE `status` = 'Cancelled' AND `booking_status` = 'pending_verification'");
         $pdo->exec("UPDATE `bookings` SET `booking_status` = 'pending_arrival', `balance_due` = `total_amount` WHERE `status` = 'Pending' AND (`payment_method` LIKE '%Hotel%' OR `payment_method` = 'pay_at_hotel') AND `booking_status` = 'pending_verification'");
 
+        // Ensure users table supports archiving (soft delete)
+        $userColumnsToEnsure = [
+            'is_archived' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER `role`",
+            'archived_at' => "DATETIME NULL DEFAULT NULL AFTER `is_archived`"
+        ];
+
+        $stmtUserCols = $pdo->query("SHOW COLUMNS FROM `users`");
+        $existingUserCols = $stmtUserCols->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($userColumnsToEnsure as $colName => $colDef) {
+            if (!in_array($colName, $existingUserCols)) {
+                $pdo->exec("ALTER TABLE `users` ADD COLUMN `{$colName}` {$colDef}");
+                $added[] = 'users.' . $colName;
+            }
+        }
+
         // Ensure amenities table exists
         $pdo->exec("CREATE TABLE IF NOT EXISTS `amenities` (
             `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -109,4 +125,3 @@ if (php_sapi_name() === 'cli') {
     $result = runMigrations();
     echo json_encode($result, JSON_PRETTY_PRINT) . "\n";
 }
-

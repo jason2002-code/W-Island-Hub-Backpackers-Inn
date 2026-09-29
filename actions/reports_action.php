@@ -1125,6 +1125,9 @@ function addReport($data = null) {
     $subject = $data['subject'] ?? null;
     $message = $data['message'] ?? null;
     $type = $data['type'] ?? 'feedback';
+    $newArrivalTime = $data['new_arrival_time'] ?? null;
+    $contactPhone = $data['contact_phone'] ?? null;
+
     if (!$userId || !$message) {
         echo json_encode(['success' => false, 'message' => 'User ID and message are required']);
         exit;
@@ -1132,7 +1135,26 @@ function addReport($data = null) {
     try {
         $stmt = $pdo->prepare("INSERT INTO reports (user_id, booking_id, subject, message, type, status, created_at) VALUES (?, ?, ?, ?, ?, 'Pending', NOW())");
         $stmt->execute([$userId, $bookingId, $subject, $message, $type]);
-        echo json_encode(['success' => true, 'message' => 'Report submitted successfully', 'id' => $pdo->lastInsertId()]);
+        $reportId = $pdo->lastInsertId();
+
+        // If a new arrival time is provided for late arrival notice, update bookings record
+        if ($bookingId && $newArrivalTime) {
+            $upd = $pdo->prepare("UPDATE bookings SET expected_arrival_time = ? WHERE id = ?");
+            $upd->execute([$newArrivalTime, $bookingId]);
+        }
+        if ($bookingId && $contactPhone) {
+            $updPhone = $pdo->prepare("UPDATE bookings SET guest_phone = ? WHERE id = ? AND (guest_phone IS NULL OR guest_phone = '')");
+            $updPhone->execute([$contactPhone, $bookingId]);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => ($type === 'late_arrival') 
+                ? 'Late arrival notice received! Front desk has been notified and your arrival window has been updated.' 
+                : 'Report submitted successfully',
+            'id' => $reportId,
+            'updated_arrival_time' => $newArrivalTime
+        ]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }

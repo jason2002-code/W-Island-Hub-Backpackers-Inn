@@ -55,6 +55,11 @@ function switchTab(tabId) {
     const targetContent = document.getElementById(`tab-content-${tabId}`);
     if (targetContent) {
         targetContent.classList.remove('hidden');
+        if (tabId === 'overview') {
+            renderOverviewTab();
+        } else if (tabId === 'bookings') {
+            renderBookingsList();
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
@@ -117,73 +122,397 @@ function updateCompletenessMeter() {
 }
 
 /**
+ * Date and Time Formatting Helpers for Stays & Anti-No-Show Warnings
+ */
+function getLocalDateStr(d = new Date()) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatTime12H(timeStr) {
+    if (!timeStr) return '2:00 PM';
+    const clean = String(timeStr).trim();
+    const parts = clean.split(':');
+    let hour = parseInt(parts[0], 10);
+    const min = parts[1] ? parts[1].substring(0, 2) : '00';
+    if (isNaN(hour)) return timeStr;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour ? hour : 12;
+    return `${hour}:${min} ${ampm}`;
+}
+
+function getFormattedDateWithDay(dateStr) {
+    if (!dateStr) return '-';
+    const parts = String(dateStr).split('-');
+    if (parts.length < 3) return dateStr;
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getRelativeDayLabel(dateStr) {
+    if (!dateStr) return '';
+    const todayStr = getLocalDateStr();
+    if (dateStr === todayStr) return 'Today (Check-in Day)';
+    
+    const parts = String(dateStr).split('-');
+    if (parts.length < 3) return '';
+    const target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) return 'Tomorrow (1 Day After Book)';
+    if (diffDays === -1) return 'Yesterday';
+    if (diffDays > 1) return `In ${diffDays} Days`;
+    if (diffDays < -1) return `${Math.abs(diffDays)} Days Ago`;
+    return 'Today (Check-in Day)';
+}
+
+let stayCountdownInterval = null;
+
+function startStayCountdown(checkInDateStr, arrivalTimeStr, checkOutDateStr) {
+    if (stayCountdownInterval) {
+        clearInterval(stayCountdownInterval);
+        stayCountdownInterval = null;
+    }
+
+    if (!checkInDateStr) return;
+
+    const timeParts = (arrivalTimeStr || '14:00:00').split(':');
+    const arrHour = parseInt(timeParts[0], 10) || 14;
+    const arrMin = parseInt(timeParts[1], 10) || 0;
+
+    const checkInParts = checkInDateStr.split('-');
+    if (checkInParts.length < 3) return;
+
+    const targetCheckIn = new Date(
+        parseInt(checkInParts[0], 10),
+        parseInt(checkInParts[1], 10) - 1,
+        parseInt(checkInParts[2], 10),
+        arrHour,
+        arrMin,
+        0
+    );
+
+    let targetCheckOut = null;
+    if (checkOutDateStr) {
+        const checkOutParts = checkOutDateStr.split('-');
+        if (checkOutParts.length >= 3) {
+            targetCheckOut = new Date(
+                parseInt(checkOutParts[0], 10),
+                parseInt(checkOutParts[1], 10) - 1,
+                parseInt(checkOutParts[2], 10),
+                12,
+                0,
+                0
+            );
+        }
+    }
+
+    const time12H = formatTime12H(arrivalTimeStr);
+
+    function tick() {
+        const cdDays = document.getElementById('cd-days');
+        const cdHours = document.getElementById('cd-hours');
+        const cdMins = document.getElementById('cd-mins');
+        const cdSecs = document.getElementById('cd-secs');
+        const cdHeadline = document.getElementById('stay-countdown-headline');
+        const cdSubtext = document.getElementById('stay-countdown-subtext');
+
+        if (!cdDays || !cdHours || !cdMins || !cdSecs) {
+            if (stayCountdownInterval) {
+                clearInterval(stayCountdownInterval);
+                stayCountdownInterval = null;
+            }
+            return;
+        }
+
+        const now = new Date();
+        const diffMs = targetCheckIn.getTime() - now.getTime();
+
+        if (diffMs > 0) {
+            // Future check-in
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+            cdDays.textContent = String(days).padStart(2, '0');
+            cdHours.textContent = String(hours).padStart(2, '0');
+            cdMins.textContent = String(mins).padStart(2, '0');
+            cdSecs.textContent = String(secs).padStart(2, '0');
+
+            if (days === 0) {
+                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-amber-300 font-bold"><i class="fas fa-bell animate-bounce text-amber-400"></i> Check-In Day Is Today!</span>`;
+                if (cdSubtext) cdSubtext.innerHTML = `Your check-in starts at <strong class="text-teal-300">${time12H}</strong>. Arrive on time: <span class="text-amber-300 font-mono font-bold">${hours} Hours, ${mins} Mins</span> remaining!`;
+            } else if (days === 1) {
+                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-teal-300 font-bold"><i class="fas fa-calendar-day text-teal-400"></i> Check-In Is Tomorrow (1 Day After Book)!</span>`;
+                if (cdSubtext) cdSubtext.innerHTML = `Scheduled arrival tomorrow at <strong class="text-teal-300">${time12H}</strong> • <span class="text-teal-300 font-mono font-bold">${days} Day, ${hours} Hours</span> remaining.`;
+            } else {
+                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-teal-300 font-bold"><i class="fas fa-stopwatch text-teal-400"></i> Check-In Arrival Countdown</span>`;
+                if (cdSubtext) cdSubtext.innerHTML = `Scheduled arrival at <strong class="text-teal-300">${time12H}</strong> • <span class="text-teal-300 font-mono font-bold">${days} Days, ${hours} Hours, ${mins} Mins</span> remaining.`;
+            }
+        } else {
+            // Check-in time has arrived or passed!
+            const checkOutDiff = targetCheckOut ? (targetCheckOut.getTime() - now.getTime()) : -1;
+            cdDays.textContent = '00';
+            cdHours.textContent = '00';
+            cdMins.textContent = '00';
+            cdSecs.textContent = '00';
+
+            if (checkOutDiff > 0) {
+                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold"><i class="fas fa-door-open text-emerald-300 animate-pulse"></i> Check-In Window Is Open Now!</span>`;
+                if (cdSubtext) cdSubtext.innerHTML = `Check-in started at <strong class="text-emerald-300">${time12H}</strong>. Please report to the hotel front desk immediately to claim your room and avoid no-show cancellation!`;
+            } else {
+                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-slate-300 font-bold"><i class="fas fa-check-circle"></i> Reservation Stay Concluded</span>`;
+                if (cdSubtext) cdSubtext.textContent = "Your booked stay at W Island Hub has completed.";
+            }
+        }
+    }
+
+    tick();
+    stayCountdownInterval = setInterval(tick, 1000);
+}
+
+/**
  * Render Overview Tab (Next Upcoming Stay or Recent Activity)
  */
-function renderOverviewTab() {
+function renderOverviewTab(selectedBookingId = null) {
     const container = document.getElementById('next-stay-container');
     if (!container) return;
 
-    const bookings = (window.appState && window.appState.bookings) ? window.appState.bookings : [];
-    const confirmedBookings = bookings.filter(b => b.status === 'Confirmed');
+    if (stayCountdownInterval) {
+        clearInterval(stayCountdownInterval);
+        stayCountdownInterval = null;
+    }
 
-    // Find next upcoming stay
-    const today = new Date().toISOString().split('T')[0];
-    const upcoming = confirmedBookings.find(b => b.checkOut >= today);
+    const bookings = (window.appState && window.appState.bookings) ? window.appState.bookings : [];
+    const today = getLocalDateStr();
+
+    // Active upcoming bookings:
+    // Any booking not cancelled, not expired, not marked no-show, not completed
+    // where checkOut >= today OR checkIn >= today
+    const activeBookings = bookings.filter(b => {
+        const bStatus = (b.bookingStatus || '').toLowerCase();
+        const status = (b.status || '').toLowerCase();
+        const isCancelled = status === 'cancelled' || bStatus === 'cancelled_expired' || bStatus === 'no_show' || bStatus === 'completed';
+        if (isCancelled) return false;
+
+        const checkOut = b.checkOut || '';
+        const checkIn = b.checkIn || '';
+        return checkOut >= today || checkIn >= today;
+    });
+
+    // Sort upcoming stays by check-in date ascending (soonest stay first)
+    activeBookings.sort((a, b) => new Date(a.checkIn || 0) - new Date(b.checkIn || 0));
+
+    let upcoming = null;
+    if (selectedBookingId) {
+        upcoming = activeBookings.find(b => b.id == selectedBookingId) || activeBookings[0] || null;
+    } else {
+        upcoming = activeBookings[0] || null;
+    }
 
     if (upcoming) {
-        const checkInDate = new Date(upcoming.checkIn);
-        const formattedCheckIn = checkInDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        const formattedCheckOut = new Date(upcoming.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const formattedCheckIn = getFormattedDateWithDay(upcoming.checkIn);
+        const formattedCheckOut = getFormattedDateWithDay(upcoming.checkOut);
+        const relativeDay = getRelativeDayLabel(upcoming.checkIn);
+        const arrivalTime12H = formatTime12H(upcoming.expectedArrivalTime || '14:00:00');
+
+        const total = parseFloat(upcoming.total || 0);
+        const paid = parseFloat(upcoming.paidAmount !== undefined ? upcoming.paidAmount : (upcoming.status === 'Confirmed' ? total : 0));
+        const balance = parseFloat(upcoming.balanceDue !== undefined ? upcoming.balanceDue : (total - paid));
+        const safeRoomName = (upcoming.roomName || 'Room').replace(/'/g, "\\'");
+        const bStatus = (upcoming.bookingStatus || (upcoming.status === 'Confirmed' ? 'confirmed' : 'pending_verification')).toLowerCase();
+
+        // Status Badge
+        let statusBadgeHtml = '';
+        if (bStatus === 'confirmed') {
+            statusBadgeHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-check-circle text-emerald-600"></i> Confirmed &amp; Guaranteed</span>`;
+        } else if (bStatus === 'deposit_paid') {
+            statusBadgeHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-shield-alt text-blue-600"></i> 20% Deposit Paid (No-Show Protected)</span>`;
+        } else if (bStatus === 'pending_arrival') {
+            statusBadgeHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fas fa-store text-purple-600"></i> Pay at Hotel (Pending Arrival)</span>`;
+        } else {
+            statusBadgeHtml = `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-stopwatch text-amber-600"></i> Pending GCash Verification</span>`;
+        }
+
+        // Multi-booking quick switcher if guest has more than 1 upcoming reservation
+        let multiBookingSwitcher = '';
+        if (activeBookings.length > 1) {
+            multiBookingSwitcher = `
+                <div class="mb-5 pb-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                    <span class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                        <i class="fas fa-layer-group text-brand-blue"></i> You have <strong>${activeBookings.length}</strong> upcoming reservations:
+                    </span>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${activeBookings.map((ab, idx) => `
+                            <button onclick="renderOverviewTab(${ab.id})" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${ab.id === upcoming.id ? 'bg-brand-blue text-white shadow-xs' : 'bg-slate-100 text-gray-600 hover:bg-slate-200'}">
+                                Stay #${idx + 1}: ${ab.roomName.substring(0, 15)} (${ab.checkIn})
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         container.innerHTML = `
+            ${multiBookingSwitcher}
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-100 mb-6">
                 <div>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <i class="fas fa-calendar-check text-emerald-500"></i> Next Upcoming Stay
-                    </span>
-                    <h3 class="text-2xl font-bold text-gray-800 mt-2">${upcoming.roomName}</h3>
-                    <p class="text-xs text-gray-500">Booking Ref: <strong class="font-mono text-gray-700">${upcoming.refId || ('WIH-' + upcoming.id)}</strong></p>
+                    <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                            <i class="fas fa-calendar-check text-teal-600"></i> Next Upcoming Stay
+                        </span>
+                        ${statusBadgeHtml}
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">${upcoming.roomName}</h3>
+                    <p class="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span>Booking Ref: <strong class="font-mono text-gray-700">${upcoming.refId || ('WIH-' + upcoming.id)}</strong></span>
+                        ${upcoming.dateBooked ? `<span>• Booked: <strong class="text-gray-600">${upcoming.dateBooked.substring(0, 10)}</strong></span>` : ''}
+                    </p>
                 </div>
-                <button onclick="openVoucherModal(${upcoming.id})" class="bg-gradient-to-r from-brand-blue to-teal-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2">
-                    <i class="fas fa-ticket-alt"></i> View Voucher
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="openVoucherModal(${upcoming.id})" class="bg-gradient-to-r from-brand-blue to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2">
+                        <i class="fas fa-ticket-alt"></i> View Voucher
+                    </button>
+                    ${balance > 0 && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' ? `
+                        <button onclick="payBookingWithPayMongo(${upcoming.id}, '${upcoming.ref_id || upcoming.refId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5" title="Settle balance online">
+                            <i class="fas fa-bolt"></i> Pay Balance (₱${balance.toFixed(2)})
+                        </button>
+                    ` : ''}
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Check-in Date</span>
-                    <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
+            <!-- LIVE COUNTDOWN BANNER (TIME, DAY, HOUR, MIN, SEC) -->
+            <div class="bg-gradient-to-r from-slate-900 via-brand-dark to-slate-800 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-700/60 mb-6 relative overflow-hidden">
+                <div class="absolute -right-8 -top-8 text-8xl text-white/5 pointer-events-none">
+                    <i class="fas fa-stopwatch"></i>
+                </div>
+                
+                <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+                    <div class="max-w-xl">
+                        <div id="stay-countdown-headline" class="text-xs font-bold uppercase tracking-wider text-teal-300 mb-1 flex items-center gap-1.5">
+                            <i class="fas fa-stopwatch animate-pulse"></i> Check-In Arrival Countdown
+                        </div>
+                        <h4 id="stay-countdown-subtext" class="text-lg sm:text-xl font-black text-white tracking-tight">
+                            Calculating time to hotel arrival...
+                        </h4>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                            Know your exact arrival schedule to check in on time and avoid automatic reservation release or no-show penalties.
+                        </p>
+                    </div>
+
+                    <!-- Countdown Digit Blocks -->
+                    <div class="flex items-center gap-2 sm:gap-3 select-none flex-shrink-0 w-full sm:w-auto justify-center">
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
+                            <span id="cd-days" class="text-2xl sm:text-3xl font-black text-white font-mono block leading-none">00</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Days</span>
+                        </div>
+                        <span class="text-2xl font-bold text-teal-400/60">:</span>
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
+                            <span id="cd-hours" class="text-2xl sm:text-3xl font-black text-white font-mono block leading-none">00</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Hours</span>
+                        </div>
+                        <span class="text-2xl font-bold text-teal-400/60">:</span>
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
+                            <span id="cd-mins" class="text-2xl sm:text-3xl font-black text-white font-mono block leading-none">00</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Mins</span>
+                        </div>
+                        <span class="text-2xl font-bold text-teal-400/60">:</span>
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
+                            <span id="cd-secs" class="text-2xl sm:text-3xl font-black text-teal-300 font-mono block leading-none">00</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Secs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TIME, DAY, HOUR BOOKING SCHEDULE DETAILS GRID -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- Check-in Day & Date -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 block">Check-in Day &amp; Date</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-800">${relativeDay}</span>
+                    </div>
+                    <span class="font-bold text-gray-800 text-sm flex items-center gap-2 mt-1">
                         <i class="far fa-calendar-alt text-brand-blue"></i> ${formattedCheckIn}
                     </span>
-                    <span class="text-[10px] text-gray-500 block mt-0.5">Standard time: 2:00 PM</span>
+                    <span class="text-[11px] text-gray-500 block mt-1">Scheduled arrival day</span>
                 </div>
 
+                <!-- Check-in Time & Arrival Hour -->
                 <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Check-out Date</span>
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Check-in Time / Hour</span>
+                    <span class="font-bold text-purple-700 text-sm flex items-center gap-2">
+                        <i class="fas fa-clock text-purple-600"></i> ${arrivalTime12H}
+                    </span>
+                    <span class="text-[11px] text-gray-500 block mt-1">Standard check-in: <strong>2:00 PM</strong></span>
+                </div>
+
+                <!-- Check-out Date & Hour -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Check-out Date &amp; Hour</span>
                     <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
                         <i class="far fa-calendar-check text-amber-500"></i> ${formattedCheckOut}
                     </span>
-                    <span class="text-[10px] text-gray-500 block mt-0.5">Standard time: 12:00 PM</span>
+                    <span class="text-[11px] text-gray-500 block mt-1">Standard check-out: <strong>12:00 PM</strong></span>
                 </div>
 
+                <!-- Duration & Payment Status -->
                 <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Stay Duration & Total</span>
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Stay Duration &amp; Bill</span>
                     <span class="font-bold text-brand-blue text-sm flex items-center gap-2">
-                        <i class="fas fa-moon text-indigo-400"></i> ${upcoming.nights} Night(s) • ₱${parseFloat(upcoming.total).toFixed(2)}
+                        <i class="fas fa-moon text-indigo-400"></i> ${upcoming.nights} Night(s) • ₱${total.toFixed(2)}
                     </span>
-                    <span class="text-[10px] text-emerald-600 font-semibold block mt-0.5"><i class="fas fa-check-circle"></i> Paid via ${upcoming.paymentMethod}</span>
+                    <span class="text-[11px] ${balance > 0 ? 'text-amber-700 font-semibold' : 'text-emerald-600 font-semibold'} block mt-1">
+                        ${balance > 0 ? `₱${paid.toFixed(2)} Paid • ₱${balance.toFixed(2)} Due at Desk` : `<i class="fas fa-check-circle"></i> 100% Fully Settled`}
+                    </span>
+                </div>
+            </div>
+
+            <!-- ANTI-NO-SHOW WARNING & REMINDER BOX -->
+            <div class="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center text-lg flex-shrink-0 mt-0.5">
+                        <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h5 class="text-xs sm:text-sm font-bold text-amber-950">Arrive On Time to Avoid No-Show Cancellation</h5>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 uppercase">Policy Notice</span>
+                        </div>
+                        <p class="text-xs text-amber-900/80 mt-1 leading-relaxed">
+                            Check-in starts at <strong>2:00 PM</strong> (your expected arrival: <strong>${arrivalTime12H}</strong>). Under hotel policy, unconfirmed late arrivals may be released to waitlisted guests as a no-show. If your flight or boat is delayed, please inform the front desk immediately.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto flex-shrink-0">
+                    <a href="tel:+639456882266" class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2">
+                        <i class="fas fa-phone-alt"></i> Call Front Desk
+                    </a>
+                    <button onclick="openLateArrivalModal(${upcoming.id})" class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl bg-white hover:bg-amber-100/80 border border-amber-300 text-amber-950 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs">
+                        <i class="fas fa-clock text-amber-600"></i> Report Late Arrival
+                    </button>
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs">
-                <span class="text-gray-500"><i class="fas fa-map-pin text-rose-500 mr-1"></i> W Island Hub Main Lodge, Island Beachway</span>
+                <span class="text-gray-500"><i class="fas fa-map-pin text-rose-500 mr-1"></i> W Island Hub Main Lodge, Island Beachway, Philippines</span>
                 <div class="flex gap-2">
-                    <button onclick="openReportModal(${upcoming.id}, '${upcoming.roomName.replace(/'/g, "\\'")}')" class="text-gray-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg border border-gray-200 transition font-semibold">
-                        <i class="fas fa-exclamation-circle mr-1"></i> Need Help with this Stay?
+                    <button onclick="switchTab('bookings')" class="text-brand-blue hover:underline font-bold">
+                        View All Reservations &rarr;
                     </button>
                 </div>
             </div>
         `;
+
+        // Start real-time countdown
+        startStayCountdown(upcoming.checkIn, upcoming.expectedArrivalTime, upcoming.checkOut);
     } else {
         container.innerHTML = `
             <div class="text-center py-10">
@@ -236,18 +565,48 @@ function renderBookingsList() {
     if (!container) return;
 
     const allBookings = (window.appState && window.appState.bookings) ? window.appState.bookings : [];
+    const today = getLocalDateStr();
 
     // Filter by status
     let filtered = allBookings;
     if (activeBookingFilter !== 'all') {
-        filtered = filtered.filter(b => (b.status || '').toLowerCase() === activeBookingFilter.toLowerCase());
+        const filterLower = activeBookingFilter.toLowerCase();
+        if (filterLower === 'upcoming') {
+            filtered = filtered.filter(b => {
+                const bStatus = (b.bookingStatus || '').toLowerCase();
+                const status = (b.status || '').toLowerCase();
+                const isCancelled = status === 'cancelled' || bStatus === 'cancelled_expired' || bStatus === 'no_show';
+                // Only strictly future check-ins (not today, not past)
+                return !isCancelled && (b.checkIn || '') > today;
+            });
+        } else if (filterLower === 'confirmed') {
+            filtered = filtered.filter(b => {
+                const bStatus = (b.bookingStatus || '').toLowerCase();
+                const status = (b.status || '').toLowerCase();
+                return status === 'confirmed' || bStatus === 'confirmed' || bStatus === 'deposit_paid';
+            });
+        } else if (filterLower === 'pending') {
+            filtered = filtered.filter(b => {
+                const bStatus = (b.bookingStatus || '').toLowerCase();
+                const status = (b.status || '').toLowerCase();
+                return (status === 'pending' || bStatus === 'pending_arrival' || bStatus === 'pending_verification') && bStatus !== 'cancelled_expired' && bStatus !== 'no_show';
+            });
+        } else if (filterLower === 'cancelled') {
+            filtered = filtered.filter(b => {
+                const bStatus = (b.bookingStatus || '').toLowerCase();
+                const status = (b.status || '').toLowerCase();
+                return status === 'cancelled' || bStatus === 'cancelled_expired' || bStatus === 'no_show';
+            });
+        } else {
+            filtered = filtered.filter(b => (b.status || '').toLowerCase() === filterLower);
+        }
     }
 
     // Filter by search query
     if (currentSearchQuery) {
         filtered = filtered.filter(b => {
             const roomMatch = (b.roomName || '').toLowerCase().includes(currentSearchQuery);
-            const refMatch = (b.refId || '').toLowerCase().includes(currentSearchQuery);
+            const refMatch = (b.refId || '').toLowerCase().includes(currentSearchQuery) || (b.ref_id || '').toLowerCase().includes(currentSearchQuery);
             const idMatch = String(b.id).includes(currentSearchQuery);
             return roomMatch || refMatch || idMatch;
         });
@@ -278,11 +637,11 @@ function renderBookingsList() {
                 timerNotice = `<span class="text-[10px] text-amber-700 font-semibold block mt-0.5">2-Hour hold expires at ${b.expiresAt.substring(11, 16)}</span>`;
             }
         } else if (bStatus === 'deposit_paid') {
-            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-coins text-[10px]"></i> Deposit Paid (Balance Due at Desk)</span>`;
+            statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-shield-alt text-[10px]"></i> 20% Deposit Paid (Balance Due at Desk)</span>`;
         } else if (bStatus === 'pending_arrival') {
             statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fas fa-store text-[10px]"></i> Pending Arrival (Pay at Hotel)</span>`;
             if (b.expectedArrivalTime) {
-                timerNotice = `<span class="text-[10px] text-purple-700 font-semibold block mt-0.5">Expected arrival: ${b.expectedArrivalTime}</span>`;
+                timerNotice = `<span class="text-[10px] text-purple-700 font-semibold block mt-0.5">Expected arrival: ${formatTime12H(b.expectedArrivalTime)}</span>`;
             }
         } else if (bStatus === 'confirmed') {
             statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-check-circle text-[10px]"></i> Confirmed (Paid Full)</span>`;
@@ -294,21 +653,41 @@ function renderBookingsList() {
             statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200"><i class="fas fa-times-circle text-[10px]"></i> Expired / Cancelled</span>`;
         }
 
-        const checkInFmt = b.checkIn ? new Date(b.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
-        const checkOutFmt = b.checkOut ? new Date(b.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+        const checkInFmt = b.checkIn ? getFormattedDateWithDay(b.checkIn) : '-';
+        const checkOutFmt = b.checkOut ? getFormattedDateWithDay(b.checkOut) : '-';
         const safeRoomName = (b.roomName || 'Room').replace(/'/g, "\\'");
         const total = parseFloat(b.total || 0);
         const paid = parseFloat(b.paidAmount !== undefined ? b.paidAmount : (b.status === 'Confirmed' ? total : 0));
         const balance = parseFloat(b.balanceDue !== undefined ? b.balanceDue : (total - paid));
+        const arrivalTime12H = formatTime12H(b.expectedArrivalTime || '14:00:00');
+        const relativeDay = b.checkIn ? getRelativeDayLabel(b.checkIn) : '';
 
-        // Review Button for Completed/Confirmed Stays
+        // Only show upcoming reminder/actions when check-in date is strictly AFTER today
+        // (same-day bookings = guest should already be at the hotel, so no reminder needed)
+        const isUpcomingActive = b.status !== 'Cancelled' && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' && bStatus !== 'completed' && ((b.checkIn || '') > today);
+
+        // Review Button for Completed Stays Only
         let reviewBtn = '';
-        if ((b.status === 'Confirmed' || bStatus === 'confirmed' || bStatus === 'completed') && b.roomId) {
-            reviewBtn = `
-                <button onclick="openReviewModal(${b.roomId}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center gap-1.5">
-                    <i class="fas fa-star text-amber-500"></i> Write Review
-                </button>
-            `;
+        const isPastStay = (b.checkOut && b.checkOut <= today) || bStatus === 'completed';
+        const isEligibleBooking = (b.status === 'Confirmed' || bStatus === 'confirmed' || bStatus === 'completed' || bStatus === 'deposit_paid') && bStatus !== 'cancelled_expired' && bStatus !== 'no_show';
+
+        if (b.roomId && isEligibleBooking) {
+            const userReviews = (window.appState && Array.isArray(window.appState.reviews)) ? window.appState.reviews : [];
+            const alreadyReviewed = userReviews.some(r => String(r.room_id) === String(b.roomId));
+
+            if (alreadyReviewed) {
+                reviewBtn = `
+                    <span class="px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-bold inline-flex items-center gap-1.5" title="You have reviewed this room">
+                        <i class="fas fa-check-circle text-emerald-500"></i> Reviewed
+                    </span>
+                `;
+            } else if (isPastStay) {
+                reviewBtn = `
+                    <button onclick="openReviewModal(${b.roomId}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center gap-1.5 shadow-xs" title="Share your stay experience">
+                        <i class="fas fa-star text-amber-500"></i> Write Review
+                    </button>
+                `;
+            }
         }
 
         return `
@@ -326,6 +705,11 @@ function renderBookingsList() {
                         <p class="text-xs text-gray-500 flex items-center gap-2 mt-1">
                             <i class="far fa-calendar-alt text-brand-blue"></i> ${checkInFmt} &rarr; ${checkOutFmt} (${b.nights} night${b.nights > 1 ? 's' : ''})
                         </p>
+                        ${isUpcomingActive ? `
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200 mt-2">
+                                <i class="fas fa-clock text-purple-600"></i> Check-in: <strong>${arrivalTime12H}</strong> • ${relativeDay} <span class="text-[11px] text-purple-600 font-normal">(Arrive on time to avoid no-show)</span>
+                            </div>
+                        ` : ''}
                         <div class="flex flex-wrap items-center gap-3 text-[11px] text-gray-400 mt-1">
                             <span>Ref: <strong class="font-mono text-gray-600">${b.ref_id || b.refId || ('WIH-' + b.id)}</strong></span>
                             ${b.gcashRefNo ? `<span>• GCash Ref: <strong class="font-mono text-gray-600">${b.gcashRefNo}</strong></span>` : ''}
@@ -351,6 +735,11 @@ function renderBookingsList() {
                         <button onclick="openVoucherModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition flex items-center gap-1.5">
                             <i class="fas fa-ticket-alt text-brand-blue"></i> Voucher
                         </button>
+                        ${isUpcomingActive ? `
+                            <button onclick="openLateArrivalModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1.5 shadow-xs" title="Report Delay / Late Check-in">
+                                <i class="fas fa-clock text-amber-600"></i> Report Delay
+                            </button>
+                        ` : ''}
                         ${reviewBtn}
                         <button onclick="openReportModal(${b.id}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-rose-600 text-xs font-bold transition" title="Report Issue / Question">
                             <i class="fas fa-question-circle"></i>
@@ -376,8 +765,9 @@ function openVoucherModal(bookingId) {
         return;
     }
 
-    const checkInFmt = booking.checkIn ? new Date(booking.checkIn).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '-';
-    const checkOutFmt = booking.checkOut ? new Date(booking.checkOut).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+    const arrivalTime12H = formatTime12H(booking.expectedArrivalTime || '14:00:00');
+    const checkInFmt = booking.checkIn ? `${getFormattedDateWithDay(booking.checkIn)} at ${arrivalTime12H}` : '-';
+    const checkOutFmt = booking.checkOut ? `${getFormattedDateWithDay(booking.checkOut)} by 12:00 PM` : '-';
 
     const guestName = (window.appState && window.appState.currentUser && window.appState.currentUser.name) ? window.appState.currentUser.name : (booking.guestName || 'Valued Guest');
     const total = parseFloat(booking.total || 0);
@@ -395,8 +785,8 @@ function openVoucherModal(bookingId) {
 
     const badge = document.getElementById('voucher-status-badge');
     if (badge) {
-        const bStatus = booking.bookingStatus || booking.status;
-        if (bStatus === 'confirmed' || bStatus === 'Confirmed' || bStatus === 'completed') {
+        const bStatus = (booking.bookingStatus || booking.status || '').toLowerCase();
+        if (bStatus === 'confirmed' || bStatus === 'completed') {
             badge.innerText = 'Confirmed (Paid Full)';
             badge.className = 'inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold';
         } else if (bStatus === 'deposit_paid') {
@@ -405,7 +795,7 @@ function openVoucherModal(bookingId) {
         } else if (bStatus === 'pending_arrival') {
             badge.innerText = `Pending Arrival (Due at Desk: ₱${balance.toFixed(2)})`;
             badge.className = 'inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold';
-        } else if (bStatus === 'cancelled_expired' || bStatus === 'Cancelled' || bStatus === 'no_show') {
+        } else if (bStatus === 'cancelled_expired' || bStatus === 'cancelled' || bStatus === 'no_show') {
             badge.innerText = 'Cancelled / Expired';
             badge.className = 'inline-block px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-bold';
         } else {
@@ -702,7 +1092,7 @@ function renderFeedbackList() {
     const container = document.getElementById('user-reports-container');
     if (!container) return;
 
-    const reports = (window.appState && window.appState.reports) ? window.appState.reports : [];
+    const reports = (window.appState && Array.isArray(window.appState.reports)) ? window.appState.reports : [];
 
     if (reports.length === 0) {
         container.innerHTML = `
@@ -719,25 +1109,29 @@ function renderFeedbackList() {
 
     container.innerHTML = reports.map(r => {
         const dateFmt = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-        const statusClass = r.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+        const isResolved = r.status === 'Resolved';
+        const statusClass = isResolved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+        const reply = r.admin_response || r.admin_reply || '';
 
         return `
             <div class="border border-gray-100 rounded-2xl p-4 bg-slate-50/50 hover:bg-white hover:shadow-sm transition">
                 <div class="flex justify-between items-start mb-1.5">
-                    <h5 class="font-bold text-gray-800 text-sm">${r.subject || 'General Inquiry'}</h5>
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusClass}">${r.status}</span>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">${r.type || 'Inquiry'}</span>
+                        <h5 class="font-bold text-gray-800 text-sm">${r.subject || 'General Inquiry'}</h5>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusClass}">${r.status || 'Pending'}</span>
                 </div>
                 <p class="text-xs text-gray-600 mb-2 leading-relaxed">${r.message}</p>
                 <div class="text-[10px] text-gray-400 flex items-center justify-between">
                     <span><i class="far fa-clock mr-1"></i> ${dateFmt}</span>
-                    <span class="capitalize font-semibold text-gray-500">${r.type || 'feedback'}</span>
                 </div>
-                ${r.admin_response ? `
+                ${reply ? `
                     <div class="mt-3 p-3 bg-blue-50/80 border-l-4 border-brand-blue rounded-r-xl">
                         <div class="text-[11px] font-bold text-brand-blue mb-1 flex items-center gap-1.5">
                             <i class="fas fa-reply"></i> Response from Inn Staff:
                         </div>
-                        <p class="text-xs text-gray-700">${r.admin_response}</p>
+                        <p class="text-xs text-gray-700">${reply}</p>
                     </div>
                 ` : ''}
             </div>
@@ -752,40 +1146,43 @@ function renderReviewsList() {
     const container = document.getElementById('user-reviews-container');
     if (!container) return;
 
-    const reviews = (window.appState && window.appState.reviews) ? window.appState.reviews : [];
+    const reviews = (window.appState && Array.isArray(window.appState.reviews)) ? window.appState.reviews : [];
 
     if (reviews.length === 0) {
         container.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-                <i class="fas fa-star text-3xl text-gray-200 mb-2"></i>
-                <p class="text-xs">You haven't written any room reviews yet.</p>
-                <p class="text-[11px] text-gray-400 mt-1">Review your room after your stay to help other travelers!</p>
+            <div class="text-center py-8 text-gray-400 bg-slate-50 rounded-2xl border border-dashed border-gray-200">
+                <i class="far fa-star text-3xl text-gray-300 mb-2"></i>
+                <p class="text-xs text-gray-600 font-medium">You haven't written any room reviews yet.</p>
+                <p class="text-[11px] text-gray-400 mt-1">Review your room after completing your stay to help other travelers!</p>
             </div>
         `;
         return;
     }
 
     container.innerHTML = reviews.map(rev => {
-        const stars = Array.from({ length: 5 }, (_, i) => {
-            return `<i class="fas fa-star ${i < Math.round(rev.rating) ? 'text-amber-400' : 'text-gray-200'}"></i>`;
-        }).join('');
+        const rating = Math.max(1, Math.min(5, Math.round(parseFloat(rev.rating || 5))));
+        let stars = '';
+        for (let i = 0; i < 5; i++) {
+            stars += `<i class="fas fa-star ${i < rating ? 'text-amber-400' : 'text-gray-200'}"></i>`;
+        }
 
-        const dateFmt = rev.created_at ? new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const dateFmt = rev.created_at ? new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+        const reply = rev.admin_reply || rev.admin_response || '';
 
         return `
             <div class="border border-gray-100 rounded-2xl p-4 bg-slate-50/50 hover:bg-white hover:shadow-sm transition">
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <h5 class="font-bold text-gray-800 text-sm">${rev.room_name || 'Room Stay'}</h5>
-                        <div class="flex items-center gap-1 text-xs mt-0.5">${stars} <span class="font-bold text-gray-700 text-xs ml-1">${parseFloat(rev.rating).toFixed(1)}</span></div>
+                        <div class="flex items-center gap-1 text-xs mt-0.5">${stars} <span class="font-bold text-gray-700 text-xs ml-1">${parseFloat(rev.rating || 5).toFixed(1)}</span></div>
                     </div>
                     <span class="text-[10px] text-gray-400">${dateFmt}</span>
                 </div>
                 <p class="text-xs text-gray-600 leading-relaxed italic">"${rev.comment}"</p>
-                ${rev.admin_reply ? `
+                ${reply ? `
                     <div class="mt-3 p-3 bg-amber-50/70 border-l-4 border-amber-400 rounded-r-xl">
                         <div class="text-[11px] font-bold text-amber-800 mb-0.5"><i class="fas fa-reply mr-1"></i> Inn Host Reply:</div>
-                        <p class="text-xs text-gray-700">${rev.admin_reply}</p>
+                        <p class="text-xs text-gray-700">${reply}</p>
                     </div>
                 ` : ''}
             </div>
@@ -797,9 +1194,13 @@ function renderReviewsList() {
  * Open Review Modal
  */
 function openReviewModal(roomId, roomTitle) {
-    document.getElementById('review-room-id').value = roomId;
-    document.getElementById('review-modal-room-title').innerText = `Reviewing: ${roomTitle}`;
-    document.getElementById('review-comment').value = '';
+    const roomIdInput = document.getElementById('review-room-id');
+    const roomTitleSpan = document.getElementById('review-modal-room-title');
+    const commentInput = document.getElementById('review-comment');
+
+    if (roomIdInput) roomIdInput.value = roomId;
+    if (roomTitleSpan) roomTitleSpan.innerText = `Reviewing: ${roomTitle}`;
+    if (commentInput) commentInput.value = '';
     setModalRating(5);
 
     const modal = document.getElementById('review-modal');
@@ -815,10 +1216,14 @@ function closeReviewModal() {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     }
+    const form = document.getElementById('review-form');
+    if (form) form.reset();
 }
 
 function setModalRating(rating) {
-    document.getElementById('review-rating-val').value = rating;
+    const ratingInput = document.getElementById('review-rating-val');
+    if (ratingInput) ratingInput.value = rating;
+
     const stars = document.querySelectorAll('#star-rating-picker i');
     stars.forEach((star, index) => {
         if (index < rating) {
@@ -841,12 +1246,35 @@ function setModalRating(rating) {
 
 function submitReviewFromModal(e) {
     e.preventDefault();
-    const roomId = document.getElementById('review-room-id').value;
-    const rating = document.getElementById('review-rating-val').value;
-    const comment = document.getElementById('review-comment').value.trim();
+    const roomIdInput = document.getElementById('review-room-id');
+    const ratingInput = document.getElementById('review-rating-val');
+    const commentInput = document.getElementById('review-comment');
+
+    const roomId = roomIdInput ? roomIdInput.value : '';
+    const rating = ratingInput ? ratingInput.value : '5';
+    const comment = commentInput ? commentInput.value.trim() : '';
     const currentUser = (window.appState && window.appState.currentUser) ? window.appState.currentUser : {};
 
-    fetch('../actions/profile_action.php', {
+    if (!roomId) {
+        if (typeof showToast === 'function') showToast('Please select a room to review.', 'error');
+        else alert('Please select a room to review.');
+        return;
+    }
+
+    if (!comment) {
+        if (typeof showToast === 'function') showToast('Please write a brief comment sharing your experience.', 'error');
+        else alert('Please write a brief comment sharing your experience.');
+        return;
+    }
+
+    const submitBtn = document.querySelector('#review-form button[type="submit"]') || document.getElementById('review-submit-btn');
+    const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Post Review';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Submitting...';
+    }
+
+    fetch('../actions/reviews_action.php?action=submit_review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -861,12 +1289,34 @@ function submitReviewFromModal(e) {
     .then(data => {
         if (data.success) {
             if (typeof showToast === 'function') {
-                showToast('Thank you for your review!', 'success');
+                showToast(data.message || 'Thank you for your review!', 'success');
             } else {
-                alert('Thank you for your review!');
+                alert(data.message || 'Thank you for your review!');
             }
+
+            // Find room name for immediate display in UI
+            const booking = (window.appState && Array.isArray(window.appState.bookings))
+                ? window.appState.bookings.find(b => b.roomId == roomId)
+                : null;
+            const roomName = booking ? (booking.roomName || 'Room Stay') : 'Room Stay';
+
+            // Add new review to appState
+            if (!window.appState.reviews) window.appState.reviews = [];
+            window.appState.reviews.unshift({
+                id: data.id || Date.now(),
+                user_id: currentUser.id,
+                room_id: roomId,
+                room_name: roomName,
+                rating: rating,
+                comment: comment,
+                status: 'approved',
+                visible: 1,
+                created_at: new Date().toISOString()
+            });
+
             closeReviewModal();
-            setTimeout(() => window.location.reload(), 1200);
+            renderReviewsList();
+            renderBookingsList();
         } else {
             if (typeof showToast === 'function') {
                 showToast(data.message || 'Failed to submit review', 'error');
@@ -881,6 +1331,186 @@ function submitReviewFromModal(e) {
             showToast('Network error while submitting review', 'error');
         } else {
             alert('Network error while submitting review');
+        }
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    });
+}
+
+/**
+ * Open Dedicated Late Arrival Reporting Modal
+ */
+function openLateArrivalModal(bookingId = null) {
+    const allBookings = (window.appState && Array.isArray(window.appState.bookings)) ? window.appState.bookings : [];
+    let booking = null;
+    if (bookingId) {
+        booking = allBookings.find(b => b.id == bookingId);
+    }
+    if (!booking) {
+        const today = getLocalDateStr();
+        booking = allBookings.find(b => {
+            const bStatus = (b.bookingStatus || '').toLowerCase();
+            const status = (b.status || '').toLowerCase();
+            return status !== 'cancelled' && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' && ((b.checkOut || '') >= today || (b.checkIn || '') >= today);
+        }) || allBookings[0] || null;
+    }
+
+    if (!booking) {
+        if (typeof showToast === 'function') {
+            showToast('No active reservation found to report late arrival.', 'warning');
+        } else {
+            alert('No active reservation found to report late arrival.');
+        }
+        return;
+    }
+
+    const bIdInput = document.getElementById('late-arrival-booking-id');
+    const roomNameEl = document.getElementById('late-modal-room-name');
+    const refIdEl = document.getElementById('late-modal-ref-id');
+    const checkInDateEl = document.getElementById('late-modal-checkin-date');
+    const currentTimeEl = document.getElementById('late-modal-current-time');
+    const newTimeInput = document.getElementById('late-arrival-new-time');
+    const phoneInput = document.getElementById('late-arrival-contact-phone');
+    const notesInput = document.getElementById('late-arrival-notes');
+    const reasonSelect = document.getElementById('late-arrival-reason');
+
+    if (bIdInput) bIdInput.value = booking.id;
+    if (roomNameEl) roomNameEl.textContent = booking.roomName || 'Island Room';
+    if (refIdEl) refIdEl.textContent = `Ref: ${booking.ref_id || booking.refId || ('WIH-' + booking.id)}`;
+    if (checkInDateEl) checkInDateEl.textContent = getFormattedDateWithDay(booking.checkIn);
+    if (currentTimeEl) currentTimeEl.textContent = `Current: ${formatTime12H(booking.expectedArrivalTime || '14:00:00')}`;
+
+    // Set default new arrival time to 2 hours after scheduled or 17:00
+    if (newTimeInput) {
+        const cur = (booking.expectedArrivalTime || '14:00:00').substring(0, 5);
+        const parts = cur.split(':');
+        let h = (parseInt(parts[0], 10) || 14) + 2;
+        if (h > 23) h = 23;
+        newTimeInput.value = `${String(h).padStart(2, '0')}:00`;
+    }
+
+    const user = (window.appState && window.appState.currentUser) ? window.appState.currentUser : {};
+    if (phoneInput) {
+        phoneInput.value = user.phone || booking.guestPhone || '';
+    }
+
+    if (notesInput) notesInput.value = '';
+    if (reasonSelect) reasonSelect.selectedIndex = 0;
+
+    const modal = document.getElementById('late-arrival-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeLateArrivalModal() {
+    const modal = document.getElementById('late-arrival-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function submitLateArrival(e) {
+    e.preventDefault();
+    const bookingId = document.getElementById('late-arrival-booking-id').value;
+    const newTime = document.getElementById('late-arrival-new-time').value;
+    const reason = document.getElementById('late-arrival-reason').value;
+    const phone = document.getElementById('late-arrival-contact-phone').value.trim();
+    const notes = document.getElementById('late-arrival-notes').value.trim();
+    const currentUser = (window.appState && window.appState.currentUser) ? window.appState.currentUser : {};
+
+    if (!newTime) {
+        if (typeof showToast === 'function') {
+            showToast('Please select your new estimated arrival time.', 'warning');
+        } else {
+            alert('Please select your new estimated arrival time.');
+        }
+        return;
+    }
+
+    const allBookings = (window.appState && Array.isArray(window.appState.bookings)) ? window.appState.bookings : [];
+    const booking = allBookings.find(b => b.id == bookingId) || {};
+    const roomName = booking.roomName || 'Reservation';
+    const refCode = booking.ref_id || booking.refId || ('WIH-' + booking.id);
+    const newTime12H = formatTime12H(newTime);
+
+    const fullMessage = [
+        `=== LATE ARRIVAL NOTIFICATION ===`,
+        `Reservation: ${roomName} (Ref: ${refCode})`,
+        `Reason for Delay: ${reason}`,
+        `New Estimated Arrival Time: ${newTime12H} (${newTime})`,
+        `Contact Phone / WhatsApp: ${phone || 'Not provided'}`,
+        notes ? `Guest Notes: ${notes}` : `Guest requested room hold extension due to travel delay.`
+    ].join('\n');
+
+    const submitBtn = document.getElementById('btn-submit-late-arrival');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Submitting...';
+    }
+
+    fetch('../actions/reports_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            user_id: currentUser.id,
+            booking_id: bookingId ? parseInt(bookingId, 10) : null,
+            type: 'late_arrival',
+            subject: `Late Arrival: ${roomName} [ETA ${newTime12H}] (${refCode})`,
+            message: fullMessage,
+            new_arrival_time: newTime + (newTime.length === 5 ? ':00' : ''),
+            contact_phone: phone
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Arrival Notice';
+        }
+
+        if (data.success) {
+            // Update local state so countdown and UI refresh immediately without page reload!
+            if (booking) {
+                booking.expectedArrivalTime = newTime + (newTime.length === 5 ? ':00' : '');
+                if (phone) booking.guestPhone = phone;
+            }
+
+            if (typeof showToast === 'function') {
+                showToast(`Late arrival recorded! Your new arrival time is set to ${newTime12H}. Room hold is maintained.`, 'success');
+            } else {
+                alert(`Late arrival recorded! Your new arrival time is set to ${newTime12H}. Room hold is maintained.`);
+            }
+
+            closeLateArrivalModal();
+
+            // Refresh overview tab and bookings list with new arrival time
+            renderOverviewTab(bookingId);
+            renderBookingsList();
+        } else {
+            if (typeof showToast === 'function') {
+                showToast('Error: ' + data.message, 'error');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        }
+    })
+    .catch(err => {
+        console.error('Late arrival submission error:', err);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Arrival Notice';
+        }
+        if (typeof showToast === 'function') {
+            showToast('Network error while reporting late arrival. Please call front desk.', 'error');
+        } else {
+            alert('Network error while reporting late arrival. Please call front desk directly.');
         }
     });
 }
@@ -961,110 +1591,7 @@ function submitReport(e) {
     });
 }
 
-/**
- * Render User's Reviews in Support & Reviews Tab
- */
-function renderReviewsList() {
-    const container = document.getElementById('user-reviews-container');
-    if (!container) return;
 
-    const reviews = (window.appState && Array.isArray(window.appState.reviews)) ? window.appState.reviews : [];
-
-    if (reviews.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                <i class="far fa-star text-slate-300 text-3xl mb-2"></i>
-                <p class="text-slate-500 text-sm font-medium">You haven't written any room reviews yet.</p>
-                <p class="text-slate-400 text-xs mt-1">Share your experience after completing your stay!</p>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = reviews.map(rev => {
-        const rating = Math.max(1, Math.min(5, Math.round(parseFloat(rev.rating || 5))));
-        let stars = '';
-        for (let i = 0; i < 5; i++) {
-            stars += `<i class="fas fa-star ${i < rating ? 'text-amber-400' : 'text-slate-200'} text-xs"></i>`;
-        }
-
-        const replyHtml = rev.admin_reply ? `
-            <div class="mt-3 p-3 bg-amber-50/70 border-l-2 border-amber-500 rounded-r-xl text-xs">
-                <strong class="text-slate-800 block mb-0.5 font-bold"><i class="fas fa-reply mr-1 text-amber-600"></i> Host Response:</strong>
-                <span class="text-slate-600">${rev.admin_reply}</span>
-            </div>
-        ` : '';
-
-        return `
-            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-slate-200 transition-colors">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <h4 class="font-bold text-slate-900 text-sm">${rev.room_name || 'Room Stay'}</h4>
-                        <span class="text-xs text-slate-400">${new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <div class="flex gap-0.5">${stars}</div>
-                        <span class="text-xs font-bold text-slate-700 ml-1.5">${parseFloat(rev.rating).toFixed(1)}</span>
-                    </div>
-                </div>
-                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">${rev.comment}</p>
-                ${replyHtml}
-            </div>
-        `;
-    }).join('');
-}
-
-/**
- * Render User's Support Inquiries & Tickets
- */
-function renderFeedbackList() {
-    const container = document.getElementById('user-reports-container');
-    if (!container) return;
-
-    const reports = (window.appState && Array.isArray(window.appState.reports)) ? window.appState.reports : [];
-
-    if (reports.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                <i class="far fa-envelope-open text-slate-300 text-3xl mb-2"></i>
-                <p class="text-slate-500 text-sm font-medium">No support inquiries filed.</p>
-                <p class="text-slate-400 text-xs mt-1">Need help or have questions? Click "New Ticket".</p>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = reports.map(rep => {
-        const isResolved = rep.status === 'Resolved';
-        const badgeClass = isResolved ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100';
-
-        const replyHtml = rep.admin_reply ? `
-            <div class="mt-3 p-3 bg-blue-50/70 border-l-2 border-brand-blue rounded-r-xl text-xs">
-                <strong class="text-brand-dark block mb-0.5 font-bold"><i class="fas fa-reply mr-1 text-brand-blue"></i> Support Response:</strong>
-                <span class="text-slate-600">${rep.admin_reply}</span>
-            </div>
-        ` : '';
-
-        return `
-            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">${rep.type || 'Inquiry'}</span>
-                        <h4 class="font-bold text-slate-900 text-sm">${rep.subject || 'Support Ticket'}</h4>
-                    </div>
-                    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badgeClass}">
-                        ${rep.status || 'Pending'}
-                    </span>
-                </div>
-                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">${rep.message}</p>
-                ${replyHtml}
-                <div class="mt-2 text-[10px] text-slate-400 text-right">
-                    ${new Date(rep.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
 /**
  * Logout Helper
