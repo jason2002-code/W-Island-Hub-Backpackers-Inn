@@ -12,10 +12,26 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `avatar` varchar(255) DEFAULT NULL,
+  `phone` varchar(30) DEFAULT NULL,
+  `gender` varchar(20) DEFAULT NULL,
+  `birthdate` date DEFAULT NULL,
+  `nationality` varchar(100) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `emergency_name` varchar(100) DEFAULT NULL,
+  `emergency_phone` varchar(30) DEFAULT NULL,
+  `emergency_relation` varchar(50) DEFAULT NULL,
+  `travel_preferences` text DEFAULT NULL,
+  `is_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `bio` text DEFAULT NULL,
   `password` varchar(255) NOT NULL,
-  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `role` enum('admin','user') DEFAULT 'user',
+  `is_archived` tinyint(1) NOT NULL DEFAULT 0,
+  `archived_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_users_is_archived` (`is_archived`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
@@ -309,4 +325,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-

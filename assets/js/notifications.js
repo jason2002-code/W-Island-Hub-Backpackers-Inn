@@ -59,7 +59,8 @@ window.showToast = function(message, type = 'info') {
 // Modern Confirm Dialog (replaces confirm())
 window.showConfirm = function(message, onConfirm, options = {}) {
     const title = options.title || 'Confirm Action';
-    
+    const confirmLabel = options.confirmLabel || 'Confirm';
+    const variantClass = options.variant === 'primary' ? 'btn-confirm-ok--primary' : '';
     if (!confirmOverlay) {
         confirmOverlay = document.createElement('div');
         confirmOverlay.id = 'custom-confirm-overlay';
@@ -93,6 +94,8 @@ window.showConfirm = function(message, onConfirm, options = {}) {
             .btn-confirm-cancel:hover { background: #f1f5f9; }
             .btn-confirm-ok { background: #ef4444; color: white; }
             .btn-confirm-ok:hover { background: #dc2626; }
+            .btn-confirm-ok--primary { background: #6C5DD3; }
+            .btn-confirm-ok--primary:hover { background: #5a4bbd; }
             @media (max-width: 480px) { .custom-confirm-buttons { flex-direction: column; gap: 8px; } }
         </style>
         <div class="custom-confirm-box">
@@ -100,7 +103,7 @@ window.showConfirm = function(message, onConfirm, options = {}) {
             <p>${message}</p>
             <div class="custom-confirm-buttons">
                 <button class="btn-confirm-cancel" onclick="closeConfirm()">Cancel</button>
-                <button class="btn-confirm-ok" id="confirm-ok-btn">Confirm</button>
+                <button class="btn-confirm-ok ${variantClass}" id="confirm-ok-btn">${confirmLabel}</button>
             </div>
         </div>
     `;

@@ -4,6 +4,27 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/config/db.php';
+
+// Archived accounts are locked out even when they still hold a live session.
+if (!empty($_SESSION['user_id'])) {
+    $sessionGuardDb = getDB();
+
+    if ($sessionGuardDb) {
+        try {
+            $guardStmt = $sessionGuardDb->prepare("SELECT is_archived FROM users WHERE id = ? LIMIT 1");
+            $guardStmt->execute([$_SESSION['user_id']]);
+            $archivedFlag = $guardStmt->fetchColumn();
+
+            // No row (account deleted) or is_archived = 1 means the session is no longer valid.
+            if ($archivedFlag === false || (int) $archivedFlag === 1) {
+                $_SESSION = [];
+                session_destroy();
+            }
+        } catch (PDOException $e) {
+            // The public site must keep rendering even if this check cannot run.
+        }
+    }
+}
 ?>
 <?php include 'includes/header.php'; ?>
 <?php include 'includes/navbar.php'; ?>

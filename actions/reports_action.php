@@ -17,6 +17,7 @@ if (!function_exists('getHotelInformation')) {
             'name' => 'W Island Backpackers Inn',
             'trade_name' => 'W Island Hub Backpackers Inn',
             'legal_entity' => 'W Island Backpackers Inn Hospitality Services',
+            'owner' => 'Welfrida Araneta Bolotaulo',
             'tagline' => 'Cozy Island Haven, Traveler Hub & Bohol Tour Gateway',
             'address' => 'Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines',
             'island' => 'Panglao Island, Bohol',
@@ -639,11 +640,11 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
             }
         }
 
-        // 5. Staff Performance
-        $supervisor = $pdo->query("SELECT name FROM admins ORDER BY id ASC LIMIT 1")->fetchColumn() ?: 'John Smith';
-        if ($supervisor === 'Admin') $supervisor = 'Admin (Shift Supervisor)';
-        $receptionists = 'Emily Johnson, Mark Davis';
-        $concierge = 'Sarah Thompson';
+         // 5. Staff Performance & Signatures
+        $owner = 'Welfrida Araneta Bolotaulo';
+        $frontDesk = 'Fredsil Araneta Bolotaulo, Michelle Nee Baco Bolotaulo';
+        $shiftLead = 'Fredsil Araneta Bolotaulo';
+        $supervisor = 'Fredsil Araneta Bolotaulo (Shift Lead)';
 
         // 6. Complaints and Feedback
         $complaintsReceived = intval($pdo->query("SELECT COUNT(*) FROM reports")->fetchColumn());
@@ -761,11 +762,11 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
                         ]
                     ],
                     'staff_performance' => [
-                        'title' => 'Staff Performance',
+                       'title' => 'Staff & Management',
                         'items' => [
-                            ['label' => 'Shift Supervisor', 'value' => $supervisor],
-                            ['label' => 'Receptionists', 'value' => $receptionists],
-                            ['label' => 'Concierge', 'value' => $concierge],
+                            ['label' => 'Owner', 'value' => $owner],
+                            ['label' => 'Front Desk', 'value' => $frontDesk],
+                            ['label' => 'Shift Lead', 'value' => $shiftLead],
                         ]
                     ],
                     'complaints_feedback' => [
@@ -786,9 +787,9 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
                 ],
                 'room_types_breakdown' => $roomTypeDetails,
                 'signoff' => [
-                    'prepared_by' => 'Front Desk Receptionist / Shift Lead',
-                    'audited_by' => 'Night Auditor / Shift Supervisor',
-                    'approved_by' => 'General Manager / Operations Lead'
+                    'prepared_by' => $frontDesk,
+                    'audited_by' => $shiftLead,
+                    'approved_by' => $owner . ' (Owner)'
                 ]
             ],
             'operational_snapshot' => [

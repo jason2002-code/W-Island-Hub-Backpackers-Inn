@@ -30,22 +30,29 @@ if (!$pdo) {
 try {
     // Check if user exists in either table using UNION
     $stmt = $pdo->prepare("
-        SELECT id, name, email, NULL as avatar, password, 'admin' as role FROM admins WHERE email = ?
+        SELECT id, name, email, NULL as avatar, password, 'admin' as role, 0 as is_archived FROM admins WHERE email = ?
         UNION
-        SELECT id, name, email, avatar, password, 'user' as role FROM users WHERE email = ?
+        SELECT id, name, email, avatar, password, 'user' as role, is_archived FROM users WHERE email = ?
     ");
     $stmt->execute([$email, $email]);
     $foundUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $authenticatedUser = null;
+    $archivedAccountMatched = false;
+
     // Verify password against found records (handles identical emails across tables)
     foreach ($foundUsers as $u) {
         if ($password === $u['password'] || password_verify($password, $u['password'])) {
+            // Archived accounts keep valid credentials but are locked out of the site
+            if ((int) ($u['is_archived'] ?? 0) === 1) {
+                $archivedAccountMatched = true;
+                continue;
+            }
+
             $authenticatedUser = $u;
             break;
         }
     }
-    
     if ($authenticatedUser) {
         $user = $authenticatedUser;
         // Login successful - return user data (excluding password)
@@ -78,6 +85,11 @@ try {
                 'avatar' => $user['avatar'] ?? null,
                 'role' => $user['role']
             ]
+        ]);
+    } elseif ($archivedAccountMatched) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'This account has been archived. Please contact the hotel admin to restore access.'
         ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid email or password']);

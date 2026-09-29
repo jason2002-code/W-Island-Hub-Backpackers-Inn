@@ -68,10 +68,20 @@ if (!$pdo) {
 
 try {
     // Check if email already exists
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt = $pdo->prepare("SELECT id, is_archived FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
-    
-    if ($stmt->rowCount() > 0) {
+    $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existingUser) {
+        // The email belongs to an archived account, so registration must not silently succeed
+        if ((int) $existingUser['is_archived'] === 1) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'This email belongs to an archived account. Please contact the hotel admin to restore it.'
+            ]);
+            exit;
+        }
+
         echo json_encode(['success' => false, 'message' => 'Email already registered']);
         exit;
     }

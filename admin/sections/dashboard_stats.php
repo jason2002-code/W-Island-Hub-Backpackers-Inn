@@ -19,8 +19,8 @@ try {
         if ($pdo) {
             $dbConnected = true;
             
-            // Total users
-            $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+            // Total users (archived accounts are excluded)
+            $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE is_archived = 0");
             $stats['totalUsers'] = $stmt ? $stmt->fetchColumn() : 0;
             
             // Total bookings
