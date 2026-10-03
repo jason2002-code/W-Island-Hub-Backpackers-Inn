@@ -24,6 +24,35 @@ if ($pdo) {
             ORDER BY r.created_at DESC
         ");
         $rooms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Compute real-time occupied/remaining beds for dorm rooms from active bookings today
+        $today = date('Y-m-d');
+        foreach ($rooms as &$room) {
+            $isDorm = ($room['type'] === 'Dorm' || intval($room['id']) === 5);
+            if ($isDorm) {
+                $dormTotalBeds = 8; // Fixed total beds
+                $stmtOccupied = $pdo->prepare("
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN b.beds_count > 0 THEN b.beds_count
+                            ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                        END
+                    ), 0) AS occupied_beds
+                    FROM bookings b
+                    WHERE b.room_id = ?
+                      AND b.status IN ('Pending', 'Confirmed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+                      AND COALESCE(b.check_in_date, b.check_in) <= ?
+                      AND COALESCE(b.check_out_date, b.check_out) > ?
+                ");
+                $stmtOccupied->execute([$room['id'], $today, $today]);
+                $occupiedBeds = (int)$stmtOccupied->fetchColumn();
+                $room['dorm_occupied_beds'] = $occupiedBeds;
+                $room['dorm_remaining_beds'] = max(0, $dormTotalBeds - $occupiedBeds);
+                $room['dorm_total_beds'] = $dormTotalBeds;
+            }
+        }
+        unset($room);
     } catch (PDOException $e) {
         $error = 'Failed to load rooms: ' . $e->getMessage();
     }
@@ -63,7 +92,7 @@ if ($pdo) {
                     $dorm_total_price = 3680.00;
                 }
             ?>
-            <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col" data-room-id="<?php echo $room_id; ?>" data-capacity="<?php echo $room_capacity; ?>" data-max-capacity="<?php echo $room_max_capacity; ?>" data-is-dorm="<?php echo $is_dorm ? '1' : '0'; ?>">
+            <div class="room-card bg-white rounded-xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col" data-room-id="<?php echo $room_id; ?>" data-capacity="<?php echo $room_max_capacity; ?>" data-max-capacity="<?php echo $room_max_capacity; ?>" data-is-dorm="<?php echo $is_dorm ? '1' : '0'; ?>">
                 <div class="h-48 overflow-hidden relative cursor-pointer group" onclick="openRoomInfoModal(<?php echo $room_id; ?>)" title="Click to view full room information">
                     <img src="<?php echo htmlspecialchars($room['image']); ?>" alt="<?php echo htmlspecialchars($room['name']); ?>" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
                     <div class="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -87,11 +116,15 @@ if ($pdo) {
                     <p class="text-gray-500 text-sm mb-4 line-clamp-2"><?php echo htmlspecialchars($room['description']); ?></p>
                     
                     <div class="flex flex-wrap gap-2 mb-4">
-                        <?php if ($is_dorm): ?>
+                        <?php if ($is_dorm): 
+                            $dorm_avail    = intval($room['dorm_remaining_beds'] ?? 8);
+                            $dorm_occupied = intval($room['dorm_occupied_beds']  ?? 0);
+                            $dorm_total    = intval($room['dorm_total_beds']     ?? 8);
+                        ?>
                             <span class="text-xs text-brand-blue bg-blue-50 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 room-capacity-pill" data-room-id="<?php echo $room_id; ?>">
                                 <i class="fas fa-bed text-[11px] text-brand-blue"></i> 
-                                <span class="room-beds-text"><strong class="room-avail-beds"><?php echo $room_capacity; ?></strong> Beds Available</span> 
-                                <span class="text-slate-400 font-normal text-[11px]">(8 Beds Total)</span>
+                                <span class="room-beds-text"><strong class="room-avail-beds"><?php echo $dorm_avail; ?></strong> Beds Available</span> 
+                                <span class="text-slate-400 font-normal text-[11px]">(<?php echo $dorm_occupied; ?> Occupied / <?php echo $dorm_total; ?> Total)</span>
                             </span>
                         <?php else: ?>
                             <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1">
@@ -344,7 +377,7 @@ window.serverRoomsData = window.serverRoomsData || {};
         'name' => $r['name'],
         'type' => $r['type'],
         'price' => $r_is_dorm ? 3680.00 : floatval($r['price']),
-        'capacity' => intval($r['capacity'] ?? 2),
+        'capacity' => $r_is_dorm ? 8 : intval($r['max_capacity'] ?? $r['capacity'] ?? 2),
         'max_capacity' => $r_is_dorm ? 8 : intval($r['max_capacity'] ?? $r['capacity'] ?? 2),
         'image' => $r['image'] ?? 'assets/image/background.jpg',
         'desc' => $r['description'] ?? '',
@@ -356,7 +389,8 @@ window.serverRoomsData = window.serverRoomsData || {};
         'is_dorm' => $r_is_dorm,
         'bed_price' => 460.00,
         'total_beds' => 8,
-        'remaining_beds' => intval($r['capacity'] ?? 8)
+        'occupied_beds' => $r_is_dorm ? intval($r['dorm_occupied_beds'] ?? 0) : 0,
+        'remaining_beds' => $r_is_dorm ? intval($r['dorm_remaining_beds'] ?? 8) : intval($r['max_capacity'] ?? $r['capacity'] ?? 2)
     ]); ?>;
     <?php endforeach; ?>
 <?php endif; ?>

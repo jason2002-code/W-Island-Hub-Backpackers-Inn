@@ -765,6 +765,48 @@ foreach ($bookings as $b) {
     </div>
 </div>
 
+<!-- ================= MODAL: BOOKING MESSAGES & REPORTS ================= -->
+<div id="booking-reports-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-gray-100 flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100 shrink-0">
+            <div>
+                <h3 class="text-lg font-bold text-gray-800">Messages & Reports</h3>
+                <p id="br-modal-room-name" class="text-xs text-gray-500">Booking Reference</p>
+            </div>
+            <button onclick="closeBookingReportsModal()" class="text-gray-400 hover:text-gray-600 text-lg">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Messages History Area -->
+        <div id="br-messages-container" class="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar min-h-[200px]">
+            <!-- Messages will be injected here via JS -->
+        </div>
+
+        <!-- New Report Form -->
+        <form id="br-report-form" onsubmit="submitBookingReport(event)" class="shrink-0 pt-4 border-t border-gray-100 space-y-3">
+            <input type="hidden" id="br-booking-id">
+            
+            <div class="flex gap-2">
+                <select id="br-report-type" class="w-1/3 px-3 py-2 bg-slate-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none transition">
+                    <option value="complaint">Problem/Issue</option>
+                    <option value="inquiry">Question</option>
+                    <option value="feedback">Feedback</option>
+                </select>
+                <input type="text" id="br-report-subject" required placeholder="Subject / Topic" class="w-2/3 px-3 py-2 bg-slate-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none transition">
+            </div>
+            
+            <textarea id="br-report-message" required rows="2" placeholder="Type your message or report a problem here..." class="w-full px-3 py-2 bg-slate-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-blue outline-none transition"></textarea>
+            
+            <div class="flex justify-end">
+                <button type="submit" id="br-submit-btn" class="bg-brand-blue hover:bg-sky-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5">
+                    <i class="fas fa-paper-plane"></i> Send Message
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- ================= MODAL: SUPPORT / FEEDBACK TICKET ================= -->
 <div id="report-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-gray-100">
@@ -858,37 +900,99 @@ foreach ($bookings as $b) {
 
 <!-- Bootstrap Initial State for JavaScript -->
 <script>
-    window.appState = {
-        currentUser: <?php echo json_encode($user); ?>,
-        bookings: <?php echo json_encode($jsBookings); ?>,
-        reports: <?php echo json_encode($userReports); ?>,
-        reviews: <?php echo json_encode($userReviews); ?>,
-        users: []
-    };
+    /**
+     * Cross-tab session guard.
+     *
+     * Problem: PHP sessions are shared across all browser tabs. When a second
+     * account logs in on Tab 2, it overwrites $_SESSION['user_id'] on the server.
+     * Tab 1 (still on profile.php) would then show the wrong account on next load.
+     *
+     * Fix: On every profile page load, compare what PHP rendered (phpRenderedUserId)
+     * against what this tab's sessionStorage says is the logged-in user. If they
+     * don't match, call sync_session.php to re-establish the correct PHP session
+     * for this tab, then reload so PHP re-fetches the right user's data.
+     */
+    (function() {
+        const phpRenderedUserId = <?php echo (int)$_SESSION['user_id']; ?>;
 
-    window.saveState = function() {
-        if (window.appState && window.appState.currentUser) {
+        // Read the user this tab believes is logged in
+        let tabUser = null;
+        try {
+            const stored = sessionStorage.getItem('w_currentUser');
+            tabUser = stored ? JSON.parse(stored) : null;
+        } catch(e) {}
+
+        const tabUserId = tabUser ? (parseInt(tabUser.id, 10) || 0) : 0;
+
+        // Only sync when:
+        // 1. Tab has a user in sessionStorage
+        // 2. It differs from what PHP session has
+        if (tabUserId > 0 && tabUserId !== phpRenderedUserId) {
+            // Session mismatch detected: re-sync PHP session to this tab's user
+            fetch('../actions/sync_session.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: tabUserId })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    // Reload the page — PHP will now use the correct session
+                    window.location.reload();
+                } else {
+                    // User no longer valid: clear tab state and redirect to login
+                    sessionStorage.removeItem('w_currentUser');
+                    window.location.href = '../index.php#login';
+                }
+            })
+            .catch(function() {
+                // On network error, stay on page but don't initialize with wrong data
+                sessionStorage.removeItem('w_currentUser');
+                window.location.href = '../index.php#login';
+            });
+
+            // Block profile initialization until reload completes
+            return;
+        }
+
+        // Sessions match (or no sessionStorage user) — safe to bootstrap normally
+        window.appState = {
+            currentUser: <?php echo json_encode($user); ?>,
+            bookings: <?php echo json_encode($jsBookings); ?>,
+            reports: <?php echo json_encode($userReports); ?>,
+            reviews: <?php echo json_encode($userReviews); ?>,
+            users: []
+        };
+
+        // Also update sessionStorage to keep it in sync with what PHP confirmed
+        try {
             sessionStorage.setItem('w_currentUser', JSON.stringify(window.appState.currentUser));
-        }
-    };
+        } catch(e) {}
 
-    window.router = function(page) {
-        window.location.href = '../index.php#' + page;
-    };
+        window.saveState = function() {
+            if (window.appState && window.appState.currentUser) {
+                sessionStorage.setItem('w_currentUser', JSON.stringify(window.appState.currentUser));
+            }
+        };
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const loader = document.getElementById('loader');
-        if (loader) {
-            loader.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
+        window.router = function(page) {
+            window.location.href = '../index.php#' + page;
+        };
 
-        if (typeof initGuestProfile === 'function') {
-            initGuestProfile();
-        } else if (typeof renderUserProfile === 'function') {
-            renderUserProfile();
-        }
-    });
+        document.addEventListener('DOMContentLoaded', function() {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+
+            if (typeof initGuestProfile === 'function') {
+                initGuestProfile();
+            } else if (typeof renderUserProfile === 'function') {
+                renderUserProfile();
+            }
+        });
+    })();
 </script>
 
 <!-- Modern Notifications -->

@@ -30,6 +30,8 @@ function runMigrations() {
             'booking_status' => "ENUM('pending_verification','confirmed','deposit_paid','pending_arrival','completed','cancelled_expired','no_show') NOT NULL DEFAULT 'pending_verification' AFTER `status`",
             'expires_at' => "DATETIME NULL AFTER `booking_status`",
             'special_requests' => "TEXT NULL AFTER `expires_at`",
+            'is_archived' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER `status`",
+            'archived_at' => "DATETIME NULL DEFAULT NULL AFTER `is_archived`",
             'updated_at' => "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`"
         ];
 
@@ -43,6 +45,16 @@ function runMigrations() {
                 $pdo->exec("ALTER TABLE `bookings` ADD COLUMN `{$colName}` {$colDef}");
                 $added[] = $colName;
             }
+        }
+
+        // Ensure index on bookings.is_archived
+        try {
+            $stmtIdx = $pdo->query("SHOW INDEX FROM `bookings` WHERE Key_name = 'idx_bookings_is_archived'");
+            if (!$stmtIdx->fetch()) {
+                $pdo->exec("ALTER TABLE `bookings` ADD INDEX `idx_bookings_is_archived` (`is_archived`)");
+            }
+        } catch (Exception $e) {
+            // Index check non-fatal
         }
 
         // Ensure user_id is nullable for guest reservations

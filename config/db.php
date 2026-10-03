@@ -3,6 +3,7 @@
  * DATABASE CONFIGURATION
  * Handles connection to MySQL database using PDO.
  */
+date_default_timezone_set('Asia/Manila');
 
 // Database credentials - CHECK THESE IN XAMPP
 define('DB_HOST', 'localhost');

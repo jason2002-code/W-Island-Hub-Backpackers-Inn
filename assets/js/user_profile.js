@@ -152,6 +152,44 @@ function getFormattedDateWithDay(dateStr) {
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/**
+ * Returns a full accurate datetime string combining a date string (YYYY-MM-DD)
+ * and a time string (HH:MM or HH:MM:SS) for display.
+ * Example: "Thu, Oct 1, 2026 · 2:00 PM"
+ *
+ * @param {string} dateStr  - Date in YYYY-MM-DD format.
+ * @param {string} timeStr  - Time in HH:MM or HH:MM:SS format (24-hour).
+ * @returns {string} Formatted datetime string.
+ */
+function getFormattedDateTimeStr(dateStr, timeStr) {
+    if (!dateStr) return '-';
+    const parts = String(dateStr).split('-');
+    if (parts.length < 3) return dateStr;
+    const timeParts = (timeStr || '00:00:00').split(':');
+    const hour = parseInt(timeParts[0], 10) || 0;
+    const min  = parseInt(timeParts[1], 10) || 0;
+
+    const d = new Date(
+        parseInt(parts[0], 10),
+        parseInt(parts[1], 10) - 1,
+        parseInt(parts[2], 10),
+        hour,
+        min,
+        0
+    );
+
+    const datePart = d.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    });
+    // Zero-pad minutes
+    const minStr  = String(min).padStart(2, '0');
+    const ampm    = hour >= 12 ? 'PM' : 'AM';
+    const hour12  = hour % 12 === 0 ? 12 : hour % 12;
+    const timePart = `${hour12}:${minStr} ${ampm}`;
+
+    return `${datePart} · ${timePart}`;
+}
+
 function getRelativeDayLabel(dateStr) {
     if (!dateStr) return '';
     const todayStr = getLocalDateStr();
@@ -171,111 +209,6 @@ function getRelativeDayLabel(dateStr) {
     return 'Today (Check-in Day)';
 }
 
-let stayCountdownInterval = null;
-
-function startStayCountdown(checkInDateStr, arrivalTimeStr, checkOutDateStr) {
-    if (stayCountdownInterval) {
-        clearInterval(stayCountdownInterval);
-        stayCountdownInterval = null;
-    }
-
-    if (!checkInDateStr) return;
-
-    const timeParts = (arrivalTimeStr || '14:00:00').split(':');
-    const arrHour = parseInt(timeParts[0], 10) || 14;
-    const arrMin = parseInt(timeParts[1], 10) || 0;
-
-    const checkInParts = checkInDateStr.split('-');
-    if (checkInParts.length < 3) return;
-
-    const targetCheckIn = new Date(
-        parseInt(checkInParts[0], 10),
-        parseInt(checkInParts[1], 10) - 1,
-        parseInt(checkInParts[2], 10),
-        arrHour,
-        arrMin,
-        0
-    );
-
-    let targetCheckOut = null;
-    if (checkOutDateStr) {
-        const checkOutParts = checkOutDateStr.split('-');
-        if (checkOutParts.length >= 3) {
-            targetCheckOut = new Date(
-                parseInt(checkOutParts[0], 10),
-                parseInt(checkOutParts[1], 10) - 1,
-                parseInt(checkOutParts[2], 10),
-                12,
-                0,
-                0
-            );
-        }
-    }
-
-    const time12H = formatTime12H(arrivalTimeStr);
-
-    function tick() {
-        const cdDays = document.getElementById('cd-days');
-        const cdHours = document.getElementById('cd-hours');
-        const cdMins = document.getElementById('cd-mins');
-        const cdSecs = document.getElementById('cd-secs');
-        const cdHeadline = document.getElementById('stay-countdown-headline');
-        const cdSubtext = document.getElementById('stay-countdown-subtext');
-
-        if (!cdDays || !cdHours || !cdMins || !cdSecs) {
-            if (stayCountdownInterval) {
-                clearInterval(stayCountdownInterval);
-                stayCountdownInterval = null;
-            }
-            return;
-        }
-
-        const now = new Date();
-        const diffMs = targetCheckIn.getTime() - now.getTime();
-
-        if (diffMs > 0) {
-            // Future check-in
-            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
-
-            cdDays.textContent = String(days).padStart(2, '0');
-            cdHours.textContent = String(hours).padStart(2, '0');
-            cdMins.textContent = String(mins).padStart(2, '0');
-            cdSecs.textContent = String(secs).padStart(2, '0');
-
-            if (days === 0) {
-                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-amber-300 font-bold"><i class="fas fa-bell animate-bounce text-amber-400"></i> Check-In Day Is Today!</span>`;
-                if (cdSubtext) cdSubtext.innerHTML = `Your check-in starts at <strong class="text-teal-300">${time12H}</strong>. Arrive on time: <span class="text-amber-300 font-mono font-bold">${hours} Hours, ${mins} Mins</span> remaining!`;
-            } else if (days === 1) {
-                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-teal-300 font-bold"><i class="fas fa-calendar-day text-teal-400"></i> Check-In Is Tomorrow (1 Day After Book)!</span>`;
-                if (cdSubtext) cdSubtext.innerHTML = `Scheduled arrival tomorrow at <strong class="text-teal-300">${time12H}</strong> • <span class="text-teal-300 font-mono font-bold">${days} Day, ${hours} Hours</span> remaining.`;
-            } else {
-                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-teal-300 font-bold"><i class="fas fa-stopwatch text-teal-400"></i> Check-In Arrival Countdown</span>`;
-                if (cdSubtext) cdSubtext.innerHTML = `Scheduled arrival at <strong class="text-teal-300">${time12H}</strong> • <span class="text-teal-300 font-mono font-bold">${days} Days, ${hours} Hours, ${mins} Mins</span> remaining.`;
-            }
-        } else {
-            // Check-in time has arrived or passed!
-            const checkOutDiff = targetCheckOut ? (targetCheckOut.getTime() - now.getTime()) : -1;
-            cdDays.textContent = '00';
-            cdHours.textContent = '00';
-            cdMins.textContent = '00';
-            cdSecs.textContent = '00';
-
-            if (checkOutDiff > 0) {
-                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold"><i class="fas fa-door-open text-emerald-300 animate-pulse"></i> Check-In Window Is Open Now!</span>`;
-                if (cdSubtext) cdSubtext.innerHTML = `Check-in started at <strong class="text-emerald-300">${time12H}</strong>. Please report to the hotel front desk immediately to claim your room and avoid no-show cancellation!`;
-            } else {
-                if (cdHeadline) cdHeadline.innerHTML = `<span class="inline-flex items-center gap-1.5 text-slate-300 font-bold"><i class="fas fa-check-circle"></i> Reservation Stay Concluded</span>`;
-                if (cdSubtext) cdSubtext.textContent = "Your booked stay at W Island Hub has completed.";
-            }
-        }
-    }
-
-    tick();
-    stayCountdownInterval = setInterval(tick, 1000);
-}
 
 /**
  * Render Overview Tab (Next Upcoming Stay or Recent Activity)
@@ -283,11 +216,6 @@ function startStayCountdown(checkInDateStr, arrivalTimeStr, checkOutDateStr) {
 function renderOverviewTab(selectedBookingId = null) {
     const container = document.getElementById('next-stay-container');
     if (!container) return;
-
-    if (stayCountdownInterval) {
-        clearInterval(stayCountdownInterval);
-        stayCountdownInterval = null;
-    }
 
     const bookings = (window.appState && window.appState.bookings) ? window.appState.bookings : [];
     const today = getLocalDateStr();
@@ -303,6 +231,12 @@ function renderOverviewTab(selectedBookingId = null) {
 
         const checkOut = b.checkOut || '';
         const checkIn = b.checkIn || '';
+        
+        // If check-in is today, only count as upcoming if it hasn't passed 2:00 PM
+        if (checkIn === today && new Date().getHours() >= 14) {
+            return false;
+        }
+
         return checkOut >= today || checkIn >= today;
     });
 
@@ -317,10 +251,15 @@ function renderOverviewTab(selectedBookingId = null) {
     }
 
     if (upcoming) {
-        const formattedCheckIn = getFormattedDateWithDay(upcoming.checkIn);
-        const formattedCheckOut = getFormattedDateWithDay(upcoming.checkOut);
-        const relativeDay = getRelativeDayLabel(upcoming.checkIn);
-        const arrivalTime12H = formatTime12H(upcoming.expectedArrivalTime || '14:00:00');
+        const formattedCheckIn   = getFormattedDateWithDay(upcoming.checkIn);
+        const formattedCheckOut  = getFormattedDateWithDay(upcoming.checkOut);
+        // Full accurate datetime strings: check-in uses the actual arrival time,
+        // check-out is always at 12:00 PM per hostel policy.
+        const checkInTime        = upcoming.expectedArrivalTime || '14:00:00';
+        const formattedCheckInDT = getFormattedDateTimeStr(upcoming.checkIn, checkInTime);
+        const formattedCheckOutDT = getFormattedDateTimeStr(upcoming.checkOut, '12:00:00');
+        const relativeDay   = getRelativeDayLabel(upcoming.checkIn);
+        const arrivalTime12H = formatTime12H(checkInTime);
 
         const total = parseFloat(upcoming.total || 0);
         const paid = parseFloat(upcoming.paidAmount !== undefined ? upcoming.paidAmount : (upcoming.status === 'Confirmed' ? total : 0));
@@ -387,90 +326,62 @@ function renderOverviewTab(selectedBookingId = null) {
                 </div>
             </div>
 
-            <!-- LIVE COUNTDOWN BANNER (TIME, DAY, HOUR, MIN, SEC) -->
-            <div class="bg-gradient-to-r from-slate-900 via-brand-dark to-slate-800 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-700/60 mb-6 relative overflow-hidden">
-                <div class="absolute -right-8 -top-8 text-8xl text-white/5 pointer-events-none">
-                    <i class="fas fa-stopwatch"></i>
-                </div>
-                
-                <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
-                    <div class="max-w-xl">
-                        <div id="stay-countdown-headline" class="text-xs font-bold uppercase tracking-wider text-teal-300 mb-1 flex items-center gap-1.5">
-                            <i class="fas fa-stopwatch animate-pulse"></i> Check-In Arrival Countdown
-                        </div>
-                        <h4 id="stay-countdown-subtext" class="text-lg sm:text-xl font-black text-white tracking-tight">
-                            Calculating time to hotel arrival...
-                        </h4>
-                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
-                            Know your exact arrival schedule to check in on time and avoid automatic reservation release or no-show penalties.
-                        </p>
-                    </div>
 
-                    <!-- Countdown Digit Blocks -->
-                    <div class="flex items-center gap-2 sm:gap-3 select-none flex-shrink-0 w-full sm:w-auto justify-center">
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
-                            <span id="cd-days" class="text-2xl sm:text-3xl font-black text-white font-mono block leading-none">00</span>
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Days</span>
-                        </div>
-                        <span class="text-2xl font-bold text-teal-400/60">:</span>
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
-                            <span id="cd-hours" class="text-2xl sm:text-3xl font-black text-white font-mono block leading-none">00</span>
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Hours</span>
-                        </div>
-                        <span class="text-2xl font-bold text-teal-400/60">:</span>
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
-                            <span id="cd-mins" class="text-2xl sm:text-3xl font-black text-white font-mono block leading-none">00</span>
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Mins</span>
-                        </div>
-                        <span class="text-2xl font-bold text-teal-400/60">:</span>
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 min-w-[62px] sm:min-w-[72px] text-center shadow-inner">
-                            <span id="cd-secs" class="text-2xl sm:text-3xl font-black text-teal-300 font-mono block leading-none">00</span>
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-teal-300 mt-1 block">Secs</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- TIME, DAY, HOUR BOOKING SCHEDULE DETAILS GRID -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <!-- Check-in Day & Date -->
-                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100 relative overflow-hidden">
+                <!-- Check-in: Accurate Datetime -->
+                <div class="bg-teal-50/70 p-4 rounded-2xl border border-teal-100 relative overflow-hidden sm:col-span-2">
                     <div class="flex justify-between items-start mb-1">
-                        <span class="text-[10px] uppercase font-bold text-gray-400 block">Check-in Day &amp; Date</span>
+                        <span class="text-[10px] uppercase font-bold text-teal-600 block">Arrival Date &amp; Time</span>
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-800">${relativeDay}</span>
                     </div>
-                    <span class="font-bold text-gray-800 text-sm flex items-center gap-2 mt-1">
-                        <i class="far fa-calendar-alt text-brand-blue"></i> ${formattedCheckIn}
+                    <span class="font-bold text-teal-900 text-sm flex items-center gap-2 mt-1">
+                        <i class="far fa-calendar-alt text-teal-600"></i>
+                        <span class="font-mono">${formattedCheckInDT}</span>
                     </span>
-                    <span class="text-[11px] text-gray-500 block mt-1">Scheduled arrival day</span>
+                    <span class="text-[11px] text-teal-700 block mt-1">
+                        <i class="fas fa-door-open text-teal-500 mr-1"></i>
+                        Check-in opens at <strong>2:00 PM</strong> &mdash; your expected arrival: <strong>${arrivalTime12H}</strong>
+                    </span>
                 </div>
 
-                <!-- Check-in Time & Arrival Hour -->
-                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Check-in Time / Hour</span>
-                    <span class="font-bold text-purple-700 text-sm flex items-center gap-2">
-                        <i class="fas fa-clock text-purple-600"></i> ${arrivalTime12H}
+                <!-- Check-out: Accurate Datetime -->
+                <div class="bg-amber-50/70 p-4 rounded-2xl border border-amber-100 sm:col-span-2">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] uppercase font-bold text-amber-600 block">Departure Date &amp; Time</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">${upcoming.nights} Night(s)</span>
+                    </div>
+                    <span class="font-bold text-amber-900 text-sm flex items-center gap-2 mt-1">
+                        <i class="far fa-calendar-check text-amber-600"></i>
+                        <span class="font-mono">${formattedCheckOutDT}</span>
                     </span>
-                    <span class="text-[11px] text-gray-500 block mt-1">Standard check-in: <strong>2:00 PM</strong></span>
-                </div>
-
-                <!-- Check-out Date & Hour -->
-                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Check-out Date &amp; Hour</span>
-                    <span class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                        <i class="far fa-calendar-check text-amber-500"></i> ${formattedCheckOut}
+                    <span class="text-[11px] text-amber-700 block mt-1">
+                        <i class="fas fa-door-closed text-amber-500 mr-1"></i>
+                        Standard check-out: <strong>12:00 PM</strong> &mdash; please vacate by this time
                     </span>
-                    <span class="text-[11px] text-gray-500 block mt-1">Standard check-out: <strong>12:00 PM</strong></span>
                 </div>
 
                 <!-- Duration & Payment Status -->
-                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100 sm:col-span-2">
                     <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Stay Duration &amp; Bill</span>
                     <span class="font-bold text-brand-blue text-sm flex items-center gap-2">
                         <i class="fas fa-moon text-indigo-400"></i> ${upcoming.nights} Night(s) • ₱${total.toFixed(2)}
                     </span>
                     <span class="text-[11px] ${balance > 0 ? 'text-amber-700 font-semibold' : 'text-emerald-600 font-semibold'} block mt-1">
                         ${balance > 0 ? `₱${paid.toFixed(2)} Paid • ₱${balance.toFixed(2)} Due at Desk` : `<i class="fas fa-check-circle"></i> 100% Fully Settled`}
+                    </span>
+                </div>
+
+                <!-- Booking Reference -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100 sm:col-span-2">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Booking Reference &amp; Code</span>
+                    <span class="font-bold text-gray-800 text-sm flex items-center gap-2 font-mono">
+                        <i class="fas fa-hashtag text-brand-blue"></i> ${upcoming.refId || ('WIH-' + upcoming.id)}
+                    </span>
+                    <span class="text-[11px] text-gray-500 block mt-1">
+                        <i class="fas fa-info-circle text-gray-400 mr-1"></i>
+                        Present this reference at the front desk upon arrival
                     </span>
                 </div>
             </div>
@@ -495,6 +406,9 @@ function renderOverviewTab(selectedBookingId = null) {
                     <a href="tel:+639456882266" class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-2">
                         <i class="fas fa-phone-alt"></i> Call Front Desk
                     </a>
+                    <button onclick="openBookingReportsModal(${upcoming.id})" class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl bg-white hover:bg-brand-blue/10 border border-brand-blue/30 text-brand-blue font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs">
+                        <i class="fas fa-comments"></i> Messages & Reports
+                    </button>
                     <button onclick="openLateArrivalModal(${upcoming.id})" class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl bg-white hover:bg-amber-100/80 border border-amber-300 text-amber-950 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs">
                         <i class="fas fa-clock text-amber-600"></i> Report Late Arrival
                     </button>
@@ -510,9 +424,6 @@ function renderOverviewTab(selectedBookingId = null) {
                 </div>
             </div>
         `;
-
-        // Start real-time countdown
-        startStayCountdown(upcoming.checkIn, upcoming.expectedArrivalTime, upcoming.checkOut);
     } else {
         container.innerHTML = `
             <div class="text-center py-10">
@@ -576,8 +487,16 @@ function renderBookingsList() {
                 const bStatus = (b.bookingStatus || '').toLowerCase();
                 const status = (b.status || '').toLowerCase();
                 const isCancelled = status === 'cancelled' || bStatus === 'cancelled_expired' || bStatus === 'no_show';
-                // Only strictly future check-ins (not today, not past)
-                return !isCancelled && (b.checkIn || '') > today;
+                const checkInDate = b.checkIn || '';
+                if (isCancelled) return false;
+                
+                // If strictly future date
+                if (checkInDate > today) return true;
+                
+                // If it is today, count as upcoming only if before 2:00 PM
+                if (checkInDate === today && new Date().getHours() < 14) return true;
+                
+                return false;
             });
         } else if (filterLower === 'confirmed') {
             filtered = filtered.filter(b => {
@@ -741,8 +660,8 @@ function renderBookingsList() {
                             </button>
                         ` : ''}
                         ${reviewBtn}
-                        <button onclick="openReportModal(${b.id}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-rose-600 text-xs font-bold transition" title="Report Issue / Question">
-                            <i class="fas fa-question-circle"></i>
+                        <button onclick="openBookingReportsModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-brand-blue hover:text-sky-600 text-xs font-bold transition" title="Messages & Reports">
+                            <i class="fas fa-comments"></i>
                         </button>
                     </div>
                 </div>
@@ -1092,7 +1011,10 @@ function renderFeedbackList() {
     const container = document.getElementById('user-reports-container');
     if (!container) return;
 
-    const reports = (window.appState && Array.isArray(window.appState.reports)) ? window.appState.reports : [];
+    const allReports = (window.appState && Array.isArray(window.appState.reports)) ? window.appState.reports : [];
+    
+    // Hide booking-specific reports and late arrivals from the general support inquiries tab
+    const reports = allReports.filter(r => !r.booking_id && r.type !== 'late_arrival');
 
     if (reports.length === 0) {
         container.innerHTML = `
@@ -1671,3 +1593,179 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+
+/**
+ * Booking Messages & Reports Modal Logic
+ */
+function openBookingReportsModal(bookingId) {
+    const allBookings = (window.appState && Array.isArray(window.appState.bookings)) ? window.appState.bookings : [];
+    const booking = allBookings.find(b => b.id == bookingId);
+    if (!booking) return;
+
+    const roomName = booking.roomName || 'Reservation';
+    const refCode = booking.ref_id || booking.refId || ('WIH-' + booking.id);
+    
+    document.getElementById('br-booking-id').value = bookingId;
+    document.getElementById('br-modal-room-name').textContent = `${roomName} (Ref: ${refCode})`;
+    
+    // Reset form
+    document.getElementById('br-report-type').value = 'complaint';
+    document.getElementById('br-report-subject').value = '';
+    document.getElementById('br-report-message').value = '';
+
+    // Render Messages
+    renderBookingMessages(bookingId);
+
+    const modal = document.getElementById('booking-reports-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeBookingReportsModal() {
+    const modal = document.getElementById('booking-reports-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function renderBookingMessages(bookingId) {
+    const container = document.getElementById('br-messages-container');
+    const allReports = (window.appState && Array.isArray(window.appState.reports)) ? window.appState.reports : [];
+    
+    // Filter reports for this specific booking
+    const bookingReports = allReports.filter(r => r.booking_id == bookingId);
+    
+    // Sort by created_at ascending so newest is at bottom (chat style)
+    bookingReports.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+    if (bookingReports.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-6 text-gray-400 flex flex-col items-center">
+                <i class="fas fa-inbox text-2xl mb-2 text-gray-300"></i>
+                <p class="text-xs">No previous messages or reports for this booking.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = bookingReports.map(r => {
+        const dateFmt = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        const reply = r.admin_response || r.admin_reply || '';
+        const isLateArrival = r.type === 'late_arrival';
+        
+        let typeBadge = '';
+        if (isLateArrival) {
+            typeBadge = '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Late Arrival</span>';
+        } else if (r.type === 'complaint') {
+            typeBadge = '<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Problem/Issue</span>';
+        } else {
+            typeBadge = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">${r.type || 'Message'}</span>`;
+        }
+
+        let html = `
+            <div class="bg-slate-50 border border-gray-200 rounded-2xl p-3 shadow-xs">
+                <div class="flex justify-between items-start mb-1.5">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-user-circle text-gray-400"></i>
+                        <span class="font-bold text-gray-800 text-xs">You</span>
+                    </div>
+                    ${typeBadge}
+                </div>
+                <h5 class="font-bold text-gray-700 text-[11px] mb-1">${r.subject || ''}</h5>
+                <p class="text-xs text-gray-600 whitespace-pre-line leading-relaxed">${r.message}</p>
+                <div class="text-[9px] text-gray-400 text-right mt-1">${dateFmt}</div>
+            </div>
+        `;
+
+        if (reply) {
+            html += `
+                <div class="bg-blue-50/60 border border-brand-blue/30 rounded-2xl p-3 ml-6 mt-2 relative shadow-xs">
+                    <div class="absolute -left-3 top-4 text-brand-blue/30"><i class="fas fa-reply fa-flip-horizontal"></i></div>
+                    <div class="flex justify-between items-start mb-1.5">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-headset text-brand-blue"></i>
+                            <span class="font-bold text-brand-blue text-xs">Management</span>
+                        </div>
+                        <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Response</span>
+                    </div>
+                    <p class="text-xs text-gray-700 whitespace-pre-line leading-relaxed">${reply}</p>
+                </div>
+            `;
+        }
+        return html;
+    }).join('');
+    
+    // Scroll to bottom
+    setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+    }, 10);
+}
+
+function submitBookingReport(e) {
+    e.preventDefault();
+    const btn = document.getElementById('br-submit-btn');
+    const originalBtnHtml = btn.innerHTML;
+    
+    const bookingId = document.getElementById('br-booking-id').value;
+    const type = document.getElementById('br-report-type').value;
+    const subject = document.getElementById('br-report-subject').value.trim();
+    const message = document.getElementById('br-report-message').value.trim();
+    const currentUser = (window.appState && window.appState.currentUser) ? window.appState.currentUser : {};
+
+    if (!message || !subject) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending...';
+
+    fetch('../actions/reports_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            user_id: currentUser.id,
+            booking_id: bookingId,
+            type: type,
+            subject: subject,
+            message: message
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (typeof showToast === 'function') {
+                showToast('Your message has been sent to management.', 'success');
+            }
+            
+            // Add to local state so it appears immediately
+            if (!window.appState.reports) window.appState.reports = [];
+            window.appState.reports.push({
+                id: data.report_id || Date.now(),
+                booking_id: bookingId,
+                type: type,
+                subject: subject,
+                message: message,
+                status: 'Pending',
+                created_at: new Date().toISOString()
+            });
+            
+            // Clear form and re-render messages
+            document.getElementById('br-report-subject').value = '';
+            document.getElementById('br-report-message').value = '';
+            renderBookingMessages(bookingId);
+            if (typeof renderFeedbackList === 'function') renderFeedbackList();
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(data.message || 'Error sending message', 'error');
+            } else {
+                alert(data.message || 'Error sending message');
+            }
+        }
+    })
+    .catch(err => {
+        console.error('Error submitting report:', err);
+        if (typeof showToast === 'function') showToast('Network error', 'error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+    });
+}

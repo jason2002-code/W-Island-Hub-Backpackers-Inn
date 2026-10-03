@@ -10,7 +10,29 @@ require_once __DIR__ . '/../config/paymongo.php';
 require_once __DIR__ . '/cron_expiry_action.php';
 
 /**
+ * Active / archived totals for booking tab badges
+ */
+function getArchiveBookingCounts(PDO $pdo) {
+    try {
+        $stmt = $pdo->query("
+            SELECT 
+                COALESCE(SUM(COALESCE(is_archived, 0) = 0), 0) AS active,
+                COALESCE(SUM(is_archived = 1), 0) AS archived
+            FROM bookings
+        ");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return [
+            'active' => (int) ($row['active'] ?? 0),
+            'archived' => (int) ($row['archived'] ?? 0)
+        ];
+    } catch (Exception $e) {
+        return ['active' => 0, 'archived' => 0];
+    }
+}
+
+/**
  * Gets all bookings with comprehensive multi-tier and user details
+ * Supports ?view=active (default), ?view=archived, or ?view=all
  */
 function getBookings() {
     $pdo = getDB();
@@ -18,6 +40,22 @@ function getBookings() {
         echo json_encode(['success' => false, 'message' => 'Database connection failed']);
         exit;
     }
+
+    $view = strtolower($_GET['view'] ?? 'active');
+    if (!in_array($view, ['active', 'archived', 'all'], true)) {
+        $view = 'active';
+    }
+
+    $whereClause = "WHERE COALESCE(b.is_archived, 0) = 0";
+    $orderBy = "b.created_at DESC";
+    if ($view === 'archived') {
+        $whereClause = "WHERE b.is_archived = 1";
+        $orderBy = "b.archived_at DESC, b.created_at DESC";
+    } elseif ($view === 'all') {
+        $whereClause = "";
+        $orderBy = "b.created_at DESC";
+    }
+
     try {
         $stmt = $pdo->prepare("
             SELECT b.*, 
@@ -31,7 +69,8 @@ function getBookings() {
             FROM bookings b 
             LEFT JOIN rooms r ON b.room_id = r.id 
             LEFT JOIN users u ON b.user_id = u.id 
-            ORDER BY b.created_at DESC
+            {$whereClause}
+            ORDER BY {$orderBy}
         ");
         $stmt->execute();
         $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -81,6 +120,8 @@ function getBookings() {
                 'status' => $b['status'] ?? 'Pending',
                 'expiresAt' => $b['expires_at'],
                 'specialRequests' => $b['special_requests'] ?? '',
+                'isArchived' => (int)($b['is_archived'] ?? 0),
+                'archivedAt' => $b['archived_at'] ?? null,
                 'created_at' => $b['created_at'],
                 'updated_at' => $b['updated_at'] ?? $b['created_at'],
                 'room_price' => (float)($b['room_price'] ?? 0),
@@ -93,7 +134,13 @@ function getBookings() {
             ];
         }, $bookings);
 
-        echo json_encode(['success' => true, 'bookings' => $formatted]);
+        $counts = getArchiveBookingCounts($pdo);
+        echo json_encode([
+            'success' => true, 
+            'view' => $view,
+            'bookings' => $formatted,
+            'counts' => $counts
+        ]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Query failed: ' . $e->getMessage()]);
     }
@@ -247,7 +294,8 @@ function createBooking($data) {
             FROM bookings b
             WHERE b.room_id = ?
               AND b.status IN ('Pending', 'Confirmed')
-              AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+              AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+              AND COALESCE(b.is_archived, 0) = 0
               AND COALESCE(b.check_in_date, b.check_in) < ?
               AND COALESCE(b.check_out_date, b.check_out) > ?
         ");
@@ -257,7 +305,7 @@ function createBooking($data) {
 
         if ($bedsCount > $remainingBeds) {
             echo json_encode([
-                'success' => false,
+                'success' => false, 
                 'message' => "Only {$remainingBeds} bed(s) are available in Room 5 for your selected dates. You requested {$bedsCount} bed(s)."
             ]);
             exit;
@@ -273,7 +321,7 @@ function createBooking($data) {
         $totalAllowedCapacity = $roomMaxCap * $roomsCount;
         if ($totalGuests > $totalAllowedCapacity) {
             echo json_encode([
-                'success' => false,
+                'success' => false, 
                 'message' => "The hotel does not accommodate {$totalGuests} guests for this reservation. The room is limited to {$totalAllowedCapacity} guests."
             ]);
             exit;
@@ -287,7 +335,8 @@ function createBooking($data) {
             SELECT COUNT(*) FROM bookings
             WHERE room_id = ?
               AND status IN ('Pending', 'Confirmed')
-              AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+              AND booking_status NOT IN ('cancelled_expired', 'no_show')
+              AND COALESCE(is_archived, 0) = 0
               AND COALESCE(check_in_date, check_in) < ?
               AND COALESCE(check_out_date, check_out) > ?
         ");
@@ -726,23 +775,283 @@ function updateBookingStatus($data) {
 }
 
 /**
- * Deletes specific booking
+ * Archives a booking (soft delete)
  */
-function deleteBooking() {
+function archiveBooking($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $bookingId = (int)($data['id'] ?? $data['booking_id'] ?? 0);
+    if ($bookingId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Valid Booking ID is required']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT id, ref_id, is_archived, booking_status FROM bookings WHERE id = ? LIMIT 1");
+        $stmt->execute([$bookingId]);
+        $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$booking) {
+            echo json_encode(['success' => false, 'message' => 'Booking not found']);
+            exit;
+        }
+
+        if ((int)$booking['is_archived'] === 1) {
+            echo json_encode(['success' => false, 'message' => 'This booking is already archived.']);
+            exit;
+        }
+
+        // Archive and release hold timer
+        $update = $pdo->prepare("
+            UPDATE bookings 
+            SET is_archived = 1, 
+                archived_at = NOW(), 
+                expires_at = NULL, 
+                updated_at = NOW() 
+            WHERE id = ?
+        ");
+        $update->execute([$bookingId]);
+
+        $counts = getArchiveBookingCounts($pdo);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Booking ' . ($booking['ref_id'] ?? '#' . $bookingId) . ' archived successfully. You can review or restore it from the Archive tab.',
+            'booking_id' => $bookingId,
+            'counts' => $counts
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Restores an archived booking back to the active list
+ */
+function restoreBooking($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $bookingId = (int)($data['id'] ?? $data['booking_id'] ?? 0);
+    if ($bookingId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Valid Booking ID is required']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT id, ref_id, is_archived FROM bookings WHERE id = ? LIMIT 1");
+        $stmt->execute([$bookingId]);
+        $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$booking) {
+            echo json_encode(['success' => false, 'message' => 'Booking not found']);
+            exit;
+        }
+
+        if ((int)$booking['is_archived'] === 0) {
+            echo json_encode(['success' => false, 'message' => 'This booking is not archived.']);
+            exit;
+        }
+
+        $update = $pdo->prepare("
+            UPDATE bookings 
+            SET is_archived = 0, 
+                archived_at = NULL, 
+                updated_at = NOW() 
+            WHERE id = ?
+        ");
+        $update->execute([$bookingId]);
+
+        $counts = getArchiveBookingCounts($pdo);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Booking ' . ($booking['ref_id'] ?? '#' . $bookingId) . ' restored to active list successfully.',
+            'booking_id' => $bookingId,
+            'counts' => $counts
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Batch archive multiple bookings or all cancelled/expired bookings
+ */
+function batchArchiveBookings($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $type = $data['type'] ?? null;
+    $ids = $data['ids'] ?? [];
+
+    try {
+        if ($type === 'cancelled' || $type === 'expired') {
+            $stmt = $pdo->prepare("
+                UPDATE bookings 
+                SET is_archived = 1, 
+                    archived_at = NOW(), 
+                    expires_at = NULL, 
+                    updated_at = NOW() 
+                WHERE booking_status IN ('cancelled_expired', 'no_show') 
+                  AND COALESCE(is_archived, 0) = 0
+            ");
+            $stmt->execute();
+            $affected = $stmt->rowCount();
+
+            $counts = getArchiveBookingCounts($pdo);
+            echo json_encode([
+                'success' => true,
+                'message' => "Archived {$affected} cancelled/expired booking(s).",
+                'affected' => $affected,
+                'counts' => $counts
+            ]);
+            return;
+        }
+
+        if (empty($ids) || !is_array($ids)) {
+            echo json_encode(['success' => false, 'message' => 'No booking IDs provided for batch archiving.']);
+            exit;
+        }
+
+        $cleanIds = array_map('intval', array_filter($ids, 'is_numeric'));
+        if (empty($cleanIds)) {
+            echo json_encode(['success' => false, 'message' => 'No valid booking IDs provided.']);
+            exit;
+        }
+
+        $inClause = implode(',', array_fill(0, count($cleanIds), '?'));
+        $stmt = $pdo->prepare("
+            UPDATE bookings 
+            SET is_archived = 1, 
+                archived_at = NOW(), 
+                expires_at = NULL, 
+                updated_at = NOW() 
+            WHERE id IN ($inClause) AND COALESCE(is_archived, 0) = 0
+        ");
+        $stmt->execute($cleanIds);
+        $affected = $stmt->rowCount();
+
+        $counts = getArchiveBookingCounts($pdo);
+        echo json_encode([
+            'success' => true,
+            'message' => "Archived {$affected} booking(s) successfully.",
+            'affected' => $affected,
+            'counts' => $counts
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Batch restore multiple bookings from archive
+ */
+function batchRestoreBookings($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $ids = $data['ids'] ?? [];
+    if (empty($ids) || !is_array($ids)) {
+        echo json_encode(['success' => false, 'message' => 'No booking IDs provided for batch restoration.']);
+        exit;
+    }
+
+    $cleanIds = array_map('intval', array_filter($ids, 'is_numeric'));
+    if (empty($cleanIds)) {
+        echo json_encode(['success' => false, 'message' => 'No valid booking IDs provided.']);
+        exit;
+    }
+
+    try {
+        $inClause = implode(',', array_fill(0, count($cleanIds), '?'));
+        $stmt = $pdo->prepare("
+            UPDATE bookings 
+            SET is_archived = 0, 
+                archived_at = NULL, 
+                updated_at = NOW() 
+            WHERE id IN ($inClause) AND is_archived = 1
+        ");
+        $stmt->execute($cleanIds);
+        $affected = $stmt->rowCount();
+
+        $counts = getArchiveBookingCounts($pdo);
+        echo json_encode([
+            'success' => true,
+            'message' => "Restored {$affected} booking(s) to active list.",
+            'affected' => $affected,
+            'counts' => $counts
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * Deletes specific booking permanently (only allowed for archived bookings)
+ */
+function deleteBooking($data = null) {
     $pdo = getDB();
     if (!$pdo) {
         echo json_encode(['success' => false, 'message' => 'DB failed']);
         exit;
     }
-    $bookingId = $_GET['id'] ?? null;
+    $bookingId = $data['id'] ?? $data['booking_id'] ?? $_GET['id'] ?? $_GET['booking_id'] ?? null;
     if (!$bookingId) {
-        echo json_encode(['success' => false, 'message' => 'ID required']);
+        echo json_encode(['success' => false, 'message' => 'Booking ID required']);
         exit;
     }
+
     try {
-        $stmt = $pdo->prepare("DELETE FROM bookings WHERE id = ?");
-        $stmt->execute([$bookingId]);
-        echo json_encode(['success' => true, 'message' => 'Booking deleted successfully']);
+        $stmt = $pdo->prepare("SELECT id, ref_id, receipt_url, is_archived FROM bookings WHERE id = ? LIMIT 1");
+        $stmt->execute([(int)$bookingId]);
+        $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$booking) {
+            echo json_encode(['success' => false, 'message' => 'Booking not found']);
+            exit;
+        }
+
+        // Safety policy: only archived bookings can be permanently deleted
+        if ((int)$booking['is_archived'] !== 1) {
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Only archived bookings can be permanently deleted. Please archive this booking first.'
+            ]);
+            exit;
+        }
+
+        // Clean up receipt file if present
+        if (!empty($booking['receipt_url']) && is_string($booking['receipt_url'])) {
+            $receiptRel = str_replace('\\', '/', $booking['receipt_url']);
+            $allowedBase = realpath(__DIR__ . '/../assets/image/uploads/receipts');
+            $fullPath = realpath(__DIR__ . '/../' . ltrim($receiptRel, '/'));
+            if ($allowedBase && $fullPath && strpos($fullPath, $allowedBase) === 0 && is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
+
+        $delStmt = $pdo->prepare("DELETE FROM bookings WHERE id = ?");
+        $delStmt->execute([(int)$bookingId]);
+
+        $counts = getArchiveBookingCounts($pdo);
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Booking ' . ($booking['ref_id'] ?? '#' . $bookingId) . ' permanently deleted.',
+            'booking_id' => (int)$bookingId,
+            'counts' => $counts
+        ]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'DB error: ' . $e->getMessage()]);
     }
@@ -761,6 +1070,7 @@ function getBookingCounts() {
         $stmt = $pdo->prepare("
             SELECT booking_status, status, COUNT(*) as count 
             FROM bookings 
+            WHERE COALESCE(is_archived, 0) = 0
             GROUP BY booking_status, status
         ");
         $stmt->execute();
@@ -792,6 +1102,10 @@ function getBookingCounts() {
                 $counts[$legStatus] += $c;
             }
         }
+
+        $archiveCounts = getArchiveBookingCounts($pdo);
+        $counts['active'] = $archiveCounts['active'];
+        $counts['archived'] = $archiveCounts['archived'];
 
         echo json_encode(['success' => true, 'counts' => $counts]);
     } catch (PDOException $e) {
@@ -834,6 +1148,21 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
         switch ($action) {
             case 'create':
                 createBooking($input);
+                break;
+            case 'archive':
+                archiveBooking($input);
+                break;
+            case 'restore':
+                restoreBooking($input);
+                break;
+            case 'batch_archive':
+                batchArchiveBookings($input);
+                break;
+            case 'batch_restore':
+                batchRestoreBookings($input);
+                break;
+            case 'delete':
+                deleteBooking($input);
                 break;
             case 'approve':
             case 'approve_receipt':

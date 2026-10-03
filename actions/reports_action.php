@@ -614,26 +614,36 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         $totalRevenue = $roomRevenue + $extraServicesRevenue;
 
         // 4. Payment Summary
-        $stmtPay = $pdo->query("
+         $stmtPay = $pdo->prepare("
             SELECT 
                 payment_method,
                 COALESCE(SUM(total_price), 0) as amt
             FROM bookings
             WHERE status = 'Confirmed'
+              AND (DATE(created_at) BETWEEN :s AND :e OR COALESCE(check_in_date, check_in) BETWEEN :s AND :e)
             GROUP BY payment_method
         ");
-        $payRows = $stmtPay ? $stmtPay->fetchAll(PDO::FETCH_ASSOC) : [];
+        $stmtPay->execute([':s' => $startDate, ':e' => $endDate]);
+        $payRows = $stmtPay->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($payRows) && $confCount > 0) {
+            $stmtAllPay = $pdo->query("SELECT payment_method, COALESCE(SUM(total_price), 0) as amt FROM bookings WHERE status = 'Confirmed' GROUP BY payment_method");
+            $payRows = $stmtAllPay ? $stmtAllPay->fetchAll(PDO::FETCH_ASSOC) : [];
+        }
 
         $cash = 0.00;
+        $gcash = 0.00;
         $card = 0.00;
         $otherPayments = 0.00;
 
         foreach ($payRows as $pr) {
             $pm = strtolower($pr['payment_method'] ?? '');
             $amt = floatval($pr['amt']);
-            if (strpos($pm, 'hotel') !== false || strpos($pm, 'cash') !== false) {
+            if (strpos($pm, 'gcash') !== false) {
+                $gcash += $amt;
+            } elseif (strpos($pm, 'hotel') !== false || strpos($pm, 'cash') !== false) {
                 $cash += $amt;
-            } elseif (strpos($pm, 'card') !== false || strpos($pm, 'online') !== false) {
+            } elseif (strpos($pm, 'card') !== false || strpos($pm, 'credit') !== false || strpos($pm, 'online') !== false) {
                 $card += $amt;
             } else {
                 $otherPayments += $amt;
@@ -748,16 +758,17 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
                     'revenue_statistics' => [
                         'title' => 'Revenue Statistics',
                         'items' => [
-                            ['label' => 'Total Revenue', 'value' => $totalRevenue, 'is_currency' => true],
-                            ['label' => 'Room Revenue', 'value' => $roomRevenue, 'is_currency' => true],
                             ['label' => 'Extra Services Revenue', 'value' => $extraServicesRevenue, 'is_currency' => true],
+                            ['label' => 'Room Revenue', 'value' => $roomRevenue, 'is_currency' => true],
+                            ['label' => 'Total Revenue', 'value' => $totalRevenue, 'is_currency' => true],
                         ]
                     ],
                     'payment_summary' => [
                         'title' => 'Payment Summary',
                         'items' => [
-                            ['label' => 'Cash', 'value' => $cash, 'is_currency' => true],
-                            ['label' => 'Credit/Debit Cards', 'value' => $card, 'is_currency' => true],
+                           ['label' => 'Over-the-counter Cash', 'value' => $cash, 'is_currency' => true],
+                            ['label' => 'GCash / Digital', 'value' => $gcash, 'is_currency' => true],
+                            ['label' => 'Credit / Debit Cards', 'value' => $card, 'is_currency' => true],
                             ['label' => 'Other Payment Methods', 'value' => $otherPayments, 'is_currency' => true],
                         ]
                     ],
@@ -954,7 +965,20 @@ function generateRoomPerformanceReport($pdo, $startDate, $endDate, $rangeLabel) 
 
             foreach ($roomBookings as $rb) {
                 $revenue += floatval($rb['total_price']);
-                $nightsSold += max(1, intval($rb['nights']));
+                
+                $chkIn = strtotime(date('Y-m-d', strtotime($rb['check_in_date'] ?: $rb['check_in'])));
+                $chkOut = strtotime(date('Y-m-d', strtotime($rb['check_out_date'] ?: $rb['check_out'])));
+                $periodStart = strtotime($startDate);
+                $periodEnd = strtotime($endDate . ' +1 day');
+
+                $overlapStart = max($chkIn, $periodStart);
+                $overlapEnd = min($chkOut, $periodEnd);
+
+                if ($overlapEnd > $overlapStart) {
+                    $nightsSold += round(($overlapEnd - $overlapStart) / 86400);
+                } elseif ($chkIn == $chkOut && $chkIn >= $periodStart && $chkIn < $periodEnd) {
+                    $nightsSold += 1;
+                }
             }
 
             $occupancyRate = min(100, round(($nightsSold / $diff) * 100, 1));
@@ -1001,6 +1025,7 @@ function generateRoomPerformanceReport($pdo, $startDate, $endDate, $rangeLabel) 
                 'total_nights_sold' => $totalHotelNights,
                 'total_revenue' => $totalHotelRevenue,
                 'average_revenue_per_room' => count($rooms) > 0 ? ($totalHotelRevenue / count($rooms)) : 0,
+                'occupancy_percentage' => (count($rooms) * $diff) > 0 ? min(100, round(($totalHotelNights / (count($rooms) * $diff)) * 100, 1)) : 0,
             ],
             'rooms_performance' => $performanceData
         ]);
@@ -1244,3 +1269,4 @@ function getDashboardStats() {
     }
 }
 ?>
+

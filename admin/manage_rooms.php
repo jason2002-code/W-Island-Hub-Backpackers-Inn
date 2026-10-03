@@ -60,9 +60,22 @@
                         <input type="number" id="room-capacity" required min="1" value="2" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Amenities (comma separated)</label>
-                        <input type="text" id="room-amenities" placeholder="WiFi, A/C, Breakfast, Pool Access" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple focus:border-transparent">
+                     <div class="col-span-1 sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="room-amenities-container">
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Free WiFi" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Free WiFi</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Air Conditioning" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Air Conditioning</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Ceiling Fan" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Ceiling Fan</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Breakfast Included" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Breakfast</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Hot Shower" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Hot Shower</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Fresh Towels" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Fresh Towels</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Shared Kitchen" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Shared Kitchen</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Lockers" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Lockers</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Reading Light" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Reading Light</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Bidet" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Bidet</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Work Desk" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Work Desk</label>
+                            <label class="inline-flex items-center text-sm text-gray-700 cursor-pointer"><input type="checkbox" value="Toiletries" class="form-checkbox h-4 w-4 text-brand-purple rounded border-gray-300 mr-2 amenity-cb">Toiletries</label>
+                        </div>
                     </div>
                     
                     <div>
@@ -234,19 +247,24 @@ function editRoom(roomId) {
                         document.getElementById('room-preview-placeholder').classList.remove('hidden');
                     }
 
-                    // Handle amenities parsing (JSON string to comma-separated)
-                    let amenitiesVal = '';
+                      // Handle amenities parsing
+                    let amenitiesList = [];
                     try {
                         if (room.amenities && typeof room.amenities === 'string' && room.amenities.trim().startsWith('[')) {
                             const parsed = JSON.parse(room.amenities);
-                            if (Array.isArray(parsed)) amenitiesVal = parsed.join(', ');
+                            if (Array.isArray(parsed)) amenitiesList = parsed;
                         } else if (room.amenities) {
-                            amenitiesVal = room.amenities;
+                            amenitiesList = room.amenities.split(',').map(a => a.trim());
                         }
                     } catch (e) {
-                        amenitiesVal = room.amenities || '';
+                        if (room.amenities) {
+                            amenitiesList = room.amenities.split(',').map(a => a.trim());
+                        }
                     }
-                    document.getElementById('room-amenities').value = amenitiesVal;
+                    
+                    document.querySelectorAll('.amenity-cb').forEach(cb => {
+                        cb.checked = amenitiesList.includes(cb.value);
+                    });
                     
                     document.getElementById('room-modal').classList.remove('hidden');
                 }
@@ -265,10 +283,9 @@ function saveRoom(event) {
     
     const roomId = document.getElementById('room-id').value;
     
-    // Process amenities from comma-separated string to JSON string
-    const amenitiesRaw = document.getElementById('room-amenities').value;
-    const amenitiesArray = amenitiesRaw.split(',').map(item => item.trim()).filter(item => item !== '');
-    const amenitiesJson = JSON.stringify(amenitiesArray);
+      // Process amenities from checkboxes to JSON string
+    const checkedAmenities = Array.from(document.querySelectorAll('.amenity-cb:checked')).map(cb => cb.value);
+    const amenitiesJson = JSON.stringify(checkedAmenities);
 
     const formData = new FormData();
     formData.append('name', document.getElementById('room-name').value);

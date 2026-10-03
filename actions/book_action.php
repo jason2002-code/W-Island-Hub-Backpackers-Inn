@@ -72,7 +72,7 @@ function createDirectBooking($data) {
                 FROM bookings b
                 WHERE b.room_id = ?
                   AND b.status IN ('Pending', 'Confirmed')
-                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
                   AND COALESCE(b.check_in_date, b.check_in) < ?
                   AND COALESCE(b.check_out_date, b.check_out) > ?
             ");
@@ -115,7 +115,7 @@ function createDirectBooking($data) {
                 SELECT COUNT(*) FROM bookings 
                 WHERE room_id = ? 
                 AND status IN ('Pending', 'Confirmed')
-                AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                AND booking_status NOT IN ('cancelled_expired', 'no_show')
                 AND COALESCE(check_in_date, check_in) < ?
                 AND COALESCE(check_out_date, check_out) > ?
             ");
@@ -237,7 +237,7 @@ function checkAvailability($data) {
                 FROM bookings b
                 WHERE b.room_id = ?
                   AND b.status IN ('Pending', 'Confirmed')
-                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
                   AND COALESCE(b.check_in_date, b.check_in) < ?
                   AND COALESCE(b.check_out_date, b.check_out) > ?
             ");
@@ -280,7 +280,7 @@ function checkAvailability($data) {
             SELECT COUNT(*) as count FROM bookings 
             WHERE room_id = ? 
             AND status IN ('Pending', 'Confirmed')
-            AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+            AND booking_status NOT IN ('cancelled_expired', 'no_show')
             AND COALESCE(check_in_date, check_in) < ?
             AND COALESCE(check_out_date, check_out) > ?
         ");
@@ -424,7 +424,7 @@ function getRoomAvailability($data) {
                     FROM bookings b
                     WHERE b.room_id = ?
                       AND b.status IN ('Pending', 'Confirmed')
-                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
                       AND COALESCE(b.check_in_date, b.check_in) < ?
                       AND COALESCE(b.check_out_date, b.check_out) > ?
                 ");
@@ -526,7 +526,7 @@ function getRoomAvailability($data) {
                 FROM bookings b
                 WHERE b.room_id = ?
                   AND b.status IN ('Pending', 'Confirmed')
-                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                  AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
                   AND COALESCE(b.check_in_date, b.check_in) <= ?
                   AND COALESCE(b.check_out_date, b.check_out) > ?
             ");
@@ -627,7 +627,7 @@ function checkHotelCapacity($data) {
                     FROM bookings b
                     WHERE b.room_id = ?
                       AND b.status IN ('Pending', 'Confirmed')
-                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
                       AND COALESCE(b.check_in_date, b.check_in) < ?
                       AND COALESCE(b.check_out_date, b.check_out) > ?
                 ");
@@ -662,7 +662,7 @@ function checkHotelCapacity($data) {
                 SELECT COUNT(*) FROM bookings 
                 WHERE room_id = ? 
                 AND status IN ('Pending', 'Confirmed')
-                AND booking_status NOT IN ('cancelled_expired', 'no_show', 'completed')
+                AND booking_status NOT IN ('cancelled_expired', 'no_show')
                 AND COALESCE(check_in_date, check_in) < ?
                 AND COALESCE(check_out_date, check_out) > ?
             ");

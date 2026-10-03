@@ -119,9 +119,7 @@
                         <button onclick="generateHotelReportData(true, true)" id="btn-generate-report" class="bg-gradient-to-r from-brand-purple to-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:from-purple-700 hover:to-indigo-700 transition flex items-center gap-2 text-sm" title="Generate fresh report with new audit reference and direct to print page">
                             <i class="fas fa-print"></i> Generate & Print Report
                         </button>
-                        <button onclick="printHotelReport()" id="btn-print-report" class="bg-brand-blue text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-sky-600 transition flex items-center gap-2 text-sm" title="Print Current View without regenerating reference">
-                            <i class="fas fa-file-invoice"></i> Print Current View
-                        </button>
+
                         <button onclick="exportReportCSV()" id="btn-export-csv" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition flex items-center gap-2 text-sm">
                             <i class="fas fa-file-excel"></i> Export CSV
                         </button>
@@ -750,6 +748,42 @@ function handleDatePeriodChange() {
     }
 }
 
+// Open print popup in the same tab using an iframe modal
+function openSameTabPrintWindow() {
+    let modal = document.getElementById('same-tab-print-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'same-tab-print-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:999999;display:flex;align-items:center;justify-content:center;';
+        
+        let container = document.createElement('div');
+        container.style.cssText = 'width:90%;height:90%;background:#fff;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.3);display:flex;flex-direction:column;overflow:hidden;';
+        
+        let header = document.createElement('div');
+        header.style.cssText = 'padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;';
+        header.innerHTML = '<strong style="color:#1e293b;font-family:sans-serif;font-size:16px;">Print Preview</strong><button onclick="document.getElementById(\'same-tab-print-modal\').style.display=\'none\'" style="background:#ef4444;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:bold;">Close</button>';
+        
+        let iframe = document.createElement('iframe');
+        iframe.id = 'same-tab-print-iframe';
+        iframe.style.cssText = 'flex-grow:1;border:none;width:100%;background:#fff;';
+        
+        container.appendChild(header);
+        container.appendChild(iframe);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+    }
+    
+    modal.style.display = 'flex';
+    let iframe = document.getElementById('same-tab-print-iframe');
+    let win = iframe.contentWindow;
+    
+    win.document.open();
+    win.document.write('');
+    win.document.close();
+    
+    return win;
+}
+
 // Generate Report Data from API
 function generateHotelReportData(forceRefresh = false, autoPrint = false) {
     const reportType = document.getElementById('hotel-report-type').value;
@@ -764,7 +798,7 @@ function generateHotelReportData(forceRefresh = false, autoPrint = false) {
     // This prevents modern browser popup blockers from blocking window.open during async fetch
     let printWindow = null;
     if (autoPrint) {
-        printWindow = window.open('', '_blank');
+        printWindow = openSameTabPrintWindow();
         if (printWindow) {
             printWindow.document.write(`
                 <!DOCTYPE html>
@@ -936,9 +970,9 @@ function renderReportView(data) {
     if (document.getElementById('report-doc-title')) document.getElementById('report-doc-title').innerText = titleText;
     if (document.getElementById('report-doc-cycle')) document.getElementById('report-doc-cycle').innerText = data.date_range_label || 'Current Period';
     if (document.getElementById('report-doc-ref')) document.getElementById('report-doc-ref').innerText = data.report_ref || 'RES-AUDIT';
-    if (document.getElementById('report-doc-timestamp')) document.getElementById('report-doc-timestamp').innerText = data.generated_at_formatted || new Date().toLocaleString();
+    if (document.getElementById('report-doc-timestamp')) document.getElementById('report-doc-timestamp').innerText = data.generated_at_formatted || new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
     if (document.getElementById('footer-db-ref')) document.getElementById('footer-db-ref').innerText = 'Audit Ref: ' + (data.report_ref || 'RES-AUDIT');
-    if (document.getElementById('footer-timestamp')) document.getElementById('footer-timestamp').innerText = data.generated_at_formatted || new Date().toLocaleString();
+    if (document.getElementById('footer-timestamp')) document.getElementById('footer-timestamp').innerText = data.generated_at_formatted || new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
 
     const fdbSection = document.getElementById('front-desk-daily-section');
     const opsSection = document.getElementById('operational-snapshot-section');
@@ -1551,7 +1585,7 @@ function printHotelReport(customWindow = null) {
     const hotelName = hotelInfo.name || "W Island Backpackers Inn";
     const hotelAddress = hotelInfo.address || "Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines";
     const reportRef = d.report_ref || 'RES-AUDIT-OFFICIAL';
-    const generatedDate = d.generated_at_formatted || (new Date().toLocaleString() + ' PHT (UTC+8)');
+    const generatedDate = d.generated_at_formatted || (new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) + ' PHT (UTC+8)');
     const datePeriod = d.date_range_label || 'Current Audit Cycle';
     const handoverText = (document.getElementById('handover-notes-input') ? document.getElementById('handover-notes-input').value.trim() : '') || 'Normal front-office shift turnover. All key slots accounted for and physical room states reconciled with system register.';
 
@@ -1570,7 +1604,7 @@ function printHotelReport(customWindow = null) {
         const isWindowObj = customWindow && typeof customWindow.document !== 'undefined';
         let printWindow = (isWindowObj && !customWindow.closed) ? customWindow : null;
         if (!printWindow) {
-            printWindow = window.open('', '_blank');
+            printWindow = openSameTabPrintWindow();
         }
         if (!printWindow) {
             alert('Please allow popups to print report');
@@ -2299,7 +2333,7 @@ function printHotelReport(customWindow = null) {
     const isWindowObj2 = customWindow && typeof customWindow.document !== 'undefined';
     let printWindow = (isWindowObj2 && !customWindow.closed) ? customWindow : null;
     if (!printWindow) {
-        printWindow = window.open('', '_blank');
+        printWindow = openSameTabPrintWindow();
     }
     if (!printWindow) {
         alert('Please allow popups to print report');

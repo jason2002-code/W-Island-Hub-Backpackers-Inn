@@ -203,6 +203,42 @@ function closeInvoiceModal() {
     }
 }
 
+// Open print popup in the same tab using an iframe modal
+function openSameTabPrintWindow() {
+    let modal = document.getElementById('same-tab-print-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'same-tab-print-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:999999;display:flex;align-items:center;justify-content:center;';
+        
+        let container = document.createElement('div');
+        container.style.cssText = 'width:90%;height:90%;background:#fff;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.3);display:flex;flex-direction:column;overflow:hidden;';
+        
+        let header = document.createElement('div');
+        header.style.cssText = 'padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;';
+        header.innerHTML = '<strong style="color:#1e293b;font-family:sans-serif;font-size:16px;">Print Preview</strong><button onclick="document.getElementById(\'same-tab-print-modal\').style.display=\'none\'" style="background:#ef4444;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:bold;">Close</button>';
+        
+        let iframe = document.createElement('iframe');
+        iframe.id = 'same-tab-print-iframe';
+        iframe.style.cssText = 'flex-grow:1;border:none;width:100%;background:#fff;';
+        
+        container.appendChild(header);
+        container.appendChild(iframe);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+    }
+    
+    modal.style.display = 'flex';
+    let iframe = document.getElementById('same-tab-print-iframe');
+    let win = iframe.contentWindow;
+    
+    win.document.open();
+    win.document.write('');
+    win.document.close();
+    
+    return win;
+}
+
 /**
  * Opens a clean pop-up print window containing the invoice voucher and triggers the browser print dialog.
  */
@@ -210,7 +246,7 @@ function printInvoice() {
     const content = document.getElementById('invoice-content');
     if (!content) return;
     
-    const printWindow = window.open('', '_blank');
+    const printWindow = openSameTabPrintWindow();
     if (!printWindow) {
         if (typeof window.showToast === 'function') {
             window.showToast('Popup was blocked by your browser. Please allow popups to print voucher.', 'warning');

@@ -459,7 +459,9 @@ function fetchRooms() {
                         return room.amenities || [];
                     })(),
                     rating: parseFloat(room.rating) || 5.0,
-                    status: room.status || 'Available'
+                    status: room.status || 'Available',
+                    remaining_beds: room.remaining_beds !== undefined ? parseInt(room.remaining_beds) : undefined,
+                    occupied_beds: room.occupied_beds !== undefined ? parseInt(room.occupied_beds) : undefined
                 }));
                 
                 syncGuestSelectorLimits();
@@ -527,8 +529,8 @@ function renderRooms(filterDate = null) {
                     ${isDorm ? `
                         <span class="text-xs text-brand-blue bg-blue-50 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 room-capacity-pill" data-room-id="${room.id}">
                             <i class="fas fa-bed text-[11px] text-brand-blue"></i>
-                            <span class="room-beds-text"><strong class="room-avail-beds">${room.capacity || 8}</strong> Beds Available</span>
-                            <span class="text-slate-400 font-normal text-[11px]">(8 Beds Total)</span>
+                            <span class="room-beds-text"><strong class="room-avail-beds">${(room.remaining_beds !== undefined ? room.remaining_beds : (room.capacity || 8))}</strong> Beds Available</span>
+                            <span class="text-slate-400 font-normal text-[11px]">(${room.occupied_beds || 0} Occupied / 8 Total)</span>
                         </span>
                     ` : `
                         <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${roomMaxCap} Guest${roomMaxCap > 1 ? 's' : ''}</span>

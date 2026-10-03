@@ -38,6 +38,7 @@ function runExpiryEngine($pdo = null) {
             SELECT id, ref_id, room_id, guest_name, expires_at, created_at
             FROM bookings
             WHERE booking_status = 'pending_verification'
+              AND COALESCE(is_archived, 0) = 0
               AND (
                   (expires_at IS NOT NULL AND expires_at < NOW())
                   OR (expires_at IS NULL AND created_at < (NOW() - INTERVAL 2 HOUR))
@@ -76,6 +77,7 @@ function runExpiryEngine($pdo = null) {
             SELECT id, ref_id, room_id, guest_name, check_in_date, check_in, expected_arrival_time, expires_at
             FROM bookings
             WHERE booking_status = 'pending_arrival'
+              AND COALESCE(is_archived, 0) = 0
               AND (
                   (expires_at IS NOT NULL AND expires_at < NOW())
                   OR (

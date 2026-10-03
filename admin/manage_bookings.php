@@ -1,50 +1,10 @@
 <!-- ================= Manage Bookings Page ================= -->
 <div id="manage-bookings" class="page-section">
     <div class="p-6 max-w-7xl mx-auto">
-        <!-- Header & Action Controls -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div>
-                <h3 class="text-2xl sm:text-3xl font-serif font-bold text-gray-800">Booking Management</h3>
-                <p class="text-xs text-gray-500 mt-1">Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.</p>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <div class="relative flex-1 md:w-56">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                    <input type="text" id="booking-search" placeholder="Search ref, guest, phone, room..." 
-                        class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white"
-                        oninput="filterBookings()">
-                </div>
-                
-                <select id="status-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
-                    <option value="">All Statuses</option>
-                    <option value="pending_verification">⏳ Pending Verification / Hold</option>
-                    <option value="deposit_paid">🪙 Deposit Paid (Balance Due)</option>
-                    <option value="confirmed">✅ Confirmed (PayMongo / Paid)</option>
-                    <option value="pending_arrival">🏨 Pending Arrival (Pay at Hotel)</option>
-                    <option value="completed">🎉 Completed / Checked-In</option>
-                    <option value="cancelled_expired">❌ Cancelled / Expired Hold</option>
-                    <option value="no_show">⚠️ No-Show Released</option>
-                </select>
-
-                <select id="payment-method-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
-                    <option value="">All Payment Types</option>
-                    <option value="paymongo">⚡ PayMongo Online</option>
-                    <option value="full_gcash">Full GCash (100%)</option>
-                    <option value="deposit_gcash">Deposit GCash (30%)</option>
-                    <option value="pay_at_hotel">Pay at Hotel</option>
-                </select>
-
-                <button onclick="loadBookings()" class="bg-brand-blue hover:bg-sky-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Refresh & trigger auto-expiry">
-                    <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
-                </button>
-            </div>
-        </div>
-        
         <!-- Multi-Tier Statistics Counter Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
-                <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider">Total</span>
+                <span class="text-[10px] uppercase font-bold text-gray-400 block tracking-wider" id="stat-total-label">Total Active</span>
                 <div class="text-2xl font-bold text-gray-800 mt-1" id="stat-total">0</div>
             </div>
             <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3.5">
@@ -69,11 +29,83 @@
             </div>
         </div>
         
+        <!-- Header & Action Controls -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <div>
+                <h3 class="text-2xl sm:text-3xl font-serif font-bold text-gray-800">Booking Management</h3>
+                <p class="text-xs text-gray-500 mt-1" id="bookings-page-subtitle">Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div class="relative flex-1 md:w-56">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="booking-search" placeholder="Search ref, guest, phone, room..." 
+                        class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white"
+                        oninput="filterBookings()">
+                </div>
+                
+                <select id="status-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
+                    <option value="">All Statuses</option>
+                    <option value="pending_verification">Pending Verification / Hold</option>
+                    <option value="deposit_paid">Deposit Paid (Balance Due)</option>
+                    <option value="confirmed">Confirmed (PayMongo / Paid)</option>
+                    <option value="pending_arrival">Pending Arrival (Pay at Hotel)</option>
+                    <option value="completed">Completed / Checked-In</option>
+                    <option value="cancelled_expired">Cancelled / Expired Hold</option>
+                    <option value="no_show">No-Show Released</option>
+                </select>
+
+                <select id="payment-method-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
+                    <option value="">All Payment Types</option>
+                    <option value="paymongo">PayMongo Online</option>
+                    <option value="full_gcash">Full GCash (100%)</option>
+                    <option value="deposit_gcash">Deposit GCash (20%)</option>
+                    <option value="pay_at_hotel">Pay at Hotel</option>
+                </select>
+
+                <button onclick="loadBookings()" class="bg-brand-blue hover:bg-sky-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Refresh & trigger auto-expiry">
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- View Tabs & Batch Actions Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div class="inline-flex bg-gray-100 rounded-xl p-1 shadow-inner">
+                <button type="button" data-bookings-view="active" onclick="switchBookingsView('active')"
+                        class="bookings-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-brand-blue shadow-sm">
+                    <i class="fas fa-calendar-check"></i>
+                    Active Bookings
+                    <span id="bookings-active-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-brand-blue">0</span>
+                </button>
+                <button type="button" data-bookings-view="archived" onclick="switchBookingsView('archived')"
+                        class="bookings-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-box-archive"></i>
+                    Archive
+                    <span id="bookings-archived-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-white text-gray-500">0</span>
+                </button>
+            </div>
+
+            <!-- Quick Batch Archive for Active View -->
+            <div id="active-batch-tools" class="flex items-center gap-2">
+                <button onclick="archiveAllCancelledBookings()" class="px-3.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Move all cancelled and expired hold records to Archive">
+                    <i class="fas fa-broom"></i>
+                    Archive Cancelled / Expired
+                </button>
+            </div>
+
+            <!-- Archive View Banner -->
+            <div id="archive-info-badge" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl flex items-center gap-2">
+                <i class="fas fa-shield-alt text-amber-600"></i>
+                <span>Archived records keep receipts, audit trails, and guest history intact. Restore or permanently delete records here.</span>
+            </div>
+        </div>
+        
         <!-- Bookings Master Table -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse min-w-[1100px]">
-                    <thead>
+                    <thead id="bookings-table-head">
                         <tr class="bg-slate-50 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
                             <th class="p-3.5">Reference ID</th>
                             <th class="p-3.5">Guest Information</th>
@@ -209,6 +241,12 @@
                     <button id="btn-modal-checkin" onclick="checkInFromModal()" class="w-full bg-brand-blue hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs flex items-center justify-center gap-2">
                         <i class="fas fa-concierge-bell"></i> Mark Checked-In & Collect Balance
                     </button>
+                    <button id="btn-modal-archive" onclick="archiveFromModal()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold py-2 rounded-xl border border-amber-200 transition text-xs flex items-center justify-center gap-2">
+                        <i class="fas fa-box-archive"></i> Archive Reservation
+                    </button>
+                    <button id="btn-modal-restore" onclick="restoreFromModal()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold py-2 rounded-xl border border-emerald-200 transition text-xs flex items-center justify-center gap-2">
+                        <i class="fas fa-rotate-left"></i> Restore to Active Bookings
+                    </button>
                 </div>
             </div>
         </div>
@@ -216,8 +254,10 @@
 </div>
 
 <script>
+let currentBookingsView = 'active';
 let allBookings = [];
 let activeModalBooking = null;
+let bookingCounts = { active: 0, archived: 0 };
 
 function formatDate(dateStr) {
     if (!dateStr) return '-';
@@ -234,28 +274,112 @@ function formatTime(timeStr) {
     return `${hour12}:${m} ${ampm}`;
 }
 
-function loadBookings() {
+function switchBookingsView(view) {
+    if (currentBookingsView === view) return;
+    currentBookingsView = (view === 'archived') ? 'archived' : 'active';
+    
+    // Clear search input on tab switch
+    const searchInput = document.getElementById('booking-search');
+    if (searchInput) searchInput.value = '';
+
+    const batchTools = document.getElementById('active-batch-tools');
+    const archiveInfo = document.getElementById('archive-info-badge');
+    const pageSubtitle = document.getElementById('bookings-page-subtitle');
+
+    if (currentBookingsView === 'archived') {
+        if (batchTools) batchTools.classList.add('hidden');
+        if (archiveInfo) archiveInfo.classList.remove('hidden');
+        if (pageSubtitle) pageSubtitle.textContent = 'Archived reservations: historical and completed stays kept safe for auditing, folios, and proof review.';
+    } else {
+        if (batchTools) batchTools.classList.remove('hidden');
+        if (archiveInfo) archiveInfo.classList.add('hidden');
+        if (pageSubtitle) pageSubtitle.textContent = 'Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.';
+    }
+
+    loadBookings();
+}
+
+function applyBookingsTabStyles() {
+    document.querySelectorAll('.bookings-tab').forEach(tab => {
+        const isActive = tab.dataset.bookingsView === currentBookingsView;
+        tab.classList.toggle('bg-white', isActive);
+        tab.classList.toggle('text-brand-blue', isActive);
+        tab.classList.toggle('shadow-sm', isActive);
+        tab.classList.toggle('text-gray-500', !isActive);
+    });
+}
+
+function renderTableHead() {
+    const headRow = document.querySelector('#bookings-table-head tr');
+    if (!headRow) return;
+
+    if (currentBookingsView === 'archived') {
+        headRow.innerHTML = `
+            <th class="p-3.5">Reference ID</th>
+            <th class="p-3.5">Guest Information</th>
+            <th class="p-3.5">Room & Stay</th>
+            <th class="p-3.5">Payment Pathway</th>
+            <th class="p-3.5">Paid / Balance Due</th>
+            <th class="p-3.5">Status</th>
+            <th class="p-3.5">Archived Date</th>
+            <th class="p-3.5 text-right">Actions</th>
+        `;
+    } else {
+        headRow.innerHTML = `
+            <th class="p-3.5">Reference ID</th>
+            <th class="p-3.5">Guest Information</th>
+            <th class="p-3.5">Room & Stay</th>
+            <th class="p-3.5">Payment Pathway</th>
+            <th class="p-3.5">Paid / Balance Due</th>
+            <th class="p-3.5">Status & Hold Timer</th>
+            <th class="p-3.5 text-right">Actions</th>
+        `;
+    }
+}
+
+function renderCounts() {
+    const activeBadge = document.getElementById('bookings-active-count');
+    const archivedBadge = document.getElementById('bookings-archived-count');
+    if (activeBadge) activeBadge.textContent = bookingCounts.active;
+    if (archivedBadge) archivedBadge.textContent = bookingCounts.archived;
+}
+
+function loadBookings(view) {
+    if (typeof view === 'string') {
+        currentBookingsView = (view === 'archived') ? 'archived' : 'active';
+    }
     const refreshIcon = document.getElementById('refresh-icon');
     if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
-    fetch('../actions/bookings_action.php')
+    applyBookingsTabStyles();
+    renderTableHead();
+
+    const tbody = document.getElementById('bookings-table-body');
+    if (tbody && allBookings.length === 0) {
+        const colSpan = (currentBookingsView === 'archived') ? 8 : 7;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i> Loading ${currentBookingsView} bookings...</td></tr>`;
+    }
+
+    fetch('../actions/bookings_action.php?view=' + currentBookingsView)
         .then(response => response.json())
         .then(data => {
             if (refreshIcon) refreshIcon.classList.remove('fa-spin');
             if (data.success) {
-                allBookings = data.bookings;
+                allBookings = Array.isArray(data.bookings) ? data.bookings : [];
+                bookingCounts = data.counts || { active: allBookings.length, archived: 0 };
+                renderCounts();
                 updateStats();
                 filterBookings();
             } else {
-                document.getElementById('bookings-table-body').innerHTML = 
-                    '<tr><td colspan="7" class="p-6 text-center text-rose-500">' + data.message + '</td></tr>';
+                const colSpan = (currentBookingsView === 'archived') ? 8 : 7;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-rose-500">${data.message || 'Error loading bookings.'}</td></tr>`;
             }
         })
         .catch(error => {
             if (refreshIcon) refreshIcon.classList.remove('fa-spin');
             console.error('Error:', error);
-            document.getElementById('bookings-table-body').innerHTML = 
-                '<tr><td colspan="7" class="p-6 text-center text-rose-500">Error loading bookings. Database connection issue.</td></tr>';
+            const colSpan = (currentBookingsView === 'archived') ? 8 : 7;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-rose-500">Error loading bookings. Database connection issue.</td></tr>`;
         });
 }
 
@@ -277,6 +401,11 @@ function updateStats() {
         else if (bs === 'confirmed' || bs === 'completed') stats.confirmed++;
         else if (bs === 'cancelled_expired' || bs === 'no_show') stats.cancelled++;
     });
+
+    const statTotalLabel = document.getElementById('stat-total-label');
+    if (statTotalLabel) {
+        statTotalLabel.textContent = (currentBookingsView === 'archived') ? 'Total Archived' : 'Total Active';
+    }
 
     document.getElementById('stat-total').textContent = stats.total;
     document.getElementById('stat-pending-verify').textContent = stats.pending_verify;
@@ -315,10 +444,17 @@ function renderBookings(bookings) {
     const tbody = document.getElementById('bookings-table-body');
     if (!tbody) return;
 
+    const colSpan = (currentBookingsView === 'archived') ? 8 : 7;
+
     if (bookings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-gray-400">No matching reservations found.</td></tr>';
+        const emptyMessage = (currentBookingsView === 'archived')
+            ? '<div class="py-4 text-center"><i class="fas fa-box-open text-3xl text-gray-300 mb-2 block"></i><p class="text-sm font-semibold text-gray-600">No archived reservations</p><p class="text-xs text-gray-400 mt-1">Archived bookings will appear here when moved out of active management.</p></div>'
+            : '<div class="py-4 text-center"><i class="fas fa-calendar-check text-3xl text-gray-300 mb-2 block"></i><p class="text-sm font-semibold text-gray-600">No matching active reservations found</p><p class="text-xs text-gray-400 mt-1">Try adjusting your search criteria or status filter.</p></div>';
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-8 text-center text-gray-400">${emptyMessage}</td></tr>`;
         return;
     }
+
+    const isArchivedView = (currentBookingsView === 'archived');
 
     tbody.innerHTML = bookings.map(b => {
         // Status Badge Logic
@@ -327,14 +463,14 @@ function renderBookings(bookings) {
 
         if (b.bookingStatus === 'pending_verification') {
             statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fas fa-stopwatch"></i> Pending Verification</span>';
-            if (b.expiresAt) {
+            if (b.expiresAt && !isArchivedView) {
                 timerNotice = `<span class="block text-[10px] text-amber-700 font-mono mt-0.5">Hold expires: ${b.expiresAt.substring(11, 16)}</span>`;
             }
         } else if (b.bookingStatus === 'deposit_paid') {
             statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-coins"></i> Deposit Paid</span>';
         } else if (b.bookingStatus === 'pending_arrival') {
             statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fas fa-store"></i> Pending Arrival</span>';
-            if (b.expectedArrivalTime) {
+            if (b.expectedArrivalTime && !isArchivedView) {
                 timerNotice = `<span class="block text-[10px] text-purple-700 font-semibold mt-0.5">ETA: ${formatTime(b.expectedArrivalTime)}</span>`;
             }
         } else if (b.bookingStatus === 'confirmed') {
@@ -356,13 +492,74 @@ function renderBookings(bookings) {
         } else if (b.paymentMethodRaw === 'full_gcash') {
             paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 w-fit"><i class="fas fa-qrcode"></i> Full GCash</span>`;
         } else if (b.paymentMethodRaw === 'deposit_gcash') {
-            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit"><i class="fas fa-coins"></i> 30% Deposit</span>`;
+            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit"><i class="fas fa-coins"></i> 20% Deposit</span>`;
         } else if (b.paymentMethodRaw === 'pay_at_hotel') {
             paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1 w-fit"><i class="fas fa-store"></i> Pay at Hotel</span>`;
         }
 
+        // Build Action Buttons
+        let actionButtons = '';
+        if (isArchivedView) {
+            actionButtons = `
+                ${(b.receiptUrl || b.gcashRefNo) ? `
+                    <button onclick="openReceiptModal(${b.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition flex items-center gap-1 shadow-xs" title="Review Proof of Payment">
+                        <i class="fas fa-search-dollar"></i> Review
+                    </button>
+                ` : ''}
+
+                <button onclick="restoreBooking(${b.id}, '${b.ref_id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs" title="Restore to active reservations">
+                    <i class="fas fa-rotate-left"></i> Restore
+                </button>
+
+                <button onclick="printAdminInvoice('${b.id}')" class="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition" title="Print Invoice / Voucher">
+                    <i class="fas fa-print"></i>
+                </button>
+
+                <button onclick="permanentlyDeleteBooking(${b.id}, '${b.ref_id}')" class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Permanently delete from database">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+        } else {
+            actionButtons = `
+                ${(b.paymongoSessionId && b.bookingStatus === 'pending_verification') ? `
+                    <button onclick="adminVerifyPaymongo('${b.paymongoSessionId}', '${b.ref_id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center gap-1" title="Check PayMongo Live Status">
+                        <i class="fas fa-sync-alt"></i> Verify
+                    </button>
+                ` : ''}
+
+                ${(b.receiptUrl || b.gcashRefNo) ? `
+                    <button onclick="openReceiptModal(${b.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition flex items-center gap-1" title="Verify Proof of Payment">
+                        <i class="fas fa-search-dollar"></i> Review
+                    </button>
+                ` : ''}
+
+                ${(b.bookingStatus === 'pending_verification') ? `
+                    <button onclick="approveBooking(${b.id})" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition" title="Approve Booking">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button onclick="rejectBooking(${b.id})" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition" title="Reject Receipt">
+                        <i class="fas fa-times"></i>
+                    </button>
+                ` : ''}
+
+                ${(b.bookingStatus === 'deposit_paid' || b.bookingStatus === 'pending_arrival') ? `
+                    <button onclick="checkInBooking(${b.id})" class="px-2 py-1 bg-brand-blue hover:bg-sky-600 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1" title="Mark Checked-In & Collect Balance">
+                        <i class="fas fa-concierge-bell"></i> Check-In
+                    </button>
+                ` : ''}
+
+                <button onclick="printAdminInvoice('${b.id}')" class="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition" title="Print Invoice / Voucher">
+                    <i class="fas fa-print"></i>
+                </button>
+                
+                <button onclick="archiveBooking(${b.id}, '${b.ref_id}')" class="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Archive reservation">
+                    <i class="fas fa-box-archive"></i>
+                </button>
+            `;
+        }
+
         return `
-            <tr class="hover:bg-slate-50/70 transition">
+            <tr class="hover:bg-slate-50/70 transition ${isArchivedView ? 'bg-slate-50/30' : ''}">
                 <!-- Ref ID & Date -->
                 <td class="p-3.5">
                     <span class="font-mono font-bold text-gray-800 text-xs block">${b.ref_id}</span>
@@ -402,49 +599,24 @@ function renderBookings(bookings) {
                     <div class="text-[11px] text-brand-blue font-semibold">Balance: ₱${parseFloat(b.balanceDue).toFixed(2)}</div>
                 </td>
 
-                <!-- Status & Hold Timer -->
+                <!-- Status & Hold Timer (or Status for Archived) -->
                 <td class="p-3.5">
                     ${statusBadge}
                     ${timerNotice}
                 </td>
 
+                ${isArchivedView ? `
+                    <!-- Archived Date -->
+                    <td class="p-3.5">
+                        <span class="font-semibold text-gray-700 text-xs block">${formatDate(b.archivedAt)}</span>
+                        <span class="text-[10px] text-gray-400 font-mono">${b.archivedAt ? b.archivedAt.substring(11, 16) : '-'}</span>
+                    </td>
+                ` : ''}
+
                 <!-- Actions -->
                 <td class="p-3.5 text-right">
-                    <div class="flex items-center justify-end gap-1.5">
-                        ${(b.paymongoSessionId && b.bookingStatus === 'pending_verification') ? `
-                            <button onclick="adminVerifyPaymongo('${b.paymongoSessionId}', '${b.ref_id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center gap-1" title="Check PayMongo Live Status">
-                                <i class="fas fa-sync-alt"></i> Verify PayMongo
-                            </button>
-                        ` : ''}
-
-                        ${(b.receiptUrl || b.gcashRefNo) ? `
-                            <button onclick="openReceiptModal(${b.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition flex items-center gap-1" title="Verify Proof of Payment">
-                                <i class="fas fa-search-dollar"></i> Review Proof
-                            </button>
-                        ` : ''}
-
-                        ${(b.bookingStatus === 'pending_verification') ? `
-                            <button onclick="approveBooking(${b.id})" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition" title="Approve Booking">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button onclick="rejectBooking(${b.id})" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition" title="Reject Receipt">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        ` : ''}
-
-                        ${(b.bookingStatus === 'deposit_paid' || b.bookingStatus === 'pending_arrival') ? `
-                            <button onclick="checkInBooking(${b.id})" class="px-2 py-1 bg-brand-blue hover:bg-sky-600 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1" title="Mark Checked-In & Collect Balance">
-                                <i class="fas fa-concierge-bell"></i> Check-In
-                            </button>
-                        ` : ''}
-
-                        <button onclick="printAdminInvoice('${b.id}')" class="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition" title="Print Invoice / Voucher">
-                            <i class="fas fa-print"></i>
-                        </button>
-                        
-                        <button onclick="deleteBooking('${b.id}')" class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Delete record">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                    <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                        ${actionButtons}
                     </div>
                 </td>
             </tr>
@@ -478,7 +650,7 @@ function openReceiptModal(bookingId) {
 
     const expiresBox = document.getElementById('modal-hold-expiry-box');
     const expiresText = document.getElementById('modal-expires-at');
-    if (booking.expiresAt && booking.bookingStatus === 'pending_verification') {
+    if (booking.expiresAt && booking.bookingStatus === 'pending_verification' && !booking.isArchived) {
         expiresBox.classList.remove('hidden');
         expiresText.textContent = booking.expiresAt + ' (2-Hour Hold Timer)';
     } else {
@@ -505,19 +677,28 @@ function openReceiptModal(bookingId) {
     const approveBtn = document.getElementById('btn-modal-approve');
     const rejectBtn = document.getElementById('btn-modal-reject');
     const checkinBtn = document.getElementById('btn-modal-checkin');
+    const archiveBtn = document.getElementById('btn-modal-archive');
+    const restoreBtn = document.getElementById('btn-modal-restore');
 
-    if (booking.bookingStatus === 'pending_verification') {
-        approveBtn.classList.remove('hidden');
-        rejectBtn.classList.remove('hidden');
-        checkinBtn.classList.add('hidden');
-    } else if (booking.bookingStatus === 'deposit_paid' || booking.bookingStatus === 'pending_arrival') {
-        approveBtn.classList.add('hidden');
-        rejectBtn.classList.add('hidden');
-        checkinBtn.classList.remove('hidden');
+    // Reset visibility
+    if (approveBtn) approveBtn.classList.add('hidden');
+    if (rejectBtn) rejectBtn.classList.add('hidden');
+    if (checkinBtn) checkinBtn.classList.add('hidden');
+    if (archiveBtn) archiveBtn.classList.add('hidden');
+    if (restoreBtn) restoreBtn.classList.add('hidden');
+
+    if (booking.isArchived) {
+        if (restoreBtn) restoreBtn.classList.remove('hidden');
     } else {
-        approveBtn.classList.add('hidden');
-        rejectBtn.classList.add('hidden');
-        checkinBtn.classList.add('hidden');
+        if (booking.bookingStatus === 'pending_verification') {
+            if (approveBtn) approveBtn.classList.remove('hidden');
+            if (rejectBtn) rejectBtn.classList.remove('hidden');
+        } else if (booking.bookingStatus === 'deposit_paid' || booking.bookingStatus === 'pending_arrival') {
+            if (checkinBtn) checkinBtn.classList.remove('hidden');
+            if (archiveBtn) archiveBtn.classList.remove('hidden');
+        } else {
+            if (archiveBtn) archiveBtn.classList.remove('hidden');
+        }
     }
 
     document.getElementById('receipt-modal').classList.remove('hidden');
@@ -554,6 +735,22 @@ function checkInFromModal() {
     closeReceiptModal();
 }
 
+function archiveFromModal() {
+    if (!activeModalBooking) return;
+    const bId = activeModalBooking.id;
+    const ref = activeModalBooking.ref_id;
+    closeReceiptModal();
+    archiveBooking(bId, ref);
+}
+
+function restoreFromModal() {
+    if (!activeModalBooking) return;
+    const bId = activeModalBooking.id;
+    const ref = activeModalBooking.ref_id;
+    closeReceiptModal();
+    restoreBooking(bId, ref);
+}
+
 // Action Handlers
 function approveBooking(bookingId) {
     showConfirm('Approve this GCash payment and lock the room reservation?', () => {
@@ -565,7 +762,10 @@ function approveBooking(bookingId) {
         .then(res => res.json())
         .then(data => {
             showToast(data.message || 'Booking approved successfully!', data.success ? 'success' : 'error');
-            if (data.success) loadBookings();
+            if (data.success) {
+                loadBookings();
+                if (typeof loadBookingCounts === 'function') loadBookingCounts();
+            }
         })
         .catch(err => {
             console.error(err);
@@ -583,6 +783,7 @@ function adminVerifyPaymongo(sessionId, refId) {
                 if (data.is_paid) {
                     showToast('Payment verified as PAID on PayMongo! Booking is Confirmed.', 'success');
                     loadBookings();
+                    if (typeof loadBookingCounts === 'function') loadBookingCounts();
                 } else {
                     showToast(`PayMongo status: ${data.session_status || 'Awaiting Payment'}.`, 'warning');
                 }
@@ -606,7 +807,10 @@ function rejectBooking(bookingId) {
         .then(res => res.json())
         .then(data => {
             showToast(data.message || 'Booking rejected.', data.success ? 'info' : 'error');
-            if (data.success) loadBookings();
+            if (data.success) {
+                loadBookings();
+                if (typeof loadBookingCounts === 'function') loadBookingCounts();
+            }
         })
         .catch(err => {
             console.error(err);
@@ -625,7 +829,10 @@ function checkInBooking(bookingId) {
         .then(res => res.json())
         .then(data => {
             showToast(data.message || 'Check-in completed!', data.success ? 'success' : 'error');
-            if (data.success) loadBookings();
+            if (data.success) {
+                loadBookings();
+                if (typeof loadBookingCounts === 'function') loadBookingCounts();
+            }
         })
         .catch(err => {
             console.error(err);
@@ -634,21 +841,156 @@ function checkInBooking(bookingId) {
     });
 }
 
+function archiveBooking(bookingId, refId) {
+    const label = refId ? `reservation <strong>${refId}</strong>` : 'this reservation';
+    showConfirm(
+        `Archive ${label}?<br><span class="text-xs text-gray-500 mt-1 block">The record will be safely moved to the Archive tab. All payment information, receipts, and folio history stay intact.</span>`,
+        () => {
+            fetch('../actions/bookings_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'archive', id: bookingId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast(data.message || 'Reservation archived successfully.', data.success ? 'success' : 'error');
+                if (data.success) {
+                    loadBookings();
+                    if (typeof loadBookingCounts === 'function') loadBookingCounts();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error archiving reservation', 'error');
+            });
+        },
+        { title: 'Archive Reservation', confirmLabel: 'Archive Record', variant: 'primary' }
+    );
+}
+
+function restoreBooking(bookingId, refId) {
+    const label = refId ? `reservation <strong>${refId}</strong>` : 'this reservation';
+    showConfirm(
+        `Restore ${label} back to the active reservations board?`,
+        () => {
+            fetch('../actions/bookings_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'restore', id: bookingId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast(data.message || 'Reservation restored successfully.', data.success ? 'success' : 'error');
+                if (data.success) {
+                    loadBookings();
+                    if (typeof loadBookingCounts === 'function') loadBookingCounts();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error restoring reservation', 'error');
+            });
+        },
+        { title: 'Restore Reservation', confirmLabel: 'Restore to Active', variant: 'primary' }
+    );
+}
+
+function permanentlyDeleteBooking(bookingId, refId) {
+    const label = refId ? `reservation <strong>${refId}</strong>` : 'this reservation';
+    showConfirm(
+        `<span class="text-rose-600 font-bold block mb-1">Permanent Deletion Warning:</span>Are you sure you want to permanently delete ${label}?<br><span class="text-xs text-rose-500 mt-1 block">This permanently deletes the record and its receipt file from the database. This action cannot be undone.</span>`,
+        () => {
+            fetch('../actions/bookings_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', id: bookingId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast(data.message || 'Reservation deleted permanently.', data.success ? 'info' : 'error');
+                if (data.success) {
+                    loadBookings();
+                    if (typeof loadBookingCounts === 'function') loadBookingCounts();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error deleting reservation', 'error');
+            });
+        },
+        { title: 'Permanent Delete', confirmLabel: 'Delete Forever' }
+    );
+}
+
+function archiveAllCancelledBookings() {
+    showConfirm(
+        `Archive all cancelled and expired hold reservations?<br><span class="text-xs text-gray-500 mt-1 block">This will clean up your active dashboard by moving all cancelled/expired bookings into the Archive tab.</span>`,
+        () => {
+            fetch('../actions/bookings_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'batch_archive', type: 'cancelled' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast(data.message || 'Cancelled reservations archived.', data.success ? 'success' : 'error');
+                if (data.success) {
+                    loadBookings();
+                    if (typeof loadBookingCounts === 'function') loadBookingCounts();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error archiving cancelled reservations', 'error');
+            });
+        },
+        { title: 'Archive Cancelled Reservations', confirmLabel: 'Archive Cancelled', variant: 'primary' }
+    );
+}
+
+// Backward-compatible delete handler
 function deleteBooking(bookingId) {
-    showConfirm('Are you sure you want to permanently delete this reservation record?', () => {
-        fetch('../actions/bookings_action.php?id=' + bookingId, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            showToast(data.message || 'Booking deleted successfully!', data.success ? 'success' : 'error');
-            if (data.success) loadBookings();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error deleting booking', 'error');
-        });
-    });
+    if (currentBookingsView === 'archived') {
+        permanentlyDeleteBooking(bookingId);
+    } else {
+        const b = allBookings.find(item => item.id == bookingId);
+        archiveBooking(bookingId, b ? b.ref_id : null);
+    }
+}
+// Open print popup in the same tab using an iframe modal
+function openSameTabPrintWindow() {
+    let modal = document.getElementById('same-tab-print-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'same-tab-print-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:999999;display:flex;align-items:center;justify-content:center;';
+        
+        let container = document.createElement('div');
+        container.style.cssText = 'width:90%;height:90%;background:#fff;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.3);display:flex;flex-direction:column;overflow:hidden;';
+        
+        let header = document.createElement('div');
+        header.style.cssText = 'padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;';
+        header.innerHTML = '<strong style="color:#1e293b;font-family:sans-serif;font-size:16px;">Print Preview</strong><button onclick="document.getElementById(\'same-tab-print-modal\').style.display=\'none\'" style="background:#ef4444;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:bold;">Close</button>';
+        
+        let iframe = document.createElement('iframe');
+        iframe.id = 'same-tab-print-iframe';
+        iframe.style.cssText = 'flex-grow:1;border:none;width:100%;background:#fff;';
+        
+        container.appendChild(header);
+        container.appendChild(iframe);
+        modal.appendChild(container);
+        document.body.appendChild(modal);
+    }
+    
+    modal.style.display = 'flex';
+    let iframe = document.getElementById('same-tab-print-iframe');
+    let win = iframe.contentWindow;
+    
+    win.document.open();
+    win.document.write('');
+    win.document.close();
+    
+    return win;
 }
 
 function printAdminInvoice(bookingId) {
@@ -799,7 +1141,7 @@ function printAdminInvoice(bookingId) {
         </html>
     `;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = openSameTabPrintWindow();
     printWindow.document.write(invoiceHTML);
     printWindow.document.close();
 }
@@ -807,3 +1149,4 @@ function printAdminInvoice(bookingId) {
 // Load bookings on load
 document.addEventListener('DOMContentLoaded', loadBookings);
 </script>
+

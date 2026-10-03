@@ -44,9 +44,35 @@ function getRooms() {
         ");
         $stmt->execute();
         $rooms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $today = date('Y-m-d');
         foreach ($rooms as &$room) {
             $room['rating'] = floatval($room['avg_rating'] ?? $room['rating'] ?? 5.0);
             $room['reviews_count'] = intval($room['total_reviews'] ?? 0);
+            $isDorm = ($room['type'] === 'Dorm' || intval($room['id']) === 5);
+            if ($isDorm) {
+                $dormTotalBeds = 8;
+                $stmtOcc = $pdo->prepare("
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN b.beds_count > 0 THEN b.beds_count
+                            ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                        END
+                    ), 0) AS occupied_beds
+                    FROM bookings b
+                    WHERE b.room_id = ?
+                      AND b.status IN ('Pending', 'Confirmed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+                      AND COALESCE(b.check_in_date, b.check_in) <= ?
+                      AND COALESCE(b.check_out_date, b.check_out) > ?
+                ");
+                $stmtOcc->execute([$room['id'], $today, $today]);
+                $occupiedBeds = (int)$stmtOcc->fetchColumn();
+                $room['occupied_beds'] = $occupiedBeds;
+                $room['remaining_beds'] = max(0, $dormTotalBeds - $occupiedBeds);
+                $room['total_beds'] = $dormTotalBeds;
+                $room['max_capacity'] = $dormTotalBeds;
+                $room['capacity'] = $dormTotalBeds;
+            }
         }
         unset($room);
         echo json_encode(['success' => true, 'rooms' => $rooms]);

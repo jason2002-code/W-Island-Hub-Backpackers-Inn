@@ -146,33 +146,11 @@
                 margin-top: -10px;
             }
 
-/* SVG Palm Tree Graphic */
-           /* .palm-tree-svg {
-                width: 120px;
-                height: auto;
+/* Loader Gold Brand Logo SVG */
+            .loader-logo-svg {
+                width: 100px;
+                height: 100px;
                 filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8)) drop-shadow(0px 0px 15px rgba(212, 175, 55, 0.3));
-            }
-*/
-            /* W Logo - Gold styled to blend with loading screen */
-            .w-logo {
-                font-family: 'Playfair Display', serif;
-                font-size: 6rem;
-                font-weight: 700;
-                display: inline-block;
-                position: relative;
-                background: linear-gradient(to bottom, var(--gold-light) 0%, var(--gold-mid) 40%, var(--gold-dark) 60%, var(--gold-mid) 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                color: transparent;
-            }
-            
-            /* Forcefully hide any leftover spinning pseudo-elements from external CSS */
-            .w-logo::before, 
-            .w-logo::after {
-                content: none !important;
-                display: none !important;
-                animation: none !important;
             }
 
             /* Loading Progress Bar */
@@ -229,32 +207,33 @@
             .loader-hidden {
                 opacity: 0 !important;
                 visibility: hidden !important;
+                pointer-events: none !important;
             }
 
             /* Scoped font imports (inline equivalent) */
             @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;500&display=swap');
         </style>
 
-<!-- Main Loader Content -->
+        <!-- Main Loader Content -->
         <div class="logo-container">
-            <!-- Custom Palm Tree SVG -->
-            <svg class="palm-tree-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
-                <!-- Trunk -->
-                <path d="M 45,110 C 50,80 35,50 40,35 C 42,30 48,30 50,35 C 55,50 65,80 55,110 Z" fill="url(#gold-gradient)"/>
-                <!-- Leaves -->
-                <path d="M 45,38 C 20,45 5,30 10,20 C 25,25 40,30 45,38 Z" fill="url(#gold-gradient)"/>
-                <path d="M 47,35 C 20,20 15,5 25,0 C 35,15 45,25 47,35 Z" fill="url(#gold-gradient)"/>
-                <path d="M 50,33 C 45,10 55,-5 65,0 C 60,15 55,25 50,33 Z" fill="url(#gold-gradient)"/>
-                <path d="M 53,35 C 75,20 90,10 95,20 C 80,30 65,35 53,35 Z" fill="url(#gold-gradient)"/>
-                <path d="M 51,38 C 75,50 90,45 85,35 C 70,35 60,35 51,38 Z" fill="url(#gold-gradient)"/>
+            <!-- Official Unified Gold Brand Logo Icon (Palm Tree & Stylized W) -->
+            <svg class="loader-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Palm Trunk -->
+                <path d="M25,85 Q35,60 30,40" stroke="url(#gold-gradient)" stroke-width="5" stroke-linecap="round"/>
+                <!-- Palm Leaves -->
+                <path d="M30,40 C15,40 10,55 10,55 C10,55 15,45 30,40" fill="url(#gold-gradient)"/>
+                <path d="M30,40 C20,25 5,30 5,30 C5,30 15,35 30,40" fill="url(#gold-gradient)"/>
+                <path d="M30,40 C30,20 20,15 20,15 C20,15 30,25 30,40" fill="url(#gold-gradient)"/>
+                <path d="M30,40 C45,25 55,35 55,35 C55,35 40,35 30,40" fill="url(#gold-gradient)"/>
+                <path d="M30,40 C50,45 50,60 50,60 C50,60 40,50 30,40" fill="url(#gold-gradient)"/>
+                <!-- Stylized W -->
+                <path d="M40,35 L50,85 L65,50 L75,85 L90,35" stroke="url(#gold-gradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
 
             <!-- Brand Typography -->
             <div class="brand-text">
                 <div class="top-row">
-                    <!-- W Logo - Gold styled to blend with loading screen -->
-                    <span class="w-logo" id="w-logo">W</span>
-                    <span class="text-island">island</span>
+                    <span class="text-island">W island</span>
                 </div>
                 <div class="text-hub">Hub</div>
             </div>
@@ -286,6 +265,7 @@
                         setTimeout(() => {
                             if(loader) {
                                 loader.classList.add('loader-hidden');
+                                document.body.style.overflow = 'auto';
                             }
                         }, 500);
                     }
