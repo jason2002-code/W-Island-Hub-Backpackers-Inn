@@ -52,24 +52,27 @@ async function init() {
             fetch(`actions/bookings_action.php?action=get_single&ref_id=${encodeURIComponent(refId)}`)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success && data.booking && typeof window.showInvoiceModal === 'function') {
+                    if (data.success && data.booking) {
                         const b = data.booking;
-                        window.showInvoiceModal(b.ref_id, {
-                            roomName: b.room_name || 'Room Stay',
-                            checkIn: b.check_in_date || b.check_in,
-                            checkOut: b.check_out_date || b.check_out,
-                            nights: parseInt(b.nights || 1),
-                            guests: (parseInt(b.adults || 1) + parseInt(b.children || 0)),
-                            adults: parseInt(b.adults || 1),
-                            children: parseInt(b.children || 0),
-                            roomsCount: parseInt(b.rooms_count || 1),
-                            total: parseFloat(b.total_amount || b.total_price)
-                        }, {
-                            payment_method: b.payment_method,
-                            booking_status: b.booking_status,
-                            paid_amount: parseFloat(b.paid_amount !== undefined ? b.paid_amount : b.total_amount),
-                            balance_due: parseFloat(b.balance_due !== undefined ? b.balance_due : 0)
-                        });
+                        const modalFn = (typeof window.showVoucherModal === 'function') ? window.showVoucherModal : window.showInvoiceModal;
+                        if (typeof modalFn === 'function') {
+                            modalFn(b.ref_id, {
+                                roomName: b.room_name || 'Room Stay',
+                                checkIn: b.check_in_date || b.check_in,
+                                checkOut: b.check_out_date || b.check_out,
+                                nights: parseInt(b.nights || 1),
+                                guests: (parseInt(b.adults || 1) + parseInt(b.children || 0)),
+                                adults: parseInt(b.adults || 1),
+                                children: parseInt(b.children || 0),
+                                roomsCount: parseInt(b.rooms_count || 1),
+                                total: parseFloat(b.total_amount || b.total_price)
+                            }, {
+                                payment_method: b.payment_method,
+                                booking_status: b.booking_status,
+                                paid_amount: parseFloat(b.paid_amount !== undefined ? b.paid_amount : b.total_amount),
+                                balance_due: parseFloat(b.balance_due !== undefined ? b.balance_due : 0)
+                            });
+                        }
                     }
                 }).catch(err => console.error('Error opening voucher:', err));
         }

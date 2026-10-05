@@ -15,14 +15,69 @@ function initGuestProfile() {
         return;
     }
 
-    // Update Profile Completeness
+    // Update Profile Completeness & Header Stats
     updateCompletenessMeter();
+    updateProfileStats();
 
     // Render Tab Components
     renderOverviewTab();
     renderBookingsList();
     renderFeedbackList();
     renderReviewsList();
+}
+
+/**
+ * Dynamically computes and updates Profile Header Stats (Total Spent, Upcoming Stays, Total Reservations)
+ */
+function updateProfileStats() {
+    const bookings = (window.appState && Array.isArray(window.appState.bookings)) ? window.appState.bookings : [];
+    const todayStr = new Date().toISOString().substring(0, 10);
+
+    let totalSpent = 0.0;
+    let upcomingCount = 0;
+    let totalReservations = bookings.length;
+
+    bookings.forEach(b => {
+        const bStatus = String(b.bookingStatus || b.booking_status || b.status || 'pending_verification').toLowerCase();
+        const legStatus = String(b.status || '').toLowerCase();
+        const checkIn = b.checkIn || b.check_in_date || b.check_in || '';
+        const checkOut = b.checkOut || b.check_out_date || b.check_out || '';
+
+        const isCancelled = ['cancelled_expired', 'cancelled', 'no_show'].includes(bStatus) || legStatus === 'cancelled';
+        const isCompleted = bStatus === 'completed' || (legStatus === 'confirmed' && checkOut && checkOut < todayStr);
+
+        if (!isCancelled) {
+            if (!isCompleted && checkIn && checkIn > todayStr) {
+                upcomingCount++;
+            }
+
+            const total = parseFloat(b.total !== undefined ? b.total : (b.total_amount || b.total_price || 0));
+            const paid = parseFloat(b.paidAmount !== undefined ? b.paidAmount : (b.paid_amount || 0));
+
+            if (paid > 0) {
+                totalSpent += paid;
+            } else if (bStatus === 'confirmed' || bStatus === 'completed' || legStatus === 'confirmed') {
+                totalSpent += total;
+            } else if (bStatus === 'deposit_paid') {
+                totalSpent += Math.round(total * 0.20 * 100) / 100;
+            }
+        }
+    });
+
+    const totalSpentEl = document.getElementById('total-spent-display');
+    if (totalSpentEl) {
+        totalSpentEl.textContent = `₱${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    const upcomingEl = document.getElementById('upcoming-stays-display');
+    if (upcomingEl) {
+        upcomingEl.textContent = upcomingCount;
+    }
+
+    const totalResEl = document.getElementById('total-reservations-display');
+    if (totalResEl) {
+        totalResEl.textContent = totalReservations;
+    }
 }
 
 // Backward compatibility alias
@@ -315,11 +370,14 @@ function renderOverviewTab(selectedBookingId = null) {
                     </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="openVoucherModal(${upcoming.id})" class="bg-gradient-to-r from-brand-blue to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2">
+                    <button onclick="openVoucherModal(${upcoming.id})" class="bg-gradient-to-r from-brand-blue to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer">
                         <i class="fas fa-ticket-alt"></i> View Voucher
                     </button>
+                    <button onclick="openInvoiceModal(${upcoming.id})" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition flex items-center gap-2 cursor-pointer">
+                        <i class="fas fa-file-invoice-dollar text-emerald-600"></i> View Invoice
+                    </button>
                     ${balance > 0 && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' ? `
-                        <button onclick="payBookingWithPayMongo(${upcoming.id}, '${upcoming.ref_id || upcoming.refId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5" title="Settle balance online">
+                        <button onclick="payBookingWithPayMongo(${upcoming.id}, '${upcoming.ref_id || upcoming.refId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer" title="Settle balance online">
                             <i class="fas fa-bolt"></i> Pay Balance (₱${balance.toFixed(2)})
                         </button>
                     ` : ''}
@@ -651,16 +709,19 @@ function renderBookingsList() {
                                 <i class="fas fa-bolt text-emerald-600"></i> Pay Online
                             </button>
                         ` : ''}
-                        <button onclick="openVoucherModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition flex items-center gap-1.5">
-                            <i class="fas fa-ticket-alt text-brand-blue"></i> Voucher
+                        <button onclick="openVoucherModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="View Stay Pass & Voucher">
+                            <i class="fas fa-ticket-alt text-teal-600"></i> Voucher
+                        </button>
+                        <button onclick="openInvoiceModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="View Official Folio Invoice / Receipt">
+                            <i class="fas fa-file-invoice-dollar text-emerald-600"></i> Invoice
                         </button>
                         ${isUpcomingActive ? `
-                            <button onclick="openLateArrivalModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1.5 shadow-xs" title="Report Delay / Late Check-in">
+                            <button onclick="openLateArrivalModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer" title="Report Delay / Late Check-in">
                                 <i class="fas fa-clock text-amber-600"></i> Report Delay
                             </button>
                         ` : ''}
                         ${reviewBtn}
-                        <button onclick="openBookingReportsModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-brand-blue hover:text-sky-600 text-xs font-bold transition" title="Messages & Reports">
+                        <button onclick="openBookingReportsModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-brand-blue hover:text-sky-600 text-xs font-bold transition cursor-pointer" title="Messages & Reports">
                             <i class="fas fa-comments"></i>
                         </button>
                     </div>
@@ -674,68 +735,42 @@ function renderBookingsList() {
  * Open Booking Voucher Modal
  */
 function openVoucherModal(bookingId) {
-    const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => b.id == bookingId);
-    if (!booking) {
-        if (typeof showToast === 'function') {
-            showToast('Booking details not found', 'error');
-        } else {
-            alert('Booking details not found');
-        }
-        return;
-    }
-
-    const arrivalTime12H = formatTime12H(booking.expectedArrivalTime || '14:00:00');
-    const checkInFmt = booking.checkIn ? `${getFormattedDateWithDay(booking.checkIn)} at ${arrivalTime12H}` : '-';
-    const checkOutFmt = booking.checkOut ? `${getFormattedDateWithDay(booking.checkOut)} by 12:00 PM` : '-';
-
-    const guestName = (window.appState && window.appState.currentUser && window.appState.currentUser.name) ? window.appState.currentUser.name : (booking.guestName || 'Valued Guest');
-    const total = parseFloat(booking.total || 0);
-    const paid = parseFloat(booking.paidAmount !== undefined ? booking.paidAmount : (booking.status === 'Confirmed' ? total : 0));
-    const balance = parseFloat(booking.balanceDue !== undefined ? booking.balanceDue : (total - paid));
-
-    document.getElementById('voucher-guest-name').innerText = guestName;
-    document.getElementById('voucher-room-name').innerText = booking.roomName || 'Standard Room';
-    document.getElementById('voucher-check-in').innerText = checkInFmt;
-    document.getElementById('voucher-check-out').innerText = checkOutFmt;
-    document.getElementById('voucher-nights').innerText = `${booking.nights} Night${booking.nights > 1 ? 's' : ''}`;
-    document.getElementById('voucher-ref-code').innerText = `Ref: ${booking.ref_id || booking.refId || ('WIH-' + booking.id)}`;
-    document.getElementById('voucher-payment-method').innerText = booking.paymentMethod || 'GCash';
-    document.getElementById('voucher-total-price').innerText = `₱${total.toFixed(2)}`;
-
-    const badge = document.getElementById('voucher-status-badge');
-    if (badge) {
-        const bStatus = (booking.bookingStatus || booking.status || '').toLowerCase();
-        if (bStatus === 'confirmed' || bStatus === 'completed') {
-            badge.innerText = 'Confirmed (Paid Full)';
-            badge.className = 'inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold';
-        } else if (bStatus === 'deposit_paid') {
-            badge.innerText = `Deposit Paid (₱${paid.toFixed(2)} / Due: ₱${balance.toFixed(2)})`;
-            badge.className = 'inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold';
-        } else if (bStatus === 'pending_arrival') {
-            badge.innerText = `Pending Arrival (Due at Desk: ₱${balance.toFixed(2)})`;
-            badge.className = 'inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold';
-        } else if (bStatus === 'cancelled_expired' || bStatus === 'cancelled' || bStatus === 'no_show') {
-            badge.innerText = 'Cancelled / Expired';
-            badge.className = 'inline-block px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-bold';
-        } else {
-            badge.innerText = 'Pending GCash Verification';
-            badge.className = 'inline-block px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold';
+    if (typeof window.showVoucherModal === 'function') {
+        const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => String(b.id) === String(bookingId) || String(b.ref_id) === String(bookingId) || String(b.refId) === String(bookingId));
+        if (booking) {
+            window.showVoucherModal(booking);
+            return;
         }
     }
+    if (typeof window.fetchBookingAndShow === 'function') {
+        window.fetchBookingAndShow(bookingId, 'voucher');
+    }
+}
 
-    const modal = document.getElementById('voucher-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+/**
+ * Open Official Folio Invoice / Receipt Modal
+ */
+function openInvoiceModal(bookingId) {
+    if (typeof window.showInvoiceModal === 'function') {
+        const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => String(b.id) === String(bookingId) || String(b.ref_id) === String(bookingId) || String(b.refId) === String(bookingId));
+        if (booking) {
+            window.showInvoiceModal(booking);
+            return;
+        }
+    }
+    if (typeof window.fetchBookingAndShow === 'function') {
+        window.fetchBookingAndShow(bookingId, 'invoice');
     }
 }
 
 function closeVoucherModal() {
-    const modal = document.getElementById('voucher-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
+    const modal = document.getElementById('voucher-modal-wrapper');
+    if (modal) modal.remove();
+}
+
+function closeInvoiceModal() {
+    const modal = document.getElementById('invoice-modal-wrapper');
+    if (modal) modal.remove();
 }
 
 /**

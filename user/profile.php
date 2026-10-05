@@ -84,10 +84,16 @@ $jsBookings = array_map(function($b) {
         'gcashRefNo' => $b['gcash_reference_no'] ?? null,
         'paymongoSessionId' => $b['paymongo_session_id'] ?? null,
         'paymongoPaymentId' => $b['paymongo_payment_id'] ?? null,
+        'adults' => (int)($b['adults'] ?? 1),
+        'children' => (int)($b['children'] ?? 0),
+        'guests' => (int)(($b['adults'] ?? 1) + ($b['children'] ?? 0)),
+        'bedsCount' => (int)($b['beds_count'] ?? 1),
+        'roomsCount' => (int)($b['rooms_count'] ?? 1),
+        'childrenAges' => !empty($b['children_ages']) ? (is_array($b['children_ages']) ? $b['children_ages'] : json_decode($b['children_ages'], true)) : [],
         'userId' => $b['user_id'],
-        'guestName' => $b['guest_name'] ?? '',
-        'guestEmail' => $b['guest_email'] ?? '',
-        'guestPhone' => $b['guest_phone'] ?? '',
+        'guestName' => !empty($b['guest_name']) ? $b['guest_name'] : ($user['name'] ?? ''),
+        'guestEmail' => !empty($b['guest_email']) ? $b['guest_email'] : ($user['email'] ?? ''),
+        'guestPhone' => !empty($b['guest_phone']) ? $b['guest_phone'] : ($user['phone'] ?? ''),
         'expiresAt' => $b['expires_at'] ?? null,
         'specialRequests' => $b['special_requests'] ?? ''
     ];
@@ -115,29 +121,38 @@ $todayStr = date('Y-m-d');
 $upcomingBookings = 0;
 $completedBookings = 0;
 $cancelledBookings = 0;
-$totalSpent = 0;
+$totalSpent = 0.0;
 
 foreach ($bookings as $b) {
-    $bStatus = $b['booking_status'] ?? 'pending_verification';
-    $status = $b['status'] ?? 'Pending';
+    $bStatus = strtolower($b['booking_status'] ?? 'pending_verification');
+    $status = strtolower($b['status'] ?? 'pending');
     $checkIn  = $b['check_in_date']  ?: ($b['check_in']  ?? '');
     $checkOut = $b['check_out_date'] ?: ($b['check_out'] ?? '');
-    $isCancelled = in_array($bStatus, ['cancelled_expired', 'no_show']) || $status === 'Cancelled';
+
+    $isCancelled = in_array($bStatus, ['cancelled_expired', 'cancelled', 'no_show']) || $status === 'cancelled';
+    $isCompleted = ($bStatus === 'completed') || ($status === 'confirmed' && !empty($checkOut) && $checkOut < $todayStr);
 
     if ($isCancelled) {
         $cancelledBookings++;
-    } elseif ($bStatus === 'completed' || ($status === 'Confirmed' && $checkOut < $todayStr)) {
-        $completedBookings++;
-        $totalSpent += (float)($b['paid_amount'] > 0 ? $b['paid_amount'] : ($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0)));
-    } elseif (!$isCancelled && $checkIn > $todayStr) {
-        // Only count as upcoming if check-in is STRICTLY in the future (after today)
-        $upcomingBookings++;
-        if ($status === 'Confirmed' || $bStatus === 'deposit_paid') {
-            $totalSpent += (float)($b['paid_amount'] > 0 ? $b['paid_amount'] : ($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0)));
+    } else {
+        if ($isCompleted) {
+            $completedBookings++;
+        } elseif (!empty($checkIn) && $checkIn > $todayStr) {
+            $upcomingBookings++;
+        }
+
+        // Total Spent Calculation: Count actual paid amount or confirmed/deposit amount
+        $paid = (float)($b['paid_amount'] ?? 0);
+        $total = (float)($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0));
+
+        if ($paid > 0) {
+            $totalSpent += $paid;
+        } elseif ($bStatus === 'confirmed' || $bStatus === 'completed' || $status === 'confirmed') {
+            $totalSpent += $total;
+        } elseif ($bStatus === 'deposit_paid') {
+            $totalSpent += round($total * 0.20, 2);
         }
     }
-    // Bookings where check_in_date == today or is in the past but not yet completed
-    // are considered "active today" and are NOT counted in upcoming
 }
 ?>
 
@@ -205,7 +220,7 @@ foreach ($bookings as $b) {
                         <i class="fas fa-calendar-check"></i>
                     </div>
                     <div>
-                        <div class="text-lg font-bold text-white"><?php echo $upcomingBookings; ?></div>
+                        <div id="upcoming-stays-display" class="text-lg font-bold text-white"><?php echo $upcomingBookings; ?></div>
                         <div class="text-[11px] text-slate-300">Upcoming Stays</div>
                     </div>
                 </div>
@@ -216,7 +231,7 @@ foreach ($bookings as $b) {
                         <i class="fas fa-bed"></i>
                     </div>
                     <div>
-                        <div class="text-lg font-bold text-white"><?php echo $totalBookings; ?></div>
+                        <div id="total-reservations-display" class="text-lg font-bold text-white"><?php echo $totalBookings; ?></div>
                         <div class="text-[11px] text-slate-300">Total Reservations</div>
                     </div>
                 </div>
@@ -227,7 +242,7 @@ foreach ($bookings as $b) {
                         <i class="fas fa-receipt"></i>
                     </div>
                     <div>
-                        <div class="text-lg font-bold text-white">₱<?php echo number_format($totalSpent, 2); ?></div>
+                        <div id="total-spent-display" class="text-lg font-bold text-white">₱<?php echo number_format($totalSpent, 2); ?></div>
                         <div class="text-[11px] text-slate-300">Total Spent</div>
                     </div>
                 </div>
@@ -584,81 +599,6 @@ foreach ($bookings as $b) {
     </div>
 </div>
 
-<!-- ================= MODAL: PRINTABLE OFFICIAL VOUCHER ================= -->
-<div id="voucher-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200">
-        <!-- Voucher Header -->
-        <div class="bg-gradient-to-r from-brand-dark to-brand-blue p-6 text-white text-center relative">
-            <button onclick="closeVoucherModal()" class="absolute top-4 right-4 text-white/70 hover:text-white text-lg">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl mx-auto mb-2 text-teal-300">
-                <i class="fas fa-ticket-alt"></i>
-            </div>
-            <h3 class="text-xl font-bold tracking-tight">Official Booking Voucher</h3>
-            <p class="text-xs text-teal-200 mt-0.5">W Island Hub Backpackers Inn</p>
-        </div>
-
-        <!-- Voucher Body -->
-        <div class="p-6 space-y-4">
-            <div class="flex justify-between items-center pb-4 border-b border-gray-100">
-                <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Primary Guest</span>
-                    <h4 id="voucher-guest-name" class="font-bold text-gray-800 text-sm">Guest Name</h4>
-                </div>
-                <div class="text-right">
-                    <span id="voucher-status-badge" class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">Confirmed</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 pb-4 border-b border-gray-100">
-                <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Room Selection</span>
-                    <p id="voucher-room-name" class="font-bold text-gray-800 text-sm">Standard Room</p>
-                </div>
-                <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Duration</span>
-                    <p id="voucher-nights" class="font-bold text-brand-blue text-sm">1 Night</p>
-                </div>
-                <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Check-in</span>
-                    <p id="voucher-check-in" class="font-bold text-gray-700 text-xs">Oct 12, 2026 (2:00 PM)</p>
-                </div>
-                <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Check-out</span>
-                    <p id="voucher-check-out" class="font-bold text-gray-700 text-xs">Oct 13, 2026 (12:00 PM)</p>
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center pb-2">
-                <div>
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Payment Method</span>
-                    <p id="voucher-payment-method" class="font-semibold text-gray-700 text-xs">Full Payment</p>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] text-gray-400 uppercase font-bold block">Total Amount</span>
-                    <p id="voucher-total-price" class="text-lg font-bold text-brand-blue">₱0.00</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 p-3.5 rounded-2xl border border-gray-100 text-center">
-                <span id="voucher-ref-code" class="font-mono font-bold text-xs text-gray-800 tracking-wider">Ref: WIH-0000</span>
-                <p class="text-[10px] text-gray-400 mt-1">Please present this reference or QR code upon check-in at the reception desk.</p>
-            </div>
-        </div>
-
-        <!-- Voucher Footer -->
-        <div class="p-6 bg-slate-50 border-t border-gray-100 flex gap-3">
-            <button onclick="window.print()" class="flex-1 bg-brand-blue hover:bg-sky-600 text-white font-bold text-xs py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm">
-                <i class="fas fa-print"></i> Print Voucher
-            </button>
-            <button onclick="closeVoucherModal()" class="px-5 bg-white border border-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-100 transition">
-                Close
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- ================= MODAL: REPORT LATE ARRIVAL ================= -->
 <div id="late-arrival-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 border border-gray-100 relative overflow-hidden max-h-[90vh] overflow-y-auto">
@@ -997,6 +937,9 @@ foreach ($bookings as $b) {
 
 <!-- Modern Notifications -->
 <script src="../assets/js/notifications.js"></script>
+<!-- Invoice & Voucher Module -->
+<script src="../assets/js/modules/invoice.js?v=<?php echo time(); ?>"></script>
 <!-- Profile Management Script -->
 <script src="../assets/js/user_profile.js?v=<?php echo time(); ?>"></script>
+
 

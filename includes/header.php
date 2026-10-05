@@ -146,11 +146,25 @@
                 margin-top: -10px;
             }
 
-/* Loader Gold Brand Logo SVG */
+            /* Loader Gold Brand Logo SVG */
             .loader-logo-svg {
                 width: 100px;
                 height: 100px;
                 filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.8)) drop-shadow(0px 0px 15px rgba(212, 175, 55, 0.3));
+            }
+
+            @media (max-width: 640px) {
+                .loader-logo-svg {
+                    width: 70px;
+                    height: 70px;
+                }
+                .text-island {
+                    font-size: 3.5rem;
+                }
+                .text-hub {
+                    font-size: 4.5rem;
+                    padding-left: 50px;
+                }
             }
 
             /* Loading Progress Bar */
@@ -233,7 +247,7 @@
             <!-- Brand Typography -->
             <div class="brand-text">
                 <div class="top-row">
-                    <span class="text-island">W island</span>
+                    <span class="text-island">island</span>
                 </div>
                 <div class="text-hub">Hub</div>
             </div>

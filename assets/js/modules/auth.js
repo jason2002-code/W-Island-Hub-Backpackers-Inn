@@ -399,6 +399,26 @@ function handleSocialLogin(provider) {
  * @param {string} name - User display name.
  */
 function processSocialLogin(provider, email, name) {
+    if (provider === 'Google' && typeof window.checkEmailVerified === 'function') {
+        window.checkEmailVerified(email).then(isVerified => {
+            if (!isVerified) {
+                window.showToast("A verification code & link have been sent to your Gmail (" + email + ").", 'info');
+                if (typeof window.triggerEmailVerification === 'function') {
+                    window.emailVerificationState.onSuccessCallback = () => {
+                        executeSocialLoginRequest(provider, email, name);
+                    };
+                    window.triggerEmailVerification('google', email, name);
+                }
+                return;
+            }
+            executeSocialLoginRequest(provider, email, name);
+        });
+    } else {
+        executeSocialLoginRequest(provider, email, name);
+    }
+}
+
+function executeSocialLoginRequest(provider, email, name) {
     fetch('actions/social_login_action.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -411,6 +431,14 @@ function processSocialLogin(provider, email, name) {
             window.saveState();
             updateAuthUI();
             window.router('home');
+        } else if (data.requires_verification) {
+            window.showToast(data.message || 'Please verify your Gmail account.', 'info');
+            if (typeof window.triggerEmailVerification === 'function') {
+                window.emailVerificationState.onSuccessCallback = () => {
+                    executeSocialLoginRequest(provider, email, name);
+                };
+                window.triggerEmailVerification('google', email, name);
+            }
         } else {
             window.showToast(data.message, 'error');
         }

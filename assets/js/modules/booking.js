@@ -1038,7 +1038,9 @@ function initBookingForm() {
                 }
 
                 window.showToast(`Reservation Created! Ref: ${data.ref_id}`, 'success');
-                if (typeof window.showInvoiceModal === 'function') {
+                if (typeof window.showVoucherModal === 'function') {
+                    window.showVoucherModal(data.ref_id, activeBooking, data);
+                } else if (typeof window.showInvoiceModal === 'function') {
                     window.showInvoiceModal(data.ref_id, activeBooking, data);
                 }
             } else {

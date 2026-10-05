@@ -78,19 +78,43 @@ function getBookings() {
         $formatted = array_map(function($b) {
             $checkIn = $b['check_in_date'] ?: $b['check_in'];
             $checkOut = $b['check_out_date'] ?: $b['check_out'];
-            $total = (float)($b['total_amount'] > 0 ? $b['total_amount'] : $b['total_price']);
+            $total = (float)($b['total_amount'] > 0 ? $b['total_amount'] : ($b['total_price'] ?? 0));
             $paid = (float)($b['paid_amount'] ?? 0);
-            $balance = (float)($b['balance_due'] ?? ($total - $paid));
+            $bStatus = $b['booking_status'] ?? 'pending_verification';
+
+            // Accurate financial logic
+            if ($bStatus === 'confirmed' || $bStatus === 'completed') {
+                $paid = $paid > 0 ? $paid : $total;
+                $balance = 0.00;
+            } elseif ($bStatus === 'deposit_paid') {
+                if ($paid <= 0) {
+                    $paid = round($total * 0.20, 2);
+                }
+                $balance = max(0.00, round($total - $paid, 2));
+            } else {
+                // Pending verification / arrival / cancelled / no_show
+                if ($paid > 0) {
+                    $balance = max(0.00, round($total - $paid, 2));
+                } else {
+                    $balance = $total;
+                }
+            }
 
             // Normalize payment method for display
             $paymentMethodRaw = $b['payment_method'] ?? 'full_online';
-            $paymentMethodLabel = 'Full Payment (Online)';
-            if ($paymentMethodRaw === 'pay_at_hotel' || stripos($paymentMethodRaw, 'hotel') !== false) {
-                $paymentMethodLabel = 'Pay at Hotel (20% Deposit)';
-            } elseif (stripos($paymentMethodRaw, 'deposit') !== false) {
+            $isHotelMethod = ($paymentMethodRaw === 'pay_at_hotel' || stripos($paymentMethodRaw, 'hotel') !== false);
+            if ($isHotelMethod) {
+                if ($bStatus === 'deposit_paid') {
+                    $paymentMethodLabel = 'Pay at Hotel (20% Deposit Paid)';
+                } else {
+                    $paymentMethodLabel = 'Pay at Hotel (20% Deposit)';
+                }
+            } elseif (stripos($paymentMethodRaw, 'deposit') !== false || $bStatus === 'deposit_paid') {
                 $paymentMethodLabel = 'Deposit Paid (20%)';
             } elseif (stripos($paymentMethodRaw, 'paymongo') !== false) {
                 $paymentMethodLabel = $paymentMethodRaw;
+            } else {
+                $paymentMethodLabel = 'Full Payment (Online)';
             }
 
             return [
@@ -362,6 +386,9 @@ function createBooking($data) {
         $depositAmount = round($totalAmount * 0.20, 2);
         $balanceDue = round($totalAmount - $depositAmount, 2);
         $amountToCharge = $depositAmount;
+        if (empty($expectedArrivalTime)) {
+            $expectedArrivalTime = '14:00:00';
+        }
     } elseif ($paymentMethod === 'GCash' || $paymentMethod === 'Full Payment' || $paymentMethod === 'full_gcash') {
         echo json_encode([
             'success' => false, 
@@ -384,6 +411,7 @@ function createBooking($data) {
 
     try {
         $refId = 'BK-' . strtoupper(substr(uniqid(), -6));
+        $initialBalanceDue = $totalAmount; // Before online deposit/payment is verified, full total is balance due
 
         $stmt = $pdo->prepare("
             INSERT INTO bookings (
@@ -407,7 +435,7 @@ function createBooking($data) {
             $refId, $userId, $roomId, $guestName, $guestEmail, $guestPhone,
             $adults, $children, $childrenAges, $roomsCount, $bedsCount,
             $checkIn, $checkOut, $checkIn, $checkOut, $expectedArrivalTime,
-            $nights, $totalAmount, $paidAmount, $balanceDue, $totalAmount,
+            $nights, $totalAmount, $paidAmount, $initialBalanceDue, $totalAmount,
             $paymentMethod, $gcashRefNo, $receiptUrl,
             $legacyStatus, $bookingStatus, $expiresAt, $specialRequests
         ]);
@@ -561,20 +589,39 @@ function approveBooking($data) {
         }
 
         $paymentMethod = $booking['payment_method'];
-        $newStatus = ($paymentMethod === 'deposit_gcash' || stripos($paymentMethod, 'deposit') !== false) 
-            ? 'deposit_paid' 
-            : 'confirmed';
+        $total = (float)($booking['total_amount'] > 0 ? $booking['total_amount'] : ($booking['total_price'] ?? 0));
+        $isDeposit = ($paymentMethod === 'pay_at_hotel' || $paymentMethod === 'deposit_gcash' || stripos($paymentMethod, 'hotel') !== false || stripos($paymentMethod, 'deposit') !== false);
 
-        // Clear hold expiration timer upon approval
-        $updateStmt = $pdo->prepare("
-            UPDATE bookings
-            SET booking_status = ?,
-                status = 'Confirmed',
-                expires_at = NULL,
-                updated_at = NOW()
-            WHERE id = ?
-        ");
-        $updateStmt->execute([$newStatus, $bookingId]);
+        if ($isDeposit) {
+            $newStatus = 'deposit_paid';
+            $paidAmt = (float)$booking['paid_amount'] > 0 ? (float)$booking['paid_amount'] : round($total * 0.20, 2);
+            $balAmt = max(0.00, round($total - $paidAmt, 2));
+
+            $updateStmt = $pdo->prepare("
+                UPDATE bookings
+                SET booking_status = 'deposit_paid',
+                    status = 'Confirmed',
+                    paid_amount = ?,
+                    balance_due = ?,
+                    expires_at = NULL,
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $updateStmt->execute([$paidAmt, $balAmt, $bookingId]);
+        } else {
+            $newStatus = 'confirmed';
+            $updateStmt = $pdo->prepare("
+                UPDATE bookings
+                SET booking_status = 'confirmed',
+                    status = 'Confirmed',
+                    paid_amount = ?,
+                    balance_due = 0.00,
+                    expires_at = NULL,
+                    updated_at = NOW()
+                WHERE id = ?
+            ");
+            $updateStmt->execute([$total, $bookingId]);
+        }
 
         echo json_encode([
             'success' => true,

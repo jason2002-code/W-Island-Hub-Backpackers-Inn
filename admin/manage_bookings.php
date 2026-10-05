@@ -221,6 +221,15 @@
                         </div>
                     </div>
 
+                    <!-- Special Requests -->
+                    <div id="modal-special-requests-box" class="hidden p-2.5 bg-violet-50 rounded-xl text-xs text-violet-900 border border-violet-200 flex items-start gap-2">
+                        <i class="fas fa-comment-dots text-violet-500 mt-0.5 flex-shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <span class="font-bold block text-violet-800 uppercase tracking-wider text-[10px]">Guest Special Requests</span>
+                            <span id="modal-special-requests-text" class="block mt-0.5 break-words leading-relaxed">-</span>
+                        </div>
+                    </div>
+
                     <div id="modal-hold-expiry-box" class="p-2.5 bg-amber-50 rounded-xl text-xs text-amber-800 border border-amber-200 flex items-start gap-2">
                         <i class="fas fa-stopwatch text-amber-600 mt-0.5"></i>
                         <div>
@@ -572,6 +581,7 @@ function renderBookings(bookings) {
                     <div class="text-[11px] text-gray-500">${b.guestEmail || '-'}</div>
                     <div class="text-[10px] text-gray-400 font-mono">${b.guestPhone || ''}</div>
                     <div class="text-[10px] text-slate-500 font-medium mt-0.5"><i class="fas fa-users text-amber-500 mr-1"></i>${(b.adults || 1) + (b.children || 0)} Guests (${b.adults || 1}A, ${b.children || 0}C${Array.isArray(b.childrenAges) && b.childrenAges.length > 0 ? ` · Ages: ${b.childrenAges.map(a => a == 0 ? '0' : a).join(', ')}` : ''})</div>
+                    ${(b.specialRequests && b.specialRequests.trim()) ? `<div class="mt-1 flex items-start gap-1 max-w-[180px]" title="${b.specialRequests.replace(/"/g, '&quot;')}"><span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200 truncate max-w-full"><i class="fas fa-comment-dots text-violet-500 flex-shrink-0"></i><span class="truncate">${b.specialRequests}</span></span></div>` : ''}
                 </td>
 
                 <!-- Room & Stay -->
@@ -655,6 +665,17 @@ function openReceiptModal(bookingId) {
         expiresText.textContent = booking.expiresAt + ' (2-Hour Hold Timer)';
     } else {
         expiresBox.classList.add('hidden');
+    }
+
+    // Special Requests
+    const specialReqBox = document.getElementById('modal-special-requests-box');
+    const specialReqText = document.getElementById('modal-special-requests-text');
+    const specialReq = (booking.specialRequests || '').trim();
+    if (specialReq) {
+        specialReqText.textContent = specialReq;
+        specialReqBox.classList.remove('hidden');
+    } else {
+        specialReqBox.classList.add('hidden');
     }
 
     const imgEl = document.getElementById('modal-receipt-img');

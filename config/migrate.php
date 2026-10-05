@@ -119,6 +119,21 @@ function runMigrations() {
             }
         }
 
+        // Ensure email_verifications table exists for guest & user email verification
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `email_verifications` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `email` varchar(150) NOT NULL,
+            `code` varchar(10) NOT NULL,
+            `token` varchar(64) NOT NULL,
+            `verified` tinyint(1) NOT NULL DEFAULT 0,
+            `expires_at` datetime NOT NULL,
+            `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `verified_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_email_code` (`email`, `code`),
+            KEY `idx_token` (`token`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         return [
             'success' => true,
             'message' => 'Migration complete',

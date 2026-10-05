@@ -14,7 +14,7 @@ require_once __DIR__ . '/../config/paymongo.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? null;
 
-if (!$action && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if (!$action && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $rawInput = file_get_contents('php://input');
     if (!empty($rawInput)) {
         $jsonInput = json_decode($rawInput, true);
@@ -26,27 +26,29 @@ if (!$action && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Route actions
-switch ($action) {
-    case 'create_checkout':
-        handleCreateCheckout();
-        break;
+if (!defined('TEST_MODE')) {
+    switch ($action) {
+        case 'create_checkout':
+            handleCreateCheckout();
+            break;
 
-    case 'verify_session':
-        handleVerifySession();
-        break;
+        case 'verify_session':
+            handleVerifySession();
+            break;
 
-    case 'success':
-        handleSuccessReturn();
-        break;
+        case 'success':
+            handleSuccessReturn();
+            break;
 
-    case 'cancel':
-        handleCancelReturn();
-        break;
+        case 'cancel':
+            handleCancelReturn();
+            break;
 
-    default:
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Invalid or missing action.']);
-        exit;
+        default:
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid or missing action.']);
+            exit;
+    }
 }
 
 /**
@@ -150,6 +152,58 @@ function handleCreateCheckout() {
 }
 
 /**
+ * Helper to update booking correctly when PayMongo payment is confirmed.
+ * Distinguishes between 20% online security deposit (for pay_at_hotel) vs 100% full payment / balance settlement.
+ */
+function applyPaymongoPaymentToBooking(PDO $pdo, array $booking, array $attributes, ?string $paymentId, string $sourceType): bool {
+    $payments = $attributes['payments'] ?? [];
+    $metadata = $attributes['metadata'] ?? [];
+    $totalAmount = (float)($booking['total_amount'] > 0 ? $booking['total_amount'] : ($booking['total_price'] ?? 0));
+    $paymentMethodRaw = $booking['payment_method'] ?? '';
+    $isHotelBooking = ($paymentMethodRaw === 'pay_at_hotel' || stripos($paymentMethodRaw, 'hotel') !== false);
+    
+    // Check if this checkout session was for a 20% security deposit
+    $isDepositSession = (!empty($metadata['is_deposit']) && $metadata['is_deposit'] === '1')
+        || ($isHotelBooking && ($booking['booking_status'] === 'pending_verification' || (float)$booking['paid_amount'] <= 0));
+
+    if ($isDepositSession) {
+        $depositAmount = !empty($metadata['deposit_amount']) ? (float)$metadata['deposit_amount'] : round($totalAmount * 0.20, 2);
+        $balanceDue = !empty($metadata['balance_due']) ? (float)$metadata['balance_due'] : round($totalAmount - $depositAmount, 2);
+
+        $upd = $pdo->prepare("
+            UPDATE bookings 
+            SET status = 'Confirmed',
+                booking_status = 'deposit_paid',
+                paid_amount = ?,
+                balance_due = ?,
+                payment_method = 'pay_at_hotel',
+                paymongo_payment_id = COALESCE(?, paymongo_payment_id),
+                expires_at = NULL,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        return $upd->execute([$depositAmount, $balanceDue, $paymentId, $booking['id']]);
+    } else {
+        // Full online settlement or remaining balance payment
+        $methodLabel = $isHotelBooking ? 'pay_at_hotel' : ('PayMongo (' . ucfirst($sourceType) . ')');
+
+        $upd = $pdo->prepare("
+            UPDATE bookings 
+            SET status = 'Confirmed',
+                booking_status = 'confirmed',
+                paid_amount = ?,
+                balance_due = 0.00,
+                payment_method = ?,
+                paymongo_payment_id = COALESCE(?, paymongo_payment_id),
+                expires_at = NULL,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        return $upd->execute([$totalAmount, $methodLabel, $paymentId, $booking['id']]);
+    }
+}
+
+/**
  * Verify PayMongo Checkout Session status
  */
 function handleVerifySession() {
@@ -200,21 +254,13 @@ function handleVerifySession() {
         $paymentMethodType = !empty($payments) ? ($payments[0]['attributes']['source']['type'] ?? 'paymongo') : 'paymongo';
 
         if ($isPaid) {
-            // Update booking as Confirmed & fully paid
-            $upd = $pdo->prepare("
-                UPDATE bookings 
-                SET status = 'Confirmed',
-                    booking_status = 'confirmed',
-                    paid_amount = CASE WHEN total_amount > 0 THEN total_amount ELSE total_price END,
-                    balance_due = 0.00,
-                    payment_method = ?,
-                    paymongo_payment_id = COALESCE(?, paymongo_payment_id),
-                    updated_at = NOW()
-                WHERE paymongo_session_id = ? 
-                   OR ref_id = ?
-            ");
-            $methodLabel = 'PayMongo (' . ucfirst($paymentMethodType) . ')';
-            $upd->execute([$methodLabel, $paymentId, $sessionId, $refId]);
+            $bStmt = $pdo->prepare("SELECT * FROM bookings WHERE paymongo_session_id = ? OR ref_id = ? LIMIT 1");
+            $bStmt->execute([$sessionId, $refId]);
+            $bRow = $bStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($bRow) {
+                applyPaymongoPaymentToBooking($pdo, $bRow, $attributes, $paymentId, $paymentMethodType);
+            }
         }
 
         echo json_encode([
@@ -266,20 +312,14 @@ function handleSuccessReturn() {
             $sourceType = !empty($payments) ? ($payments[0]['attributes']['source']['type'] ?? 'online') : 'online';
 
             if ($isPaid && $pdo) {
-                $methodLabel = 'PayMongo (' . ucfirst($sourceType) . ')';
-                $upd = $pdo->prepare("
-                    UPDATE bookings 
-                    SET status = 'Confirmed',
-                        booking_status = 'confirmed',
-                        paid_amount = CASE WHEN total_amount > 0 THEN total_amount ELSE total_price END,
-                        balance_due = 0.00,
-                        payment_method = ?,
-                        paymongo_payment_id = COALESCE(?, paymongo_payment_id),
-                        updated_at = NOW()
-                    WHERE paymongo_session_id = ? OR ref_id = ?
-                ");
-                $upd->execute([$methodLabel, $paymentId, $sessionId, $refId]);
-                $verified = true;
+                $bStmt = $pdo->prepare("SELECT * FROM bookings WHERE paymongo_session_id = ? OR ref_id = ? LIMIT 1");
+                $bStmt->execute([$sessionId, $refId]);
+                $bRow = $bStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($bRow) {
+                    applyPaymongoPaymentToBooking($pdo, $bRow, $attrs, $paymentId, $sourceType);
+                    $verified = true;
+                }
             }
         }
     }
@@ -334,7 +374,16 @@ function handleSuccessReturn() {
             </span>
 
             <h2 class="text-2xl font-serif font-bold text-brand-dark mb-2">Payment Completed!</h2>
-            <p class="text-xs text-gray-500 mb-6">Your transaction has been securely processed. Your accommodation reservation is officially confirmed.</p>
+            <?php 
+                $isDepositBooking = ($booking && ($booking['booking_status'] === 'deposit_paid' || $booking['payment_method'] === 'pay_at_hotel'));
+                $paidDisplay = $booking ? (float)$booking['paid_amount'] : 0.00;
+                $balanceDisplay = $booking ? (float)$booking['balance_due'] : 0.00;
+            ?>
+            <p class="text-xs text-gray-500 mb-6">
+                <?php echo $isDepositBooking 
+                    ? 'Your 20% online security deposit has been securely verified. Your room is secured against no-show. The remaining 80% balance is payable at hotel check-in.'
+                    : 'Your transaction has been securely processed. Your accommodation reservation is officially confirmed.'; ?>
+            </p>
 
             <div class="bg-slate-50 p-4 rounded-2xl border border-gray-100 text-left text-xs space-y-2 mb-6">
                 <div class="flex justify-between">
@@ -347,13 +396,19 @@ function handleSuccessReturn() {
                     <strong class="text-gray-800"><?php echo htmlspecialchars($booking['room_name'] ?? 'Room'); ?></strong>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-400">Amount Paid:</span>
-                    <strong class="text-emerald-600 font-bold">₱<?php echo number_format((float)($booking['total_amount'] > 0 ? $booking['total_amount'] : $booking['total_price']), 2); ?></strong>
+                    <span class="text-gray-400"><?php echo $isDepositBooking ? 'Online Deposit Paid:' : 'Amount Paid:'; ?></span>
+                    <strong class="text-emerald-600 font-bold">₱<?php echo number_format($paidDisplay, 2); ?><?php echo $isDepositBooking ? ' (20% Deposit)' : ' (Full)'; ?></strong>
                 </div>
+                <?php if ($isDepositBooking && $balanceDisplay > 0): ?>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Balance at Front Desk:</span>
+                    <strong class="text-brand-blue font-bold">₱<?php echo number_format($balanceDisplay, 2); ?> (80%)</strong>
+                </div>
+                <?php endif; ?>
                 <div class="flex justify-between">
                     <span class="text-gray-400">Status:</span>
                     <span class="text-emerald-700 font-bold flex items-center gap-1">
-                        <i class="fas fa-check-circle text-xs"></i> Confirmed
+                        <i class="fas fa-check-circle text-xs"></i> <?php echo $isDepositBooking ? 'Confirmed (20% Deposit Paid)' : 'Confirmed (Fully Paid)'; ?>
                     </span>
                 </div>
                 <?php endif; ?>
