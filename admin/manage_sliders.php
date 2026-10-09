@@ -2,7 +2,6 @@
 <div id="manage-sliders" class="page-section">
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-            <h3 class="text-2xl font-bold text-brand-dark">Carousel & Slider Management</h3>
             <p class="text-gray-500 text-sm">Manage hero carousel and island gallery carousel images</p>
         </div>
         <button onclick="openSliderModal()" class="bg-brand-purple hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2">

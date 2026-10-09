@@ -4,8 +4,7 @@
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
-                <h3 class="text-2xl font-bold text-gray-800">Room Price Management</h3>
-                <p class="text-sm text-gray-500 mt-1">Manage and update nightly rates across all room types</p>
+                <p class="text-sm text-gray-500">Manage and update nightly rates across all room types</p>
             </div>
             <div class="flex flex-wrap gap-2 w-full sm:w-auto">
                 <div class="relative flex-1 sm:flex-none">

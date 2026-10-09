@@ -4,10 +4,7 @@
         <!-- Header & Tab Navigation -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-                <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-file-invoice-dollar text-brand-purple"></i> Hotel Reports & Analytics
-                </h3>
-                <p class="text-sm text-gray-500 mt-1">Generate, analyze, export to CSV, and print official hotel operational and financial reports</p>
+                <p class="text-sm text-gray-500">Generate, analyze, export to CSV, and print official hotel operational and financial reports</p>
             </div>
             
             <!-- Tab Switcher -->

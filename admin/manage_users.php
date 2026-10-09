@@ -3,8 +3,7 @@
     <div class="p-6">
         <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
             <div>
-                <h3 class="text-2xl font-bold">User Management</h3>
-                <p class="text-sm text-gray-400 mt-1">Archive an account to hide it from the active list without losing its bookings. Permanently delete only from the Archive.</p>
+                <p class="text-sm text-gray-400">Archive an account to hide it from the active list without losing its bookings. Permanently delete only from the Archive.</p>
             </div>
             <button onclick="loadUsers()" class="bg-brand-blue text-white px-4 py-2 rounded shadow hover:bg-sky-600 flex items-center gap-2">
                 <i class="fas fa-rotate-right"></i> Refresh

@@ -2,7 +2,6 @@
 <div id="manage-rooms" class="page-section">
     <div class="p-6">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-bold">Room Management</h3>
             <div class="flex gap-2">
                 <button onclick="loadRooms()" class="bg-brand-blue text-white px-4 py-2 rounded shadow hover:bg-sky-600">
                     ↻ Refresh

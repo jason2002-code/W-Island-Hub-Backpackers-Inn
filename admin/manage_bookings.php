@@ -32,8 +32,7 @@
         <!-- Header & Action Controls -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
-                <h3 class="text-2xl sm:text-3xl font-serif font-bold text-gray-800">Booking Management</h3>
-                <p class="text-xs text-gray-500 mt-1" id="bookings-page-subtitle">Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.</p>
+                <p class="text-xs text-gray-500" id="bookings-page-subtitle">Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.</p>
             </div>
             
             <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">

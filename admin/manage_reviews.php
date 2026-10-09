@@ -1,6 +1,6 @@
 <div id="manage-reviews" class="page-section">
     <div class="flex items-center justify-between mb-8">
-        <h2 class="text-3xl font-bold text-brand-dark">Reviews & Ratings</h2>
+
         <div class="flex gap-3">
             <div class="relative">
                 <input id="reviews-search" type="text" placeholder="Search reviews..." class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple w-64">
