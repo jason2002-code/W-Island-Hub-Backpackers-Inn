@@ -1,6 +1,38 @@
 <!-- ================= Manage Bookings Page ================= -->
 <div id="manage-bookings" class="page-section">
     <div class="p-6 max-w-7xl mx-auto">
+        <!-- View Tabs & Batch Actions Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+            <div class="inline-flex bg-gray-100 rounded-xl p-1 shadow-inner">
+                <button type="button" data-bookings-view="active" onclick="switchBookingsView('active')"
+                        class="bookings-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-brand-blue shadow-sm">
+                    <i class="fas fa-calendar-check"></i>
+                    Active Bookings
+                    <span id="bookings-active-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-brand-blue">0</span>
+                </button>
+                <button type="button" data-bookings-view="archived" onclick="switchBookingsView('archived')"
+                        class="bookings-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-box-archive"></i>
+                    Archive
+                    <span id="bookings-archived-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-white text-gray-500">0</span>
+                </button>
+            </div>
+
+            <!-- Quick Batch Archive for Active View -->
+            <div id="active-batch-tools" class="flex items-center gap-2">
+                <button onclick="archiveAllCancelledBookings()" class="px-3.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Move all cancelled and expired hold records to Archive">
+                    <i class="fas fa-broom"></i>
+                    Archive Cancelled / Expired
+                </button>
+            </div>
+
+            <!-- Archive View Indicator -->
+            <div id="archive-info-badge" class="hidden text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl inline-flex items-center gap-1.5 shadow-2xs">
+                <i class="fas fa-box-archive text-amber-600"></i>
+                <span>Archived Reservations</span>
+            </div>
+        </div>
+
         <!-- Multi-Tier Statistics Counter Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
@@ -29,75 +61,43 @@
             </div>
         </div>
         
-        <!-- Header & Action Controls -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <div>
-                <p class="text-xs text-gray-500" id="bookings-page-subtitle">Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.</p>
+        <!-- Action Controls & Filters Bar -->
+        <div class="flex flex-wrap items-center gap-2.5 mb-4 w-full">
+            <div class="relative flex-1 min-w-[240px]">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" id="booking-search" placeholder="Search ref, guest, phone, room..." 
+                    class="w-full h-10 pl-9 pr-3.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white font-medium shadow-2xs"
+                    oninput="filterBookings()">
             </div>
             
-            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <div class="relative flex-1 md:w-56">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                    <input type="text" id="booking-search" placeholder="Search ref, guest, phone, room..." 
-                        class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white"
-                        oninput="filterBookings()">
-                </div>
-                
-                <select id="status-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
-                    <option value="">All Statuses</option>
-                    <option value="pending_verification">Pending Verification / Hold</option>
-                    <option value="deposit_paid">Deposit Paid (Balance Due)</option>
-                    <option value="confirmed">Confirmed (PayMongo / Paid)</option>
-                    <option value="pending_arrival">Pending Arrival (Pay at Hotel)</option>
-                    <option value="completed">Completed / Checked-In</option>
-                    <option value="cancelled_expired">Cancelled / Expired Hold</option>
-                    <option value="no_show">No-Show Released</option>
-                </select>
+            <select id="status-filter" class="h-10 px-3.5 border border-gray-200 rounded-xl text-xs bg-white font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shadow-2xs shrink-0 cursor-pointer" onchange="filterBookings()">
+                <option value="">All Statuses</option>
+                <option value="pending_verification">Pending Verification / Hold</option>
+                <option value="deposit_paid">Deposit Paid (Balance Due)</option>
+                <option value="confirmed">Confirmed (Full Payment)</option>
+                <option value="pending_arrival">Pending Arrival (Pay at Hotel)</option>
+                <option value="completed">Completed / Checked-In</option>
+                <option value="cancelled_expired">Cancelled / Expired Hold</option>
+                <option value="no_show">No-Show Released</option>
+            </select>
 
-                <select id="payment-method-filter" class="px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30" onchange="filterBookings()">
-                    <option value="">All Payment Types</option>
-                    <option value="paymongo">PayMongo Online</option>
-                    <option value="full_gcash">Full GCash (100%)</option>
-                    <option value="deposit_gcash">Deposit GCash (20%)</option>
-                    <option value="pay_at_hotel">Pay at Hotel</option>
-                </select>
+            <select id="payment-method-filter" class="h-10 px-3.5 border border-gray-200 rounded-xl text-xs bg-white font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/30 shadow-2xs shrink-0 cursor-pointer" onchange="filterBookings()">
+                <option value="">All Payment Types</option>
+                <option value="full_gcash">📱 Full GCash (100%)</option>
+                <option value="deposit_hotel">🪙 Deposit / Pay at Hotel</option>
+                <option value="walkin">💵 Walk-In / Cash (Front Desk)</option>
+                <option value="other_payment">💳 Other Payment Method</option>
+            </select>
 
-                <button onclick="loadBookings()" class="bg-brand-blue hover:bg-sky-600 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Refresh & trigger auto-expiry">
-                    <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
-                </button>
-            </div>
-        </div>
+            <button type="button" onclick="openWalkinModal()" class="h-10 bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-xl text-xs font-bold transition inline-flex items-center gap-2 shadow-xs cursor-pointer shrink-0" title="Record physical walk-in booking at front desk">
+                <i class="fas fa-user-plus"></i>
+                <span>Walk-In Booking</span>
+            </button>
 
-        <!-- View Tabs & Batch Actions Toolbar -->
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div class="inline-flex bg-gray-100 rounded-xl p-1 shadow-inner">
-                <button type="button" data-bookings-view="active" onclick="switchBookingsView('active')"
-                        class="bookings-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition bg-white text-brand-blue shadow-sm">
-                    <i class="fas fa-calendar-check"></i>
-                    Active Bookings
-                    <span id="bookings-active-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-brand-blue">0</span>
-                </button>
-                <button type="button" data-bookings-view="archived" onclick="switchBookingsView('archived')"
-                        class="bookings-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-box-archive"></i>
-                    Archive
-                    <span id="bookings-archived-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-white text-gray-500">0</span>
-                </button>
-            </div>
-
-            <!-- Quick Batch Archive for Active View -->
-            <div id="active-batch-tools" class="flex items-center gap-2">
-                <button onclick="archiveAllCancelledBookings()" class="px-3.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm" title="Move all cancelled and expired hold records to Archive">
-                    <i class="fas fa-broom"></i>
-                    Archive Cancelled / Expired
-                </button>
-            </div>
-
-            <!-- Archive View Banner -->
-            <div id="archive-info-badge" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-xl flex items-center gap-2">
-                <i class="fas fa-shield-alt text-amber-600"></i>
-                <span>Archived records keep receipts, audit trails, and guest history intact. Restore or permanently delete records here.</span>
-            </div>
+            <button onclick="loadBookings()" class="h-10 bg-brand-blue hover:bg-sky-600 text-white px-4 rounded-xl text-xs font-semibold transition inline-flex items-center gap-2 shadow-xs cursor-pointer shrink-0" title="Refresh & trigger auto-expiry">
+                <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                <span>Refresh</span>
+            </button>
         </div>
         
         <!-- Bookings Master Table -->
@@ -106,13 +106,13 @@
                 <table class="w-full text-left border-collapse min-w-[1100px]">
                     <thead id="bookings-table-head">
                         <tr class="bg-slate-50 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                            <th class="p-3.5">Reference ID</th>
-                            <th class="p-3.5">Guest Information</th>
-                            <th class="p-3.5">Room & Stay</th>
-                            <th class="p-3.5">Payment Pathway</th>
-                            <th class="p-3.5">Paid / Balance Due</th>
-                            <th class="p-3.5">Status & Hold Timer</th>
-                            <th class="p-3.5 text-right">Actions</th>
+                            <th class="p-3.5 align-middle whitespace-nowrap">Reference ID</th>
+                            <th class="p-3.5 align-middle whitespace-nowrap">Guest Information</th>
+                            <th class="p-3.5 align-middle whitespace-nowrap">Room & Stay</th>
+                            <th class="p-3.5 align-middle whitespace-nowrap">Payment Pathway</th>
+                            <th class="p-3.5 align-middle whitespace-nowrap">Paid / Balance Due</th>
+                            <th class="p-3.5 align-middle whitespace-nowrap">Status & Hold Timer</th>
+                            <th class="p-3.5 align-middle text-right whitespace-nowrap">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="bookings-table-body" class="text-xs divide-y divide-gray-100">
@@ -261,6 +261,196 @@
     </div>
 </div>
 
+<!-- ================= PHYSICAL WALK-IN BOOKING MODAL ================= -->
+<div id="walkin-modal" class="hidden fixed inset-0 bg-black/75 flex items-center justify-center z-[130] p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl w-full max-w-3xl my-8 flex flex-col shadow-2xl overflow-hidden border border-gray-100 max-h-[92vh]">
+        <!-- Header -->
+        <div class="p-5 bg-gradient-to-r from-slate-900 via-brand-dark to-emerald-800 text-white flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center font-bold text-lg text-emerald-300">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold">Front Desk Walk-In Booking</h3>
+                    <p class="text-xs text-emerald-200">Record on-site guest reservation, collect payment, and update room occupancy</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeWalkinModal()" class="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-xl transition">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Body Form -->
+        <form id="walkin-booking-form" onsubmit="submitWalkinBooking(event)" class="overflow-y-auto p-6 space-y-5">
+            <!-- Guest Information -->
+            <div>
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <i class="fas fa-id-card text-emerald-600"></i> Guest Information
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
+                        <input type="text" id="walkin-guest-name" required placeholder="e.g. Juan Dela Cruz" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Phone Number <span class="text-rose-500">*</span></label>
+                        <input type="text" id="walkin-guest-phone" required placeholder="e.g. 09171234567" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Email <span class="text-gray-400 font-normal">(Optional)</span></label>
+                        <input type="email" id="walkin-guest-email" placeholder="e.g. guest@example.com" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room & Stay Details -->
+            <div>
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <i class="fas fa-bed text-emerald-600"></i> Room & Stay Details
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Select Room <span class="text-rose-500">*</span></label>
+                        <select id="walkin-room-id" required onchange="handleWalkinRoomChange()" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                            <option value="">Loading available rooms...</option>
+                        </select>
+                        <p id="walkin-room-hint" class="text-[11px] text-gray-500 mt-1"></p>
+                    </div>
+
+                    <div id="walkin-dorm-beds-container" class="hidden sm:col-span-2 bg-teal-50 border border-teal-200 rounded-xl p-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="block text-xs font-bold text-teal-900 mb-0.5">Dormitory Bed Selection</label>
+                                <p class="text-[11px] text-teal-700">Dorm rate: ₱460.00 per bed / night</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-semibold text-teal-900">Beds count:</label>
+                                <input type="number" id="walkin-beds-count" min="1" max="8" value="1" onchange="calculateWalkinBill()" class="w-16 px-2.5 py-1.5 border border-teal-300 rounded-lg text-xs font-bold text-teal-900 bg-white text-center focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Check-in Date <span class="text-rose-500">*</span></label>
+                        <input type="date" id="walkin-check-in" required onchange="calculateWalkinBill()" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Check-out Date <span class="text-rose-500">*</span></label>
+                        <input type="date" id="walkin-check-out" required onchange="calculateWalkinBill()" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Guests Count</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <span class="text-[10px] text-gray-500">Adults:</span>
+                                <input type="number" id="walkin-adults" min="1" value="1" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs">
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-gray-500">Children:</span>
+                                <input type="number" id="walkin-children" min="0" value="0" class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Arrival Time</label>
+                        <input type="time" id="walkin-arrival-time" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment & Front Desk Status -->
+            <div>
+                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <i class="fas fa-hand-holding-dollar text-emerald-600"></i> Payment & Front Desk Status
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Payment Method</label>
+                        <select id="walkin-payment-method" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500/30 focus:outline-none font-medium">
+                            <option value="Cash (Front Desk)">💵 Cash (Front Desk Counter)</option>
+                            <option value="GCash (Front Desk)">📱 GCash (Front Desk QR / Transfer)</option>
+                            <option value="Maya (Front Desk)">🟢 Maya (Front Desk QR / E-Wallet)</option>
+                            <option value="Card / POS">💳 Credit / Debit Card (Terminal / POS)</option>
+                            <option value="Pay at Hotel">🏨 Pay at Hotel</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Reservation & Occupancy Status</label>
+                        <select id="walkin-booking-status" onchange="handleWalkinStatusChange()" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500/30 focus:outline-none font-bold text-emerald-800">
+                            <option value="completed" selected>✅ Checked-In & Room Occupied (Immediate Check-In)</option>
+                            <option value="confirmed">🟢 Confirmed Reservation (Full Payment Collected)</option>
+                            <option value="deposit_paid">🔵 Deposit Paid (Balance Due at Check-In)</option>
+                            <option value="pending_arrival">🟣 Pending Arrival (Pay Later at Counter)</option>
+                        </select>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Front Desk Notes / Special Requests</label>
+                        <input type="text" id="walkin-special-requests" placeholder="e.g. Physical walk-in guest, payment received at counter" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Financial Calculation Card -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-3 mb-3">
+                        <div class="text-xs text-gray-600">
+                            Duration: <span id="walkin-nights-display" class="font-bold text-gray-800">1 night</span>
+                            <span class="text-gray-300 mx-1">|</span>
+                            Nightly Rate: <span id="walkin-rate-display" class="font-bold text-gray-800">₱0.00</span>
+                            <span class="text-gray-300 mx-1">|</span>
+                            Fee: <span class="font-bold text-gray-800">₱15.00</span>
+                        </div>
+                        <div class="text-xs font-bold text-gray-700 flex items-center gap-1">
+                            <span>Total Bill:</span>
+                            <span id="walkin-total-display" class="text-base text-emerald-700 font-extrabold">₱0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-xs font-semibold text-gray-700">Amount Paid / Collected Now</label>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="setWalkinPaymentRatio(1.0)" class="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded transition">100% Full</button>
+                                    <button type="button" onclick="setWalkinPaymentRatio(0.2)" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold px-2 py-0.5 rounded transition">20% Deposit</button>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2 text-xs font-bold text-gray-400">₱</span>
+                                <input type="number" step="0.01" min="0" id="walkin-paid-amount" oninput="updateWalkinBalance()" class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:ring-2 focus:ring-emerald-500/30 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-3 border border-gray-200 flex justify-between items-center">
+                            <div>
+                                <span class="text-[10px] text-gray-400 uppercase font-bold block">Remaining Balance Due</span>
+                                <span id="walkin-balance-display" class="text-sm font-extrabold text-brand-blue">₱0.00</span>
+                            </div>
+                            <div id="walkin-occupancy-indicator" class="text-right">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <i class="fas fa-door-closed"></i> Will Occupy Room
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-gray-100">
+                <button type="button" onclick="closeWalkinModal()" class="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" id="btn-submit-walkin" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-2 cursor-pointer">
+                    <i class="fas fa-check-circle"></i> Register Booking & Occupy Room
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 let currentBookingsView = 'active';
 let allBookings = [];
@@ -292,16 +482,13 @@ function switchBookingsView(view) {
 
     const batchTools = document.getElementById('active-batch-tools');
     const archiveInfo = document.getElementById('archive-info-badge');
-    const pageSubtitle = document.getElementById('bookings-page-subtitle');
 
     if (currentBookingsView === 'archived') {
         if (batchTools) batchTools.classList.add('hidden');
         if (archiveInfo) archiveInfo.classList.remove('hidden');
-        if (pageSubtitle) pageSubtitle.textContent = 'Archived reservations: historical and completed stays kept safe for auditing, folios, and proof review.';
     } else {
         if (batchTools) batchTools.classList.remove('hidden');
         if (archiveInfo) archiveInfo.classList.add('hidden');
-        if (pageSubtitle) pageSubtitle.textContent = 'Automated reservation management: instant PayMongo confirmations, check-ins, and hotel arrivals.';
     }
 
     loadBookings();
@@ -323,24 +510,24 @@ function renderTableHead() {
 
     if (currentBookingsView === 'archived') {
         headRow.innerHTML = `
-            <th class="p-3.5">Reference ID</th>
-            <th class="p-3.5">Guest Information</th>
-            <th class="p-3.5">Room & Stay</th>
-            <th class="p-3.5">Payment Pathway</th>
-            <th class="p-3.5">Paid / Balance Due</th>
-            <th class="p-3.5">Status</th>
-            <th class="p-3.5">Archived Date</th>
-            <th class="p-3.5 text-right">Actions</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Reference ID</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Guest Information</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Room & Stay</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Payment Pathway</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Paid / Balance Due</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Status</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Archived Date</th>
+            <th class="p-3.5 align-middle text-right whitespace-nowrap">Actions</th>
         `;
     } else {
         headRow.innerHTML = `
-            <th class="p-3.5">Reference ID</th>
-            <th class="p-3.5">Guest Information</th>
-            <th class="p-3.5">Room & Stay</th>
-            <th class="p-3.5">Payment Pathway</th>
-            <th class="p-3.5">Paid / Balance Due</th>
-            <th class="p-3.5">Status & Hold Timer</th>
-            <th class="p-3.5 text-right">Actions</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Reference ID</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Guest Information</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Room & Stay</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Payment Pathway</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Paid / Balance Due</th>
+            <th class="p-3.5 align-middle whitespace-nowrap">Status & Hold Timer</th>
+            <th class="p-3.5 align-middle text-right whitespace-nowrap">Actions</th>
         `;
     }
 }
@@ -423,13 +610,98 @@ function updateStats() {
     document.getElementById('stat-cancelled').textContent = stats.cancelled;
 }
 
+function matchesPaymentFilter(b, paymentFilter) {
+    if (!paymentFilter) return true;
+
+    // Primary: use the server-computed canonical paymentType key
+    const pType = b.paymentType || '';
+    if (pType && pType === paymentFilter) return true;
+
+    // Secondary: inspect paymentMethod, paymentChannel, and raw value strings
+    const pMethod = (b.paymentMethod || '').toLowerCase();
+    const pChannel = (b.paymentChannel || '').toLowerCase();
+    const raw = (b.paymentMethodRaw || '').toLowerCase();
+    const ref = (b.ref_id || '').toUpperCase();
+
+    switch (paymentFilter) {
+        case 'other_payment':
+        case 'paymongo':
+            return pType === 'other_payment' ||
+                   pType === 'paymongo' ||
+                   pChannel === 'maya' ||
+                   pChannel === 'card' ||
+                   pChannel === 'grab_pay' ||
+                   pMethod.includes('card') ||
+                   pMethod.includes('credit') ||
+                   pMethod.includes('debit') ||
+                   pMethod.includes('maya') ||
+                   pMethod.includes('grab') ||
+                   pMethod.includes('other') ||
+                   raw.includes('card') ||
+                   raw.includes('credit') ||
+                   raw.includes('debit') ||
+                   raw.includes('maya') ||
+                   raw.includes('grab') ||
+                   raw.includes('other') ||
+                   (raw.includes('paymongo') && !raw.includes('gcash')) ||
+                   (b.paymongoSessionId && b.paymongoSessionId.length > 0 && !pMethod.includes('gcash') && !raw.includes('gcash')) ||
+                   (b.paymongoPaymentId && b.paymongoPaymentId.length > 0 && !pMethod.includes('gcash') && !raw.includes('gcash'));
+
+        case 'full_gcash':
+            return pType === 'full_gcash' ||
+                   pChannel === 'gcash' ||
+                   pMethod.includes('gcash') ||
+                   raw === 'full_gcash' ||
+                   raw === 'gcash' ||
+                   (raw.includes('gcash') &&
+                    !raw.includes('deposit') &&
+                    !raw.includes('front desk') &&
+                    !raw.includes('counter'));
+
+        case 'deposit_hotel':
+        case 'deposit_gcash':
+        case 'pay_at_hotel':
+            // Combines 20% Deposit (GCash) and Pay at Hotel
+            return pType === 'deposit_hotel' ||
+                   pType === 'deposit_gcash' ||
+                   pType === 'pay_at_hotel' ||
+                   pChannel === 'hotel' ||
+                   pChannel === 'deposit' ||
+                   pMethod.includes('deposit') ||
+                   pMethod.includes('hotel') ||
+                   raw === 'deposit_gcash' ||
+                   raw === 'pay_at_hotel' ||
+                   raw.includes('deposit') ||
+                   raw.includes('hotel') ||
+                   b.bookingStatus === 'deposit_paid' ||
+                   b.bookingStatus === 'pending_arrival';
+
+        case 'walkin':
+            return pType === 'walkin' ||
+                   ref.startsWith('WK-') ||
+                   pChannel === 'cash' ||
+                   pMethod.includes('front desk') ||
+                   pMethod.includes('cash') ||
+                   pMethod.includes('pos') ||
+                   raw.includes('cash') ||
+                   raw.includes('front desk') ||
+                   raw.includes('counter') ||
+                   raw.includes('walk') ||
+                   raw === 'card / pos' ||
+                   raw.includes('pos');
+
+        default:
+            return raw === paymentFilter.toLowerCase() || pType === paymentFilter.toLowerCase();
+    }
+}
+
 function filterBookings() {
     const search = (document.getElementById('booking-search').value || '').toLowerCase();
     const statusFilter = document.getElementById('status-filter').value;
     const paymentFilter = document.getElementById('payment-method-filter').value;
 
     const filtered = allBookings.filter(b => {
-        const matchesSearch = !search || 
+        const matchesSearch = !search ||
             b.ref_id.toLowerCase().includes(search) ||
             b.guestName.toLowerCase().includes(search) ||
             (b.guestEmail && b.guestEmail.toLowerCase().includes(search)) ||
@@ -438,9 +710,7 @@ function filterBookings() {
             (b.gcashRefNo && b.gcashRefNo.toLowerCase().includes(search));
 
         const matchesStatus = !statusFilter || b.bookingStatus === statusFilter;
-        const matchesPayment = !paymentFilter || 
-            b.paymentMethodRaw === paymentFilter || 
-            (paymentFilter === 'paymongo' && (b.paymentMethodRaw || '').toLowerCase().includes('paymongo'));
+        const matchesPayment = matchesPaymentFilter(b, paymentFilter);
 
         return matchesSearch && matchesStatus && matchesPayment;
     });
@@ -493,16 +763,60 @@ function renderBookings(bookings) {
             statusBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-100 text-gray-700">${b.status}</span>`;
         }
 
-        // Payment Method Badge
-        let paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-700">${b.paymentMethod}</span>`;
-        if (b.paymentMethodRaw && b.paymentMethodRaw.toLowerCase().includes('paymongo')) {
-            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-fit"><i class="fas fa-bolt text-emerald-600"></i> ${b.paymentMethod}</span>`;
-        } else if (b.paymentMethodRaw === 'full_gcash') {
-            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 w-fit"><i class="fas fa-qrcode"></i> Full GCash</span>`;
-        } else if (b.paymentMethodRaw === 'deposit_gcash') {
-            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit"><i class="fas fa-coins"></i> 20% Deposit</span>`;
-        } else if (b.paymentMethodRaw === 'pay_at_hotel') {
-            paymentBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1 w-fit"><i class="fas fa-store"></i> Pay at Hotel</span>`;
+        // Payment Method Badge — accurately displays the specific payment method used (GCash, Maya, Credit Card, Cash, etc.)
+        let paymentBadge;
+        const pMethod = b.paymentMethod || b.paymentMethodRaw || 'Standard';
+        const pMethodLower = pMethod.toLowerCase();
+        const pType = b.paymentType || '';
+        const rawLower = (b.paymentMethodRaw || '').toLowerCase();
+        const pChannel = (b.paymentChannel || '').toLowerCase();
+
+        // 1. GCash (Full GCash, GCash Deposit, GCash PayMongo, Front Desk GCash)
+        if (pChannel === 'gcash' || pMethodLower.includes('gcash') || rawLower.includes('gcash') || (b.gcashRefNo && !rawLower.includes('card') && !rawLower.includes('maya'))) {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs w-fit" title="${pMethod}"><span class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-black leading-none">G</span> ${pMethod}</span>`;
+        }
+        // 2. Maya (Maya / PayMaya E-wallet via PayMongo or Front Desk)
+        else if (pChannel === 'maya' || pMethodLower.includes('maya') || rawLower.includes('maya')) {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs w-fit" title="${pMethod}"><span class="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-black leading-none">M</span> ${pMethod}</span>`;
+        }
+        // 3. Credit / Debit Card (Visa, Mastercard, POS)
+        else if (
+            pChannel === 'card' ||
+            pMethodLower.includes('card') || pMethodLower.includes('credit') || pMethodLower.includes('debit') ||
+            pMethodLower.includes('visa') || pMethodLower.includes('mastercard') || pMethodLower.includes('pos') ||
+            rawLower.includes('card') || rawLower.includes('credit') || rawLower.includes('debit') ||
+            rawLower.includes('visa') || rawLower.includes('mastercard') || rawLower.includes('pos')
+        ) {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-2xs w-fit" title="${pMethod}"><i class="fas fa-credit-card text-indigo-600"></i> ${pMethod}</span>`;
+        }
+        // 4. GrabPay E-wallet
+        else if (pChannel === 'grab_pay' || pMethodLower.includes('grab') || rawLower.includes('grab')) {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-50 text-green-800 border border-green-200 shadow-2xs w-fit" title="${pMethod}"><i class="fas fa-mobile-screen-button text-green-600"></i> ${pMethod}</span>`;
+        }
+        // 5. Cash / Front Desk Walk-In
+        else if (
+            pChannel === 'cash' ||
+            pMethodLower.includes('cash') || rawLower.includes('cash') ||
+            (pType === 'walkin' && !pMethodLower.includes('hotel')) ||
+            (b.ref_id && b.ref_id.startsWith('WK-') && !pMethodLower.includes('hotel'))
+        ) {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs w-fit" title="${pMethod}"><i class="fas fa-money-bill-wave text-teal-600"></i> ${pMethod}</span>`;
+        }
+        // 6. Pay at Hotel / Over-the-counter
+        else if (pChannel === 'hotel' || pMethodLower.includes('hotel') || rawLower.includes('hotel') || rawLower === 'pay_at_hotel') {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs w-fit" title="${pMethod}"><i class="fas fa-store text-purple-600"></i> ${pMethod}</span>`;
+        }
+        // 7. Security Deposit Paid (20%)
+        else if (pChannel === 'deposit' || pMethodLower.includes('deposit') || rawLower.includes('deposit') || b.bookingStatus === 'deposit_paid' || pType === 'deposit_hotel') {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs w-fit" title="${pMethod}"><i class="fas fa-coins text-amber-600"></i> ${pMethod}</span>`;
+        }
+        // 8. Other Online Payment / PayMongo checkout
+        else if (pType === 'other_payment' || rawLower.includes('paymongo') || b.paymongoSessionId || b.paymongoPaymentId) {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs w-fit" title="${pMethod}"><i class="fas fa-globe text-slate-600"></i> ${pMethod}</span>`;
+        }
+        // 9. Standard Fallback
+        else {
+            paymentBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200 w-fit" title="${pMethod}"><i class="fas fa-receipt text-gray-500"></i> ${pMethod}</span>`;
         }
 
         // Build Action Buttons
@@ -510,57 +824,57 @@ function renderBookings(bookings) {
         if (isArchivedView) {
             actionButtons = `
                 ${(b.receiptUrl || b.gcashRefNo) ? `
-                    <button onclick="openReceiptModal(${b.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition flex items-center gap-1 shadow-xs" title="Review Proof of Payment">
+                    <button onclick="openReceiptModal(${b.id})" class="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Review Proof of Payment">
                         <i class="fas fa-search-dollar"></i> Review
                     </button>
                 ` : ''}
 
-                <button onclick="restoreBooking(${b.id}, '${b.ref_id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs" title="Restore to active reservations">
+                <button onclick="restoreBooking(${b.id}, '${b.ref_id}')" class="h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Restore to active reservations">
                     <i class="fas fa-rotate-left"></i> Restore
                 </button>
 
-                <button onclick="printAdminInvoice('${b.id}')" class="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition" title="Print Invoice / Voucher">
+                <button onclick="printAdminInvoice('${b.id}')" class="w-8 h-8 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Print Invoice / Voucher">
                     <i class="fas fa-print"></i>
                 </button>
 
-                <button onclick="permanentlyDeleteBooking(${b.id}, '${b.ref_id}')" class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Permanently delete from database">
+                <button onclick="permanentlyDeleteBooking(${b.id}, '${b.ref_id}')" class="w-8 h-8 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Permanently delete from database">
                     <i class="fas fa-trash"></i>
                 </button>
             `;
         } else {
             actionButtons = `
                 ${(b.paymongoSessionId && b.bookingStatus === 'pending_verification') ? `
-                    <button onclick="adminVerifyPaymongo('${b.paymongoSessionId}', '${b.ref_id}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center gap-1" title="Check PayMongo Live Status">
+                    <button onclick="adminVerifyPaymongo('${b.paymongoSessionId}', '${b.ref_id}')" class="h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Check PayMongo Live Status">
                         <i class="fas fa-sync-alt"></i> Verify
                     </button>
                 ` : ''}
 
                 ${(b.receiptUrl || b.gcashRefNo) ? `
-                    <button onclick="openReceiptModal(${b.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition flex items-center gap-1" title="Verify Proof of Payment">
+                    <button onclick="openReceiptModal(${b.id})" class="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Verify Proof of Payment">
                         <i class="fas fa-search-dollar"></i> Review
                     </button>
                 ` : ''}
 
                 ${(b.bookingStatus === 'pending_verification') ? `
-                    <button onclick="approveBooking(${b.id})" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition" title="Approve Booking">
+                    <button onclick="approveBooking(${b.id})" class="w-8 h-8 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Approve Booking">
                         <i class="fas fa-check"></i>
                     </button>
-                    <button onclick="rejectBooking(${b.id})" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition" title="Reject Receipt">
+                    <button onclick="rejectBooking(${b.id})" class="w-8 h-8 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Reject Receipt">
                         <i class="fas fa-times"></i>
                     </button>
                 ` : ''}
 
                 ${(b.bookingStatus === 'deposit_paid' || b.bookingStatus === 'pending_arrival') ? `
-                    <button onclick="checkInBooking(${b.id})" class="px-2 py-1 bg-brand-blue hover:bg-sky-600 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1" title="Mark Checked-In & Collect Balance">
+                    <button onclick="checkInBooking(${b.id})" class="h-8 px-2.5 bg-brand-blue hover:bg-sky-600 text-white rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Mark Checked-In & Collect Balance">
                         <i class="fas fa-concierge-bell"></i> Check-In
                     </button>
                 ` : ''}
 
-                <button onclick="printAdminInvoice('${b.id}')" class="p-1.5 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition" title="Print Invoice / Voucher">
+                <button onclick="printAdminInvoice('${b.id}')" class="w-8 h-8 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Print Invoice / Voucher">
                     <i class="fas fa-print"></i>
                 </button>
                 
-                <button onclick="archiveBooking(${b.id}, '${b.ref_id}')" class="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Archive reservation">
+                <button onclick="archiveBooking(${b.id}, '${b.ref_id}')" class="w-8 h-8 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Archive reservation">
                     <i class="fas fa-box-archive"></i>
                 </button>
             `;
@@ -569,68 +883,404 @@ function renderBookings(bookings) {
         return `
             <tr class="hover:bg-slate-50/70 transition ${isArchivedView ? 'bg-slate-50/30' : ''}">
                 <!-- Ref ID & Date -->
-                <td class="p-3.5">
-                    <span class="font-mono font-bold text-gray-800 text-xs block">${b.ref_id}</span>
-                    <span class="text-[10px] text-gray-400">${formatDate(b.created_at)}</span>
+                <td class="p-3.5 align-middle">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="font-mono font-bold text-gray-800 text-xs">${b.ref_id}</span>
+                        ${(b.ref_id && b.ref_id.startsWith('WK-')) ? `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">Walk-In</span>` : ''}
+                    </div>
+                    <span class="text-[10px] text-gray-400 block mt-0.5">${formatDate(b.created_at)}</span>
                 </td>
 
                 <!-- Guest Info -->
-                <td class="p-3.5">
+                <td class="p-3.5 align-middle">
                     <div class="font-bold text-gray-800 text-xs">${b.guestName}</div>
-                    <div class="text-[11px] text-gray-500">${b.guestEmail || '-'}</div>
+                    <div class="text-[11px] text-gray-500 truncate max-w-[200px]">${b.guestEmail || '-'}</div>
                     <div class="text-[10px] text-gray-400 font-mono">${b.guestPhone || ''}</div>
-                    <div class="text-[10px] text-slate-500 font-medium mt-0.5"><i class="fas fa-users text-amber-500 mr-1"></i>${(b.adults || 1) + (b.children || 0)} Guests (${b.adults || 1}A, ${b.children || 0}C${Array.isArray(b.childrenAges) && b.childrenAges.length > 0 ? ` · Ages: ${b.childrenAges.map(a => a == 0 ? '0' : a).join(', ')}` : ''})</div>
+                    <div class="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1"><i class="fas fa-users text-amber-500 shrink-0"></i>${(b.adults || 1) + (b.children || 0)} Guests (${b.adults || 1}A, ${b.children || 0}C${Array.isArray(b.childrenAges) && b.childrenAges.length > 0 ? ` · Ages: ${b.childrenAges.map(a => a == 0 ? '0' : a).join(', ')}` : ''})</div>
                     ${(b.specialRequests && b.specialRequests.trim()) ? `<div class="mt-1 flex items-start gap-1 max-w-[180px]" title="${b.specialRequests.replace(/"/g, '&quot;')}"><span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200 truncate max-w-full"><i class="fas fa-comment-dots text-violet-500 flex-shrink-0"></i><span class="truncate">${b.specialRequests}</span></span></div>` : ''}
                 </td>
 
                 <!-- Room & Stay -->
-                <td class="p-3.5">
+                <td class="p-3.5 align-middle">
                     <div class="font-semibold text-gray-800 flex items-center gap-1.5 flex-wrap">
                         ${b.roomsCount > 1 ? `<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-200">${b.roomsCount} Rooms</span>` : ''}
                         ${(b.roomId === 5 || (b.roomType && b.roomType.toLowerCase().includes('dorm')) || (b.roomName && b.roomName.toLowerCase().includes('room 5'))) ? `<span class="bg-teal-50 text-teal-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-teal-200"><i class="fas fa-bed mr-0.5 text-teal-600"></i>${b.bedsCount || 1} Bed${(b.bedsCount || 1) > 1 ? 's' : ''} (Dorm)</span>` : ''}
                         <span>${b.roomName}</span>
                     </div>
-                    <div class="text-[11px] text-gray-500">${formatDate(b.checkIn)} &rarr; ${formatDate(b.checkOut)} (${b.nights}n)</div>
+                    <div class="text-[11px] text-gray-500 mt-0.5">${formatDate(b.checkIn)} &rarr; ${formatDate(b.checkOut)} (${b.nights}n)</div>
                 </td>
 
                 <!-- Payment Pathway -->
-                <td class="p-3.5 space-y-1">
+                <td class="p-3.5 align-middle space-y-1">
                     ${paymentBadge}
-                    ${b.gcashRefNo ? `<div class="text-[10px] font-mono text-gray-500 truncate max-w-[140px]" title="GCash Ref: ${b.gcashRefNo}">GCash: ${b.gcashRefNo}</div>` : ''}
-                    ${b.paymongoPaymentId ? `<div class="text-[10px] font-mono text-emerald-700 truncate max-w-[140px]" title="PayMongo: ${b.paymongoPaymentId}"><i class="fas fa-receipt mr-1"></i>${b.paymongoPaymentId}</div>` : ''}
-                    ${(!b.paymongoPaymentId && b.paymongoSessionId) ? `<div class="text-[9px] font-mono text-gray-400 truncate max-w-[140px]" title="Session: ${b.paymongoSessionId}">${b.paymongoSessionId}</div>` : ''}
+                    ${b.gcashRefNo ? `<div class="text-[10px] font-mono text-gray-500 truncate max-w-[150px]" title="GCash Ref: ${b.gcashRefNo}">GCash: ${b.gcashRefNo}</div>` : ''}
+                    ${b.paymongoPaymentId ? `<div class="text-[10px] font-mono text-emerald-700 truncate max-w-[150px]" title="PayMongo: ${b.paymongoPaymentId}"><i class="fas fa-receipt mr-1"></i>${b.paymongoPaymentId}</div>` : ''}
+                    ${(!b.paymongoPaymentId && b.paymongoSessionId) ? `<div class="text-[9px] font-mono text-gray-400 truncate max-w-[150px]" title="Session: ${b.paymongoSessionId}">${b.paymongoSessionId}</div>` : ''}
                 </td>
 
                 <!-- Paid vs Balance -->
-                <td class="p-3.5">
-                    <div class="font-bold text-gray-900">₱${parseFloat(b.total).toFixed(2)}</div>
+                <td class="p-3.5 align-middle">
+                    <div class="font-bold text-gray-900 text-xs">₱${parseFloat(b.total).toFixed(2)}</div>
                     <div class="text-[11px] text-emerald-600 font-semibold">Paid: ₱${parseFloat(b.paidAmount).toFixed(2)}</div>
                     <div class="text-[11px] text-brand-blue font-semibold">Balance: ₱${parseFloat(b.balanceDue).toFixed(2)}</div>
                 </td>
 
                 <!-- Status & Hold Timer (or Status for Archived) -->
-                <td class="p-3.5">
-                    ${statusBadge}
-                    ${timerNotice}
+                <td class="p-3.5 align-middle">
+                    <div class="space-y-0.5">
+                        ${statusBadge}
+                        ${timerNotice}
+                    </div>
                 </td>
 
                 ${isArchivedView ? `
                     <!-- Archived Date -->
-                    <td class="p-3.5">
+                    <td class="p-3.5 align-middle">
                         <span class="font-semibold text-gray-700 text-xs block">${formatDate(b.archivedAt)}</span>
                         <span class="text-[10px] text-gray-400 font-mono">${b.archivedAt ? b.archivedAt.substring(11, 16) : '-'}</span>
                     </td>
                 ` : ''}
 
                 <!-- Actions -->
-                <td class="p-3.5 text-right">
-                    <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                <td class="p-3.5 align-middle text-right">
+                    <div class="flex items-center justify-end gap-1.5 flex-nowrap">
                         ${actionButtons}
                     </div>
                 </td>
             </tr>
         `;
     }).join('');
+}
+
+// ================= WALK-IN BOOKING CONTROLLER =================
+let walkinRoomsList = [];
+
+function loadWalkinRooms() {
+    const roomSelect = document.getElementById('walkin-room-id');
+    if (!roomSelect) return;
+    
+    roomSelect.innerHTML = '<option value="">Loading rooms...</option>';
+    
+    fetch('../actions/rooms_action.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && Array.isArray(data.rooms)) {
+                walkinRoomsList = data.rooms;
+                renderWalkinRoomOptions();
+            } else {
+                roomSelect.innerHTML = '<option value="">Failed to load rooms</option>';
+            }
+        })
+        .catch(err => {
+            console.error('Error loading rooms for walk-in:', err);
+            roomSelect.innerHTML = '<option value="">Error connecting to rooms server</option>';
+        });
+}
+
+function renderWalkinRoomOptions() {
+    const roomSelect = document.getElementById('walkin-room-id');
+    if (!roomSelect) return;
+    
+    if (walkinRoomsList.length === 0) {
+        roomSelect.innerHTML = '<option value="">No rooms configured</option>';
+        return;
+    }
+    
+    const prevVal = roomSelect.value;
+    let html = '<option value="">-- Choose a Room --</option>';
+    
+    walkinRoomsList.forEach(r => {
+        const isDorm = (r.type === 'Dorm' || r.id == 5);
+        const price = parseFloat(r.price || 0).toFixed(2);
+        let badge = '';
+        if (r.status === 'Maintenance') {
+            badge = ' [Under Maintenance]';
+        } else if (r.status === 'Occupied' || r.is_occupied) {
+            badge = ' [Currently Occupied]';
+        } else {
+            badge = ' [Available]';
+        }
+        
+        const disabled = (r.status === 'Maintenance') ? 'disabled' : '';
+        html += `<option value="${r.id}" ${disabled} ${r.id == prevVal ? 'selected' : ''}>
+            ${r.name} (${r.type || 'Room'}) - ₱${price}/nt${badge}
+        </option>`;
+    });
+    
+    roomSelect.innerHTML = html;
+    
+    if (prevVal) {
+        roomSelect.value = prevVal;
+    } else if (walkinRoomsList.length > 0) {
+        const firstAvail = walkinRoomsList.find(r => r.status !== 'Maintenance');
+        if (firstAvail) {
+            roomSelect.value = firstAvail.id;
+        }
+    }
+    
+    handleWalkinRoomChange();
+}
+
+function openWalkinModal() {
+    const modal = document.getElementById('walkin-modal');
+    if (!modal) return;
+    
+    // Reset inputs
+    document.getElementById('walkin-guest-name').value = '';
+    document.getElementById('walkin-guest-phone').value = '';
+    document.getElementById('walkin-guest-email').value = '';
+    document.getElementById('walkin-adults').value = '1';
+    document.getElementById('walkin-children').value = '0';
+    document.getElementById('walkin-beds-count').value = '1';
+    document.getElementById('walkin-payment-method').value = 'Cash (Front Desk)';
+    document.getElementById('walkin-booking-status').value = 'completed';
+    document.getElementById('walkin-special-requests').value = 'Walk-in guest (Front desk counter)';
+    
+    // Set default dates: checkIn = today, checkOut = tomorrow
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    
+    const tyyyy = tomorrow.getFullYear();
+    const tmm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const tdd = String(tomorrow.getDate()).padStart(2, '0');
+    const tomorrowStr = `${tyyyy}-${tmm}-${tdd}`;
+    
+    document.getElementById('walkin-check-in').value = todayStr;
+    document.getElementById('walkin-check-out').value = tomorrowStr;
+    
+    // Current time for arrival
+    const curHours = String(today.getHours()).padStart(2, '0');
+    const curMins = String(today.getMinutes()).padStart(2, '0');
+    document.getElementById('walkin-arrival-time').value = `${curHours}:${curMins}`;
+    
+    loadWalkinRooms();
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeWalkinModal() {
+    const modal = document.getElementById('walkin-modal');
+    if (modal) modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+
+function handleWalkinRoomChange() {
+    const roomId = document.getElementById('walkin-room-id').value;
+    const room = walkinRoomsList.find(r => r.id == roomId);
+    const dormContainer = document.getElementById('walkin-dorm-beds-container');
+    const hint = document.getElementById('walkin-room-hint');
+    
+    if (!room) {
+        if (dormContainer) dormContainer.classList.add('hidden');
+        if (hint) hint.textContent = '';
+        calculateWalkinBill();
+        return;
+    }
+    
+    const isDorm = (room.type === 'Dorm' || room.id == 5);
+    if (isDorm) {
+        if (dormContainer) dormContainer.classList.remove('hidden');
+        if (hint) {
+            const availBeds = (room.available_beds !== undefined) ? room.available_beds : 8;
+            hint.innerHTML = `<span class="text-teal-700 font-semibold"><i class="fas fa-bed mr-1"></i>Dormitory Bed Selection: ${availBeds} of 8 bed(s) available today. Rate is ₱460 per bed/night.</span>`;
+        }
+    } else {
+        if (dormContainer) dormContainer.classList.add('hidden');
+        if (hint) {
+            if (room.status === 'Occupied' || room.is_occupied) {
+                hint.innerHTML = `<span class="text-amber-700 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>Notice: This room is currently occupied today. Check if previous guest has checked out before booking today.</span>`;
+            } else {
+                hint.innerHTML = `<span class="text-emerald-700 font-medium"><i class="fas fa-check-circle mr-1"></i>Max capacity: ${room.capacity || 2} persons. Base rate: ₱${parseFloat(room.price).toFixed(2)}/night.</span>`;
+            }
+        }
+    }
+    
+    calculateWalkinBill();
+}
+
+function calculateWalkinBill() {
+    const roomId = document.getElementById('walkin-room-id').value;
+    const room = walkinRoomsList.find(r => r.id == roomId);
+    const checkInVal = document.getElementById('walkin-check-in').value;
+    const checkOutVal = document.getElementById('walkin-check-out').value;
+    
+    let nights = 1;
+    if (checkInVal && checkOutVal) {
+        const d1 = new Date(checkInVal);
+        const d2 = new Date(checkOutVal);
+        const diffTime = d2.getTime() - d1.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        nights = diffDays > 0 ? diffDays : 1;
+    }
+    
+    const nightsDisplay = document.getElementById('walkin-nights-display');
+    if (nightsDisplay) nightsDisplay.textContent = `${nights} night${nights > 1 ? 's' : ''}`;
+    
+    let ratePerNight = 0;
+    let standardTotal = 0;
+    const isDorm = room && (room.type === 'Dorm' || room.id == 5);
+    
+    if (isDorm) {
+        const beds = Math.max(1, parseInt(document.getElementById('walkin-beds-count').value || 1, 10));
+        ratePerNight = 460 * beds;
+        standardTotal = (ratePerNight * nights) + 15.00;
+        const rateDisplay = document.getElementById('walkin-rate-display');
+        if (rateDisplay) rateDisplay.textContent = `₱460 × ${beds} bed${beds > 1 ? 's' : ''} = ₱${ratePerNight.toFixed(2)}`;
+    } else if (room) {
+        ratePerNight = parseFloat(room.price || 0);
+        standardTotal = (ratePerNight * nights) + 15.00;
+        const rateDisplay = document.getElementById('walkin-rate-display');
+        if (rateDisplay) rateDisplay.textContent = `₱${ratePerNight.toFixed(2)}/night`;
+    } else {
+        const rateDisplay = document.getElementById('walkin-rate-display');
+        if (rateDisplay) rateDisplay.textContent = '₱0.00';
+    }
+    
+    const totalDisplay = document.getElementById('walkin-total-display');
+    if (totalDisplay) totalDisplay.textContent = `₱${standardTotal.toFixed(2)}`;
+    
+    handleWalkinStatusChange(standardTotal);
+}
+
+function handleWalkinStatusChange(calculatedTotal) {
+    const status = document.getElementById('walkin-booking-status').value;
+    const total = (typeof calculatedTotal === 'number') 
+        ? calculatedTotal 
+        : parseFloat((document.getElementById('walkin-total-display').textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+    
+    const paidInput = document.getElementById('walkin-paid-amount');
+    const occIndicator = document.getElementById('walkin-occupancy-indicator');
+    
+    if (status === 'completed' || status === 'confirmed') {
+        paidInput.value = total.toFixed(2);
+        if (occIndicator) {
+            occIndicator.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fas fa-door-closed"></i> Will Occupy Room</span>`;
+        }
+    } else if (status === 'deposit_paid') {
+        const deposit = Math.round(total * 0.20 * 100) / 100;
+        paidInput.value = deposit.toFixed(2);
+        if (occIndicator) {
+            occIndicator.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200"><i class="fas fa-coins"></i> 20% Deposit Held</span>`;
+        }
+    } else if (status === 'pending_arrival') {
+        paidInput.value = '0.00';
+        if (occIndicator) {
+            occIndicator.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200"><i class="fas fa-clock"></i> Pending Arrival</span>`;
+        }
+    }
+    
+    updateWalkinBalance();
+}
+
+function updateWalkinBalance() {
+    const total = parseFloat((document.getElementById('walkin-total-display').textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+    const paid = parseFloat(document.getElementById('walkin-paid-amount').value || 0) || 0;
+    const balance = Math.max(0, total - paid);
+    
+    const balanceDisplay = document.getElementById('walkin-balance-display');
+    if (balanceDisplay) {
+        balanceDisplay.textContent = `₱${balance.toFixed(2)}`;
+    }
+}
+
+function setWalkinPaymentRatio(ratio) {
+    const total = parseFloat((document.getElementById('walkin-total-display').textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+    const paid = Math.round(total * ratio * 100) / 100;
+    document.getElementById('walkin-paid-amount').value = paid.toFixed(2);
+    updateWalkinBalance();
+}
+
+function submitWalkinBooking(event) {
+    event.preventDefault();
+    
+    const roomId = document.getElementById('walkin-room-id').value;
+    const guestName = document.getElementById('walkin-guest-name').value.trim();
+    const guestPhone = document.getElementById('walkin-guest-phone').value.trim();
+    const guestEmail = document.getElementById('walkin-guest-email').value.trim();
+    const checkIn = document.getElementById('walkin-check-in').value;
+    const checkOut = document.getElementById('walkin-check-out').value;
+    const adults = document.getElementById('walkin-adults').value;
+    const children = document.getElementById('walkin-children').value;
+    const bedsCount = document.getElementById('walkin-beds-count').value;
+    const arrivalTime = document.getElementById('walkin-arrival-time').value;
+    const paymentMethod = document.getElementById('walkin-payment-method').value;
+    const bookingStatus = document.getElementById('walkin-booking-status').value;
+    const specialRequests = document.getElementById('walkin-special-requests').value.trim();
+    const paidAmount = parseFloat(document.getElementById('walkin-paid-amount').value || 0);
+    const totalAmount = parseFloat((document.getElementById('walkin-total-display').textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+    
+    if (!roomId) {
+        showToast('Please select a room for this walk-in guest.', 'warning');
+        return;
+    }
+    if (!guestName || !guestPhone) {
+        showToast('Guest Name and Phone Number are required.', 'warning');
+        return;
+    }
+    if (!checkIn || !checkOut) {
+        showToast('Please select valid check-in and check-out dates.', 'warning');
+        return;
+    }
+    if (checkOut <= checkIn) {
+        showToast('Check-out date must be strictly after check-in date.', 'error');
+        return;
+    }
+    
+    const btnSubmit = document.getElementById('btn-submit-walkin');
+    const originalBtnText = btnSubmit.innerHTML;
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Registering Booking...';
+    
+    const payload = {
+        action: 'create_walkin',
+        room_id: roomId,
+        guest_name: guestName,
+        guest_phone: guestPhone,
+        guest_email: guestEmail,
+        check_in: checkIn,
+        check_out: checkOut,
+        adults: adults,
+        children: children,
+        beds_count: bedsCount,
+        expected_arrival_time: arrivalTime,
+        payment_method: paymentMethod,
+        booking_status: bookingStatus,
+        special_requests: specialRequests,
+        total_amount: totalAmount,
+        paid_amount: paidAmount
+    };
+    
+    fetch('../actions/bookings_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnText;
+        
+        if (data.success) {
+            showToast(data.message || `Walk-in booking ${data.ref_id} created successfully!`, 'success');
+            closeWalkinModal();
+            loadBookings();
+            if (typeof loadBookingCounts === 'function') loadBookingCounts();
+        } else {
+            showToast(data.message || 'Failed to create walk-in booking', 'error');
+        }
+    })
+    .catch(err => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalBtnText;
+        console.error('Walk-in booking error:', err);
+        showToast('Network error while saving walk-in booking', 'error');
+    });
 }
 
 // Side-by-Side Receipt Modal Operations

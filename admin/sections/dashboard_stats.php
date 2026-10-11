@@ -271,7 +271,12 @@ function loadRoomsOverview() {
             if (data.success && data.rooms && data.rooms.length > 0) {
                 console.log('Found ' + data.rooms.length + ' rooms');
                 container.innerHTML = data.rooms.map(room => {
-                    const statusBadge = room.status === 'Maintenance' ? '<span class="px-2 py-1 bg-red-100 text-red-600 text-xs font-bold rounded">Maintenance</span>' : '<span class="px-2 py-1 bg-green-100 text-green-600 text-xs font-bold rounded">Available</span>';
+                    const isOccupied = room.status === 'Occupied' || room.is_occupied || (room.remaining_beds !== undefined && room.remaining_beds === 0);
+                    const statusBadge = room.status === 'Maintenance' 
+                        ? '<span class="px-2 py-1 bg-red-100 text-red-600 text-xs font-bold rounded">Maintenance</span>' 
+                        : (isOccupied 
+                            ? '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded">Occupied</span>' 
+                            : '<span class="px-2 py-1 bg-green-100 text-green-600 text-xs font-bold rounded">Available</span>');
                     const imgSrc = room.image && room.image.startsWith('http') ? room.image : (room.image ? '../' + room.image : '../assets/image/rooms/default.jpg');
 
                     return `
@@ -313,7 +318,13 @@ function viewRoomDetails(roomId) {
                     document.getElementById('room-details-type').innerText = room.type + ' • Capacity: ' + room.capacity + ' guests';
                     document.getElementById('room-details-price').innerText = '₱' + room.price;
                     document.getElementById('room-details-capacity').innerText = room.capacity + ' Guest(s)';
-                    document.getElementById('room-details-status').innerHTML = room.status === 'Maintenance' ? '<span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600">Maintenance</span>' : '<span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Available</span>';
+                    const modalIsOccupied = room.status === 'Occupied' || room.is_occupied || (room.remaining_beds !== undefined && room.remaining_beds === 0);
+                    const modalStatusHtml = room.status === 'Maintenance' 
+                        ? '<span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600">Maintenance</span>' 
+                        : (modalIsOccupied 
+                            ? '<span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Occupied</span>' 
+                            : '<span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Available</span>');
+                    document.getElementById('room-details-status').innerHTML = modalStatusHtml;
 
                     // Parse amenities
                     let amenitiesText = 'No amenities';

@@ -330,11 +330,17 @@ function generateHotelReport($postData = null) {
             if (stripos($paymentRaw, 'full_gcash') !== false || ($paymentRaw === 'gcash' && $balanceDue <= 0)) {
                 $paymentChannel = 'GCash (Full Payment)';
             } elseif (stripos($paymentRaw, 'deposit') !== false || stripos($paymentRaw, '30%') !== false) {
-                $paymentChannel = 'GCash (30% Down Payment)';
-            } elseif (stripos($paymentRaw, 'card') !== false || stripos($paymentRaw, 'credit') !== false) {
+                $paymentChannel = 'GCash (Down Payment)';
+            } elseif (stripos($paymentRaw, 'maya') !== false) {
+                $paymentChannel = 'Maya E-Wallet';
+            } elseif (stripos($paymentRaw, 'card') !== false || stripos($paymentRaw, 'credit') !== false || stripos($paymentRaw, 'debit') !== false) {
                 $paymentChannel = 'Credit / Debit Card';
+            } elseif (stripos($paymentRaw, 'grab') !== false) {
+                $paymentChannel = 'GrabPay';
             } elseif (stripos($paymentRaw, 'gcash') !== false) {
                 $paymentChannel = 'GCash Digital Folio';
+            } elseif (stripos($paymentRaw, 'cash') !== false) {
+                $paymentChannel = 'Cash (Front Desk)';
             }
 
             // Down Payment / Deposit Status

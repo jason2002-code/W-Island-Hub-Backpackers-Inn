@@ -643,12 +643,13 @@ function renderBookingsList() {
         // (same-day bookings = guest should already be at the hotel, so no reminder needed)
         const isUpcomingActive = b.status !== 'Cancelled' && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' && bStatus !== 'completed' && ((b.checkIn || '') > today);
 
-        // Review Button for Completed Stays Only
+        // Review Button: only shown when checkout date is STRICTLY before today
+        // (i.e. the guest has already fully checked out, not just today's checkout)
         let reviewBtn = '';
-        const isPastStay = (b.checkOut && b.checkOut <= today) || bStatus === 'completed';
-        const isEligibleBooking = (b.status === 'Confirmed' || bStatus === 'confirmed' || bStatus === 'completed' || bStatus === 'deposit_paid') && bStatus !== 'cancelled_expired' && bStatus !== 'no_show';
+        const isPastStay = (b.checkOut && b.checkOut < today) && bStatus !== 'cancelled_expired' && bStatus !== 'no_show';
+        const isEligibleBooking = (b.status === 'Confirmed' || bStatus === 'confirmed' || bStatus === 'completed') && bStatus !== 'cancelled_expired' && bStatus !== 'no_show';
 
-        if (b.roomId && isEligibleBooking) {
+        if (b.roomId && isPastStay && isEligibleBooking) {
             const userReviews = (window.appState && Array.isArray(window.appState.reviews)) ? window.appState.reviews : [];
             const alreadyReviewed = userReviews.some(r => String(r.room_id) === String(b.roomId));
 
@@ -658,7 +659,7 @@ function renderBookingsList() {
                         <i class="fas fa-check-circle text-emerald-500"></i> Reviewed
                     </span>
                 `;
-            } else if (isPastStay) {
+            } else {
                 reviewBtn = `
                     <button onclick="openReviewModal(${b.roomId}, '${safeRoomName}')" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition flex items-center gap-1.5 shadow-xs" title="Share your stay experience">
                         <i class="fas fa-star text-amber-500"></i> Write Review

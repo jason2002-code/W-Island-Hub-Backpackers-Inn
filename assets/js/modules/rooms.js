@@ -488,11 +488,8 @@ function renderRooms(filterDate = null) {
         const stars = Array(Math.round(room.rating)).fill('<i class="fas fa-star text-yellow-400 text-xs"></i>').join('');
         
         let statusBadge = '';
-        if (isLoggedIn && room.status && room.status !== 'Available') {
-            let statusClass = room.status === 'Maintenance' 
-                ? 'bg-red-100 text-red-800' 
-                : 'bg-yellow-100 text-yellow-800';
-            statusBadge = `<span class="room-status-badge ${statusClass} text-xs font-bold px-2 py-1 rounded uppercase ml-2">${room.status}</span>`;
+        if (room.status === 'Maintenance') {
+            statusBadge = `<span class="room-status-badge bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded uppercase ml-2">Maintenance</span>`;
         }
         
         const isDorm = (parseInt(room.id) === 5 || (room.type && room.type.toLowerCase().includes('dorm')));
@@ -530,7 +527,6 @@ function renderRooms(filterDate = null) {
                         <span class="text-xs text-brand-blue bg-blue-50 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 room-capacity-pill" data-room-id="${room.id}">
                             <i class="fas fa-bed text-[11px] text-brand-blue"></i>
                             <span class="room-beds-text"><strong class="room-avail-beds">${(room.remaining_beds !== undefined ? room.remaining_beds : (room.capacity || 8))}</strong> Beds Available</span>
-                            <span class="text-slate-400 font-normal text-[11px]">(${room.occupied_beds || 0} Occupied / 8 Total)</span>
                         </span>
                     ` : `
                         <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${roomMaxCap} Guest${roomMaxCap > 1 ? 's' : ''}</span>
@@ -812,23 +808,13 @@ function initAvailabilityForm() {
                 console.warn('Hotel capacity check error:', capErr);
             }
 
-            // 2. Overcapacity Handling: Guest number exceeds available hotel capacity
+            // 2. Overcapacity Handling: Guest number exceeds total available room capacity
             if (capData && capData.success && !capData.can_accommodate) {
-                const warningMsg = capData.warning_message || `The hotel does not accommodate ${guests} guests as the available room capacity is limited to ${capData.total_available_capacity} guests.`;
-
                 if (capBanner) {
-                    capBanner.classList.remove('hidden');
-                    if (capBannerText) {
-                        capBannerText.innerHTML = `<strong>Notice:</strong> The hotel does not accommodate <strong>${guests} guests</strong> as the available room capacity is limited to <strong>${capData.total_available_capacity} guests</strong> for your selected dates.`;
-                    }
-                    capBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    capBanner.classList.add('hidden');
                 }
 
-                if (typeof window.showToast === 'function') {
-                    window.showToast(warningMsg, 'warning');
-                }
-
-                // Hide room cards because total hotel accommodation is insufficient
+                // Filter all rooms out
                 allRoomEls.forEach(el => {
                     el.style.display = 'none';
                 });
@@ -837,30 +823,52 @@ function initAvailabilityForm() {
                 if (!noAvailEl && roomsContainer) {
                     noAvailEl = document.createElement('div');
                     noAvailEl.id = 'no-available-rooms';
-                    noAvailEl.className = 'col-span-full text-center text-gray-500 py-12';
+                    noAvailEl.className = 'col-span-full text-center text-gray-500 py-6';
                     roomsContainer.appendChild(noAvailEl);
                 }
                 if (noAvailEl) {
-                    noAvailEl.innerHTML = `
-                        <div class="bg-rose-50 border-2 border-rose-200 rounded-3xl p-8 max-w-lg mx-auto text-center shadow-sm">
-                            <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mx-auto mb-4">
-                                <i class="fas fa-users-slash"></i>
+                    if (capData.total_available_capacity <= 0) {
+                        noAvailEl.innerHTML = `
+                            <div class="max-w-xl mx-auto my-6 text-center">
+                                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-8 shadow-sm">
+                                    <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                                        <i class="fas fa-calendar-times"></i>
+                                    </div>
+                                    <h4 class="text-xl font-bold text-slate-800 mb-2">No Rooms Available</h4>
+                                    <p class="text-sm text-slate-600 mb-4 leading-relaxed font-medium">
+                                        <strong>Reminder:</strong> All rooms are currently booked for your selected dates from <strong class="text-slate-800">${checkIn}</strong> to <strong class="text-slate-800">${checkOut}</strong>.
+                                    </p>
+                                    <p class="text-xs text-brand-blue font-semibold">Please try choosing different check-in / check-out dates above.</p>
+                                </div>
                             </div>
-                            <h4 class="text-lg font-bold text-rose-900 mb-1">Hotel Capacity Limited</h4>
-                            <p class="text-xs sm:text-sm text-rose-800 mb-4 leading-relaxed font-medium">
-                                The hotel does not accommodate <strong>${guests} guests</strong>. Our available room capacity for these dates is limited to <strong>${capData.total_available_capacity} guests</strong>.
-                            </p>
-                            <div class="p-3 bg-white/80 rounded-xl border border-rose-100 text-xs text-rose-700 mb-4">
-                                <span><i class="fas fa-info-circle mr-1 text-rose-500"></i> Please reduce your party size or select alternative dates.</span>
+                        `;
+                    } else {
+                        noAvailEl.innerHTML = `
+                            <div class="max-w-xl mx-auto my-6 text-center">
+                                <div class="bg-amber-50/95 border-2 border-amber-300 rounded-3xl p-8 shadow-sm">
+                                    <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mx-auto mb-4 shadow-xs">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <h4 class="text-xl font-bold text-amber-950 mb-2">Guest Limit Exceeded</h4>
+                                    <p class="text-sm text-amber-900 mb-4 leading-relaxed font-medium">
+                                        <strong>Reminder:</strong> Your requested party of <strong>${guests} guests</strong> exceeds the total capacity limit of all available rooms (<strong>${capData.total_available_capacity} guests</strong>) from <strong class="text-amber-950">${checkIn}</strong> to <strong class="text-amber-950">${checkOut}</strong>.
+                                    </p>
+                                    <div class="p-3.5 bg-white/90 rounded-2xl border border-amber-200 text-xs text-amber-800 mb-5 font-medium">
+                                        <i class="fas fa-info-circle mr-1 text-amber-600"></i> Please reduce your party size to <strong>${capData.total_available_capacity} ${capData.total_available_capacity === 1 ? 'guest' : 'guests'}</strong> or select alternative dates.
+                                    </div>
+                                    <button type="button" onclick="window.router('contact')" class="bg-brand-dark hover:bg-gray-800 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2">
+                                        <i class="fas fa-envelope"></i> Contact Front Desk
+                                    </button>
+                                </div>
                             </div>
-                            <button type="button" onclick="window.router('contact')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2">
-                                <i class="fas fa-envelope"></i> Contact Front Desk
-                            </button>
-                        </div>
-                    `;
+                        `;
+                    }
                     noAvailEl.style.display = '';
                 }
 
+                if (typeof window.showToast === 'function') {
+                    window.showToast(`Requested ${guests} guests exceeds the total available capacity limit (${capData.total_available_capacity} guests).`, 'warning');
+                }
                 return;
             } else {
                 if (capBanner) {
@@ -872,8 +880,6 @@ function initAvailabilityForm() {
                 el.style.display = '';
             });
 
-            const maxAvailCap = (capData && capData.total_available_capacity) ? capData.total_available_capacity : getTotalHotelCapacity();
-
             const results = await Promise.all(allRoomEls.map(async (roomEl) => {
                 const roomId = roomEl.dataset.roomId;
                 const roomCapacity = parseInt(roomEl.dataset.capacity, 10) || 
@@ -883,17 +889,7 @@ function initAvailabilityForm() {
                                         (window.appState?.rooms?.find(r => r.id == roomId)?.max_capacity) || 
                                         roomCapacity;
 
-                const isSmallForGroup = roomMaxCapacity < guests;
-                const isTwoCapRecommendation = (guests >= 4 && roomMaxCapacity <= 2 && guests <= maxAvailCap);
-
-                if (isSmallForGroup && !isTwoCapRecommendation) {
-                    roomEl.style.display = 'none';
-                    return { roomId, available: false, capacityMatch: false, isBooked: false };
-                }
-
                 try {
-                    // If checking a 2-capacity room for 4+ guests recommendation, check base room availability
-                    const guestsParam = isTwoCapRecommendation ? 1 : guests;
                     const response = await fetch('actions/book_action.php', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -902,18 +898,19 @@ function initAvailabilityForm() {
                             room_id: roomId,
                             check_in: checkIn,
                             check_out: checkOut,
-                            guests: guestsParam
+                            guests: guests
                         })
                     });
                     const data = await response.json();
-                    const available = !!(data && data.success && data.available);
                     const isBooked = !!(data && data.is_booked);
+                    const available = !!(data && data.success && data.available && !isBooked);
 
                     if (!available) {
-                        // Filter out already booked or unavailable room
+                        // Filter out already booked or maintenance room for these dates
                         roomEl.style.display = 'none';
-                        return { roomId, available: false, capacityMatch: false, isBooked };
+                        return { roomId, available: false, capacityMatch: false, isBooked: true };
                     } else {
+                        // Room is available on these dates! Keep it visible - do not remove available room
                         roomEl.style.display = '';
                         const statusBadge = roomEl.querySelector('.room-status-badge');
                         if (statusBadge && statusBadge.textContent.trim().toLowerCase() === 'available') {
@@ -924,44 +921,54 @@ function initAvailabilityForm() {
                         const existingBadge = roomEl.querySelector('.room-rec-card-badge');
                         if (existingBadge) existingBadge.remove();
 
-                        // If dorm, update capacity pill to show live remaining beds and occupied count
                         const isDormRoom = (data.is_dorm || parseInt(roomId) === 5 || roomEl.dataset.isDorm === '1');
                         if (isDormRoom && data.remaining_beds !== undefined) {
                             const dormPill = roomEl.querySelector('.room-capacity-pill');
                             if (dormPill) {
-                                dormPill.innerHTML = `<i class="fas fa-bed text-[11px] text-brand-blue"></i> <span class="room-beds-text"><strong class="room-avail-beds">${data.remaining_beds}</strong> Beds Available</span> <span class="text-slate-400 font-normal text-[11px]">(${data.occupied_beds || (8 - data.remaining_beds)} Occupied / 8 Total)</span>`;
+                                dormPill.innerHTML = `<i class="fas fa-bed text-[11px] text-brand-blue"></i> <span class="room-beds-text"><strong class="room-avail-beds">${data.remaining_beds}</strong> Beds Available</span>`;
                             }
                         }
 
-                        // Add dynamic badge: Recommended multi-room, Dorm Beds, or Direct Fit
+                        // Add reminder / capacity match message badge
                         const descEl = roomEl.querySelector('p.line-clamp-2') || roomEl.querySelector('.room-card > div.p-6');
                         if (descEl && descEl.parentNode) {
                             const badgeDiv = document.createElement('div');
-                            badgeDiv.className = 'room-rec-card-badge mt-2 mb-2 p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5';
+                            badgeDiv.className = 'room-rec-card-badge mt-2 mb-2 p-2.5 rounded-xl text-xs font-semibold flex items-start gap-2';
+
                             if (isDormRoom && data.remaining_beds !== undefined) {
-                                badgeDiv.className += ' bg-teal-50 border border-teal-200 text-teal-900';
-                                badgeDiv.innerHTML = `<i class="fas fa-bed text-teal-600"></i><span><strong>${data.remaining_beds} Beds Available</strong> (${data.occupied_beds || (8 - data.remaining_beds)} Occupied / 8 Total) &bull; <strong>₱460.00</strong> / bed</span>`;
-                            } else if (isTwoCapRecommendation) {
+                                if (data.remaining_beds < guests) {
+                                    // Reminder: fewer beds available than requested party size
+                                    badgeDiv.className += ' bg-amber-50 border border-amber-200 text-amber-900';
+                                    badgeDiv.innerHTML = `<i class="fas fa-info-circle text-amber-600 mt-0.5 flex-shrink-0"></i><span><strong>Reminder:</strong> Only <strong>${data.remaining_beds} bed${data.remaining_beds > 1 ? 's' : ''}</strong> available for your party of <strong>${guests} guests</strong>.</span>`;
+                                } else {
+                                    badgeDiv.className += ' bg-teal-50 border border-teal-200 text-teal-900';
+                                    badgeDiv.innerHTML = `<i class="fas fa-bed text-teal-600 mt-0.5 flex-shrink-0"></i><span><strong>${data.remaining_beds} Beds Available</strong> &bull; <strong>₱460.00</strong> / bed (Fits your ${guests} guest${guests > 1 ? 's' : ''})</span>`;
+                                }
+                            } else if (roomMaxCapacity < guests) {
+                                // Reminder: room capacity is smaller than requested guests, but room is available!
                                 const needed = Math.ceil(guests / roomMaxCapacity);
                                 badgeDiv.className += ' bg-amber-50 border border-amber-200 text-amber-900';
-                                badgeDiv.innerHTML = `<i class="fas fa-lightbulb text-amber-500"></i><span>Capacity: 2 &bull; <strong>Recommended: Book ${needed} Rooms</strong> to fit your ${guests} guests</span>`;
+                                badgeDiv.innerHTML = `<i class="fas fa-info-circle text-amber-600 mt-0.5 flex-shrink-0"></i><span><strong>Reminder:</strong> This room accommodates up to <strong>${roomMaxCapacity} guests</strong>. For your party of <strong>${guests} guests</strong>, you can book <strong>${needed} rooms</strong>.</span>`;
                             } else {
+                                // Direct capacity fit
                                 badgeDiv.className += ' bg-emerald-50 border border-emerald-200 text-emerald-800';
-                                badgeDiv.innerHTML = `<i class="fas fa-check-circle text-emerald-500"></i><span><strong>Fits Entire Group:</strong> Up to ${roomMaxCapacity} Guests</span>`;
+                                badgeDiv.innerHTML = `<i class="fas fa-check-circle text-emerald-500 mt-0.5 flex-shrink-0"></i><span><strong>Available:</strong> Fits your group (Up to ${roomMaxCapacity} Guests)</span>`;
                             }
                             descEl.parentNode.insertBefore(badgeDiv, descEl.nextSibling);
                         }
 
-                        return { roomId, available: true, capacityMatch: true, isBooked: false };
+                        const roomAvailCap = isDormRoom ? (data.remaining_beds !== undefined ? data.remaining_beds : 8) : roomMaxCapacity;
+                        const capacityMatch = isDormRoom ? (data.remaining_beds >= guests) : (roomMaxCapacity >= guests);
+                        return { roomId, available: true, capacity: roomAvailCap, capacityMatch, isBooked: false };
                     }
                 } catch (err) {
                     console.error('Availability check failed for room ' + roomId, err);
-                    roomEl.style.display = 'none';
-                    return { roomId, available: false, capacityMatch: true, isBooked: false };
+                    return { roomId, available: false, capacity: 0, capacityMatch: false, isBooked: false };
                 }
             }));
 
-            const availableRooms = results.filter(r => r.available && r.capacityMatch);
+            const availableRooms = results.filter(r => r.available);
+            const totalAvailableCap = availableRooms.reduce((sum, r) => sum + (r.capacity || 0), 0);
             const anyAvailable = availableRooms.length > 0;
             const bookedCount = results.filter(r => r.isBooked).length;
 
@@ -969,19 +976,57 @@ function initAvailabilityForm() {
             if (!noAvailEl && roomsContainer) {
                 noAvailEl = document.createElement('div');
                 noAvailEl.id = 'no-available-rooms';
-                noAvailEl.className = 'col-span-full text-center text-gray-500 py-12';
+                noAvailEl.className = 'col-span-full text-center text-gray-500 py-6';
                 roomsContainer.appendChild(noAvailEl);
             }
+
+            // If the requested guest number exceeds the total combined limit of all available rooms:
+            if (anyAvailable && guests > totalAvailableCap) {
+                allRoomEls.forEach(el => {
+                    el.style.display = 'none';
+                });
+                if (noAvailEl) {
+                    noAvailEl.innerHTML = `
+                        <div class="max-w-xl mx-auto my-6 text-center">
+                            <div class="bg-amber-50/95 border-2 border-amber-300 rounded-3xl p-8 shadow-sm">
+                                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mx-auto mb-4 shadow-xs">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <h4 class="text-xl font-bold text-amber-950 mb-2">Guest Limit Exceeded</h4>
+                                <p class="text-sm text-amber-900 mb-4 leading-relaxed font-medium">
+                                    <strong>Reminder:</strong> Your requested party of <strong>${guests} guests</strong> exceeds the total capacity limit of all available rooms (<strong>${totalAvailableCap} guests</strong>) from <strong class="text-amber-950">${checkIn}</strong> to <strong class="text-amber-950">${checkOut}</strong>.
+                                </p>
+                                <div class="p-3.5 bg-white/90 rounded-2xl border border-amber-200 text-xs text-amber-800 mb-5 font-medium">
+                                    <i class="fas fa-info-circle mr-1 text-amber-600"></i> Please reduce your party size to <strong>${totalAvailableCap} ${totalAvailableCap === 1 ? 'guest' : 'guests'}</strong> or select alternative dates.
+                                </div>
+                                <button type="button" onclick="window.router('contact')" class="bg-brand-dark hover:bg-gray-800 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2">
+                                    <i class="fas fa-envelope"></i> Contact Front Desk
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    noAvailEl.style.display = '';
+                }
+                if (typeof window.showToast === 'function') {
+                    window.showToast(`Requested ${guests} guests exceeds the total available capacity limit (${totalAvailableCap} guests).`, 'warning');
+                }
+                return;
+            }
+
             if (noAvailEl) {
-                noAvailEl.innerHTML = `
-                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-8 max-w-md mx-auto text-center">
-                        <i class="fas fa-calendar-times text-rose-500 text-4xl mb-3"></i>
-                        <h4 class="text-lg font-bold text-slate-800 mb-1">No Rooms Available</h4>
-                        <p class="text-xs text-slate-500 mb-4">All rooms are booked or unavailable for ${guests} ${guests === 1 ? 'guest' : 'guests'} from <strong class="text-slate-700">${checkIn}</strong> to <strong class="text-slate-700">${checkOut}</strong>.</p>
-                        <p class="text-xs text-brand-blue font-semibold">Try choosing different check-in / check-out dates above.</p>
-                    </div>
-                `;
-                noAvailEl.style.display = anyAvailable ? 'none' : '';
+                if (!anyAvailable) {
+                    noAvailEl.innerHTML = `
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-8 max-w-md mx-auto text-center">
+                            <i class="fas fa-calendar-times text-rose-500 text-4xl mb-3"></i>
+                            <h4 class="text-lg font-bold text-slate-800 mb-1">No Rooms Available</h4>
+                            <p class="text-xs text-slate-500 mb-4">All rooms are booked or unavailable for selected dates from <strong class="text-slate-700">${checkIn}</strong> to <strong class="text-slate-700">${checkOut}</strong>.</p>
+                            <p class="text-xs text-brand-blue font-semibold">Try choosing different check-in / check-out dates above.</p>
+                        </div>
+                    `;
+                    noAvailEl.style.display = '';
+                } else {
+                    noAvailEl.style.display = 'none';
+                }
             }
 
             if (typeof window.showToast === 'function') {

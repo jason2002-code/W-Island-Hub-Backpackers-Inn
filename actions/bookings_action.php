@@ -100,61 +100,159 @@ function getBookings() {
                 }
             }
 
-            // Normalize payment method for display
+            // Normalize payment method for display + compute a reliable type tag for JS filters
             $paymentMethodRaw = $b['payment_method'] ?? 'full_online';
-            $isHotelMethod = ($paymentMethodRaw === 'pay_at_hotel' || stripos($paymentMethodRaw, 'hotel') !== false);
-            if ($isHotelMethod) {
-                if ($bStatus === 'deposit_paid') {
-                    $paymentMethodLabel = 'Pay at Hotel (20% Deposit Paid)';
+            $pmRawLower       = strtolower($paymentMethodRaw);
+            $hasSessionId     = !empty($b['paymongo_session_id']);
+            $hasPaymentId     = !empty($b['paymongo_payment_id']);
+
+            // 1. GCash Payments
+            if (stripos($pmRawLower, 'gcash') !== false) {
+                if (stripos($pmRawLower, 'front desk') !== false || stripos($pmRawLower, 'counter') !== false) {
+                    $paymentType        = 'walkin';
+                    $paymentMethodLabel = 'GCash (Front Desk)';
+                    $paymentChannel     = 'gcash';
+                } elseif (stripos($pmRawLower, 'deposit') !== false || $paymentMethodRaw === 'deposit_gcash') {
+                    $paymentType        = 'deposit_hotel';
+                    $paymentMethodLabel = 'GCash Deposit (20%)';
+                    $paymentChannel     = 'gcash';
+                } elseif (stripos($pmRawLower, 'paymongo') !== false) {
+                    $paymentType        = 'full_gcash';
+                    $paymentMethodLabel = 'GCash (PayMongo)';
+                    $paymentChannel     = 'gcash';
                 } else {
-                    $paymentMethodLabel = 'Pay at Hotel (20% Deposit)';
+                    $paymentType        = 'full_gcash';
+                    $paymentMethodLabel = 'Full GCash (100%)';
+                    $paymentChannel     = 'gcash';
                 }
-            } elseif (stripos($paymentMethodRaw, 'deposit') !== false || $bStatus === 'deposit_paid') {
-                $paymentMethodLabel = 'Deposit Paid (20%)';
-            } elseif (stripos($paymentMethodRaw, 'paymongo') !== false) {
-                $paymentMethodLabel = $paymentMethodRaw;
-            } else {
-                $paymentMethodLabel = 'Full Payment (Online)';
+            }
+            // 2. Maya / PayMaya Payments
+            elseif (stripos($pmRawLower, 'maya') !== false) {
+                if (stripos($pmRawLower, 'front desk') !== false || stripos($pmRawLower, 'counter') !== false) {
+                    $paymentType        = 'walkin';
+                    $paymentMethodLabel = 'Maya (Front Desk)';
+                    $paymentChannel     = 'maya';
+                } elseif (stripos($pmRawLower, 'paymongo') !== false) {
+                    $paymentType        = 'other_payment';
+                    $paymentMethodLabel = 'Maya (PayMongo)';
+                    $paymentChannel     = 'maya';
+                } else {
+                    $paymentType        = 'other_payment';
+                    $paymentMethodLabel = 'Maya';
+                    $paymentChannel     = 'maya';
+                }
+            }
+            // 3. Credit / Debit Card Payments
+            elseif (
+                stripos($pmRawLower, 'card') !== false ||
+                stripos($pmRawLower, 'credit') !== false ||
+                stripos($pmRawLower, 'debit') !== false ||
+                stripos($pmRawLower, 'visa') !== false ||
+                stripos($pmRawLower, 'mastercard') !== false ||
+                $pmRawLower === 'pos'
+            ) {
+                if (stripos($pmRawLower, 'front desk') !== false || stripos($pmRawLower, 'pos') !== false || stripos($pmRawLower, 'counter') !== false) {
+                    $paymentType        = 'walkin';
+                    $paymentMethodLabel = 'Credit Card / POS (Front Desk)';
+                    $paymentChannel     = 'card';
+                } elseif (stripos($pmRawLower, 'paymongo') !== false) {
+                    $paymentType        = 'other_payment';
+                    $paymentMethodLabel = 'Credit / Debit Card (PayMongo)';
+                    $paymentChannel     = 'card';
+                } else {
+                    $paymentType        = 'other_payment';
+                    $paymentMethodLabel = 'Credit / Debit Card';
+                    $paymentChannel     = 'card';
+                }
+            }
+            // 4. GrabPay Payments
+            elseif (stripos($pmRawLower, 'grab') !== false) {
+                $paymentType        = 'other_payment';
+                $paymentMethodLabel = 'GrabPay (PayMongo)';
+                $paymentChannel     = 'grab_pay';
+            }
+            // 5. Cash / Front Desk Walk-In
+            elseif (
+                stripos($pmRawLower, 'cash') !== false ||
+                stripos($pmRawLower, 'walk') !== false ||
+                stripos($pmRawLower, 'counter') !== false ||
+                str_starts_with($b['ref_id'] ?? '', 'WK-')
+            ) {
+                $paymentType        = 'walkin';
+                $paymentMethodLabel = 'Cash (Front Desk)';
+                $paymentChannel     = 'cash';
+            }
+            // 6. Pay at Hotel / Hotel Over-the-counter
+            elseif ($paymentMethodRaw === 'pay_at_hotel' || stripos($pmRawLower, 'hotel') !== false) {
+                $paymentType  = 'deposit_hotel';
+                if ($bStatus === 'deposit_paid') {
+                    $paymentMethodLabel = 'Pay at Hotel (Deposit Paid)';
+                } else {
+                    $paymentMethodLabel = 'Pay at Hotel';
+                }
+                $paymentChannel = 'hotel';
+            }
+            // 7. Generic PayMongo / Checkout Session
+            elseif (stripos($pmRawLower, 'paymongo') !== false || $hasSessionId || $hasPaymentId) {
+                $paymentType        = 'other_payment';
+                $paymentMethodLabel = 'PayMongo (Online)';
+                $paymentChannel     = 'paymongo';
+            }
+            // 8. Deposit Paid status fallback
+            elseif ($bStatus === 'deposit_paid') {
+                $paymentType        = 'deposit_hotel';
+                $paymentMethodLabel = 'GCash Deposit (20%)';
+                $paymentChannel     = 'deposit';
+            }
+            // 9. Other default
+            else {
+                $paymentType        = 'other_payment';
+                $paymentMethodLabel = !empty($paymentMethodRaw) && $paymentMethodRaw !== 'full_online' 
+                    ? ucwords(str_replace('_', ' ', $paymentMethodRaw)) 
+                    : 'Other Payment Method';
+                $paymentChannel     = 'other';
             }
 
             return [
-                'id' => (int)$b['id'],
-                'ref_id' => $b['ref_id'],
-                'guestName' => $b['final_guest_name'],
-                'guestEmail' => $b['final_guest_email'] ?? '',
-                'guestPhone' => $b['final_guest_phone'] ?? '',
-                'roomName' => $b['room_name'] ?? 'Room #' . $b['room_id'],
-                'roomId' => (int)$b['room_id'],
-                'roomType' => $b['room_type'] ?? 'Standard',
-                'roomImage' => $b['room_image'] ?? 'assets/image/background.jpg',
-                'checkIn' => $checkIn,
-                'checkOut' => $checkOut,
+                'id'                => (int)$b['id'],
+                'ref_id'            => $b['ref_id'],
+                'guestName'         => $b['final_guest_name'],
+                'guestEmail'        => $b['final_guest_email'] ?? '',
+                'guestPhone'        => $b['final_guest_phone'] ?? '',
+                'roomName'          => $b['room_name'] ?? 'Room #' . $b['room_id'],
+                'roomId'            => (int)$b['room_id'],
+                'roomType'          => $b['room_type'] ?? 'Standard',
+                'roomImage'         => $b['room_image'] ?? 'assets/image/background.jpg',
+                'checkIn'           => $checkIn,
+                'checkOut'          => $checkOut,
                 'expectedArrivalTime' => $b['expected_arrival_time'] ? substr($b['expected_arrival_time'], 0, 5) : null,
-                'nights' => (int)$b['nights'],
-                'total' => $total,
-                'paidAmount' => $paid,
-                'balanceDue' => max(0, $balance),
-                'paymentMethod' => $paymentMethodLabel,
-                'paymentMethodRaw' => $paymentMethodRaw,
-                'gcashRefNo' => $b['gcash_reference_no'] ?? null,
+                'nights'            => (int)$b['nights'],
+                'total'             => $total,
+                'paidAmount'        => $paid,
+                'balanceDue'        => max(0, $balance),
+                'paymentMethod'     => $paymentMethodLabel,
+                'paymentMethodRaw'  => $paymentMethodRaw,
+                'paymentChannel'    => $paymentChannel,
+                'paymentType'       => $paymentType,   // ← canonical filter key
+                'gcashRefNo'        => $b['gcash_reference_no'] ?? null,
                 'paymongoSessionId' => $b['paymongo_session_id'] ?? null,
                 'paymongoPaymentId' => $b['paymongo_payment_id'] ?? null,
-                'receiptUrl' => $b['receipt_url'] ?? null,
-                'bookingStatus' => $b['booking_status'] ?? 'pending_verification',
-                'status' => $b['status'] ?? 'Pending',
-                'expiresAt' => $b['expires_at'],
-                'specialRequests' => $b['special_requests'] ?? '',
-                'isArchived' => (int)($b['is_archived'] ?? 0),
-                'archivedAt' => $b['archived_at'] ?? null,
-                'created_at' => $b['created_at'],
-                'updated_at' => $b['updated_at'] ?? $b['created_at'],
-                'room_price' => (float)($b['room_price'] ?? 0),
-                'adults' => (int)($b['adults'] ?? 1),
-                'children' => (int)($b['children'] ?? 0),
-                'children_ages' => $b['children_ages'] ?? '[]',
-                'childrenAges' => !empty($b['children_ages']) ? (json_decode($b['children_ages'], true) ?: []) : [],
-                'roomsCount' => (int)($b['rooms_count'] ?? 1),
-                'bedsCount' => (int)($b['beds_count'] ?? 1)
+                'receiptUrl'        => $b['receipt_url'] ?? null,
+                'bookingStatus'     => $b['booking_status'] ?? 'pending_verification',
+                'status'            => $b['status'] ?? 'Pending',
+                'expiresAt'         => $b['expires_at'],
+                'specialRequests'   => $b['special_requests'] ?? '',
+                'isArchived'        => (int)($b['is_archived'] ?? 0),
+                'archivedAt'        => $b['archived_at'] ?? null,
+                'created_at'        => $b['created_at'],
+                'updated_at'        => $b['updated_at'] ?? $b['created_at'],
+                'room_price'        => (float)($b['room_price'] ?? 0),
+                'adults'            => (int)($b['adults'] ?? 1),
+                'children'          => (int)($b['children'] ?? 0),
+                'children_ages'     => $b['children_ages'] ?? '[]',
+                'childrenAges'      => !empty($b['children_ages']) ? (json_decode($b['children_ages'], true) ?: []) : [],
+                'roomsCount'        => (int)($b['rooms_count'] ?? 1),
+                'bedsCount'         => (int)($b['beds_count'] ?? 1)
             ];
         }, $bookings);
 
@@ -560,6 +658,207 @@ function handleReceiptUpload() {
     }
 
     return null;
+}
+
+/**
+ * Admin Action: Manually create a walk-in / physical guest booking at front desk
+ */
+function createWalkinBooking($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $roomId = intval($data['room_id'] ?? 0);
+    $guestName = trim($data['guest_name'] ?? '');
+    $guestEmail = trim($data['guest_email'] ?? '');
+    $guestPhone = trim($data['guest_phone'] ?? '');
+    $checkIn = trim($data['check_in'] ?? '');
+    $checkOut = trim($data['check_out'] ?? '');
+    $adults = max(1, intval($data['adults'] ?? 1));
+    $children = max(0, intval($data['children'] ?? 0));
+    $bedsCount = max(1, intval($data['beds_count'] ?? 1));
+    $expectedArrivalTime = !empty($data['expected_arrival_time']) ? trim($data['expected_arrival_time']) : date('H:i:s');
+    $paymentMethod = trim($data['payment_method'] ?? 'Cash (Front Desk)');
+    $specialRequests = trim($data['special_requests'] ?? 'Physical Walk-In Reservation');
+    $desiredStatus = trim($data['booking_status'] ?? 'completed'); // 'completed', 'confirmed', 'deposit_paid', 'pending_arrival'
+
+    if (!$roomId || empty($guestName) || empty($checkIn) || empty($checkOut)) {
+        echo json_encode(['success' => false, 'message' => 'Please provide Room, Guest Name, Check-in, and Check-out dates.']);
+        exit;
+    }
+
+    // Verify room exists
+    $stmtRoom = $pdo->prepare("SELECT * FROM rooms WHERE id = ?");
+    $stmtRoom->execute([$roomId]);
+    $room = $stmtRoom->fetch(PDO::FETCH_ASSOC);
+    if (!$room) {
+        echo json_encode(['success' => false, 'message' => 'Selected room was not found.']);
+        exit;
+    }
+    if (($room['status'] ?? '') === 'Maintenance') {
+        echo json_encode(['success' => false, 'message' => 'This room is currently under Maintenance.']);
+        exit;
+    }
+
+    $checkInDate = new DateTime($checkIn);
+    $checkOutDate = new DateTime($checkOut);
+    if ($checkOutDate <= $checkInDate) {
+        echo json_encode(['success' => false, 'message' => 'Check-out date must be strictly after check-in date.']);
+        exit;
+    }
+
+    $nights = (int)$checkOutDate->diff($checkInDate)->days;
+    if ($nights < 1) $nights = 1;
+
+    $isDorm = ($room['type'] === 'Dorm' || $roomId === 5);
+    $roomMaxCap = max(1, intval($room['max_capacity'] ?? $room['capacity'] ?? ($isDorm ? 8 : 2)));
+
+    if ($isDorm) {
+        $bedPrice = 460.00;
+        $bedsCount = max(1, min($roomMaxCap, $bedsCount));
+
+        // Overlapping dorm beds check
+        $stmtDorm = $pdo->prepare("
+            SELECT COALESCE(SUM(
+                CASE 
+                    WHEN b.beds_count > 0 THEN b.beds_count
+                    ELSE GREATEST(1, COALESCE(b.adults + b.children, b.adults, 1))
+                END
+            ), 0) as occupied_beds
+            FROM bookings b
+            WHERE b.room_id = ?
+              AND b.status IN ('Pending', 'Confirmed')
+              AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+              AND COALESCE(b.is_archived, 0) = 0
+              AND COALESCE(b.check_in_date, b.check_in) < ?
+              AND COALESCE(b.check_out_date, b.check_out) > ?
+        ");
+        $stmtDorm->execute([$roomId, $checkOut, $checkIn]);
+        $occupiedBeds = (int)$stmtDorm->fetchColumn();
+        $remainingBeds = max(0, $roomMaxCap - $occupiedBeds);
+
+        if ($bedsCount > $remainingBeds) {
+            echo json_encode([
+                'success' => false,
+                'message' => "Only {$remainingBeds} bed(s) available in {$room['name']} for selected dates. Requested: {$bedsCount}."
+            ]);
+            exit;
+        }
+
+        $standardTotal = ($bedPrice * $bedsCount * $nights) + 15.00;
+        $adults = $bedsCount;
+        $children = 0;
+    } else {
+        $bedsCount = 1;
+        // Overlapping private room check
+        $stmtOverlap = $pdo->prepare("
+            SELECT COUNT(*) FROM bookings
+            WHERE room_id = ?
+              AND status IN ('Pending', 'Confirmed')
+              AND booking_status NOT IN ('cancelled_expired', 'no_show')
+              AND COALESCE(is_archived, 0) = 0
+              AND COALESCE(check_in_date, check_in) < ?
+              AND COALESCE(check_out_date, check_out) > ?
+        ");
+        $stmtOverlap->execute([$roomId, $checkOut, $checkIn]);
+        if ($stmtOverlap->fetchColumn() > 0) {
+            echo json_encode([
+                'success' => false,
+                'message' => "Room {$room['name']} is already booked or occupied on the selected dates."
+            ]);
+            exit;
+        }
+
+        $pricePerNight = (float)$room['price'];
+        $standardTotal = ($pricePerNight * $nights) + 15.00;
+    }
+
+    // Allow custom total or default to standard total
+    $totalAmount = isset($data['total_amount']) && is_numeric($data['total_amount']) && floatval($data['total_amount']) >= 0 
+        ? floatval($data['total_amount']) 
+        : $standardTotal;
+
+    $paidAmountInput = isset($data['paid_amount']) && is_numeric($data['paid_amount']) 
+        ? floatval($data['paid_amount']) 
+        : null;
+
+    if ($desiredStatus === 'completed' || $desiredStatus === 'confirmed') {
+        $bookingStatus = $desiredStatus;
+        $status = 'Confirmed';
+        $paidAmount = ($paidAmountInput !== null) ? $paidAmountInput : $totalAmount;
+    } elseif ($desiredStatus === 'deposit_paid') {
+        $bookingStatus = 'deposit_paid';
+        $status = 'Confirmed';
+        $paidAmount = ($paidAmountInput !== null) ? $paidAmountInput : round($totalAmount * 0.20, 2);
+    } elseif ($desiredStatus === 'pending_arrival') {
+        $bookingStatus = 'pending_arrival';
+        $status = 'Pending';
+        $paidAmount = ($paidAmountInput !== null) ? $paidAmountInput : 0.00;
+    } else {
+        $bookingStatus = 'completed';
+        $status = 'Confirmed';
+        $paidAmount = ($paidAmountInput !== null) ? $paidAmountInput : $totalAmount;
+    }
+
+    $balanceDue = max(0.00, round($totalAmount - $paidAmount, 2));
+
+    // Unique reference code
+    $refId = 'WK-' . strtoupper(substr(uniqid(), -6));
+
+    if (empty($guestEmail)) {
+        $guestEmail = strtolower($refId) . '@walkin.wislandhub.com';
+    }
+
+    // Match registered user if exists
+    $userId = null;
+    $uStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND role != 'admin' LIMIT 1");
+    $uStmt->execute([$guestEmail]);
+    if ($uRow = $uStmt->fetch(PDO::FETCH_ASSOC)) {
+        $userId = intval($uRow['id']);
+    }
+
+    $stmtInsert = $pdo->prepare("
+        INSERT INTO bookings (
+            ref_id, user_id, room_id, guest_name, guest_email, guest_phone,
+            adults, children, children_ages, rooms_count, beds_count,
+            check_in_date, check_out_date, check_in, check_out, expected_arrival_time,
+            nights, total_amount, paid_amount, balance_due, total_price,
+            payment_method, status, booking_status, expires_at, special_requests, created_at, updated_at
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, '[]', 1, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?,
+            ?, ?, ?, NULL, ?, NOW(), NOW()
+        )
+    ");
+
+    $stmtInsert->execute([
+        $refId, $userId, $roomId, $guestName, $guestEmail, $guestPhone,
+        $adults, $children, $bedsCount,
+        $checkIn, $checkOut, $checkIn, $checkOut, $expectedArrivalTime,
+        $nights, $totalAmount, $paidAmount, $balanceDue, $totalAmount,
+        $paymentMethod, $status, $bookingStatus, $specialRequests
+    ]);
+
+    $bookingId = (int)$pdo->lastInsertId();
+
+    // Occupy room if check-in is today and booking is confirmed or completed
+    $today = date('Y-m-d');
+    if ($checkIn <= $today && $checkOut > $today && in_array($bookingStatus, ['completed', 'confirmed'])) {
+        if (!$isDorm) {
+            $pdo->prepare("UPDATE rooms SET status = 'Occupied' WHERE id = ? AND status != 'Maintenance'")->execute([$roomId]);
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => "Walk-in booking {$refId} successfully recorded! Room is now reserved and occupied.",
+        'booking_id' => $bookingId,
+        'ref_id' => $refId
+    ]);
 }
 
 /**
@@ -1195,6 +1494,10 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
         switch ($action) {
             case 'create':
                 createBooking($input);
+                break;
+            case 'create_walkin':
+            case 'walkin_booking':
+                createWalkinBooking($input);
                 break;
             case 'archive':
                 archiveBooking($input);

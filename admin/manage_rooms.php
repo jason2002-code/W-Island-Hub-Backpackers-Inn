@@ -155,7 +155,7 @@ function loadRooms() {
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden flex flex-col transition hover:shadow-md cursor-pointer" onclick="viewRoomFeatures('${room.id}')">
                         <img src="${room.image.startsWith('http') ? room.image : '../' + room.image}" class="w-full h-48 object-cover bg-gray-200" alt="${room.name}">
                         <div class="p-4 flex-1 flex flex-col justify-center">
-                            <h4 class="font-bold text-gray-800">${room.name} ${room.status === 'Maintenance' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded ml-2">Maintenance</span>' : ''}</h4>
+                            <h4 class="font-bold text-gray-800">${room.name} ${room.status === 'Maintenance' ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded ml-2">Maintenance</span>' : (room.status === 'Occupied' || room.is_occupied ? '<span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded ml-2">Occupied</span>' : '<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded ml-2">Available</span>')}</h4>
                             <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">${room.type}</p>
                             <p class="text-brand-purple font-bold text-lg">₱${parseFloat(room.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="text-xs text-gray-400 font-normal">/night</span></p>
                             <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">

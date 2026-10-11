@@ -278,7 +278,7 @@ async function initiateBooking(roomId, options = {}) {
         if (isDorm) {
             if (dormSelectorContainer) dormSelectorContainer.classList.remove('hidden');
             if (dormRemainingBadge) {
-                dormRemainingBadge.textContent = `${dormRemainingBeds} Bed${dormRemainingBeds > 1 ? 's' : ''} Available (${availData.occupied_beds || (8 - dormRemainingBeds)} Occupied / 8 Total)`;
+                dormRemainingBadge.textContent = `${dormRemainingBeds} Bed${dormRemainingBeds > 1 ? 's' : ''} Available`;
             }
             if (dormBedCountDisplay) dormBedCountDisplay.textContent = `${initialBeds} Bed${initialBeds > 1 ? 's' : ''}`;
             if (dormBedsInput) dormBedsInput.value = initialBeds;
@@ -574,9 +574,9 @@ async function handleSummaryDateChange() {
 
             if (dormRemaining <= 0) {
                 if (statusBadge) statusBadge.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
-                if (statusBadgeText) statusBadgeText.textContent = 'All Beds Occupied';
+                if (statusBadgeText) statusBadgeText.textContent = 'No Beds Available';
                 if (statusMsg) {
-                    statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> All 8 beds in Room 5 are occupied on selected dates.';
+                    statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> All beds in Room 5 are booked on selected dates.';
                     statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
                 }
                 if (confirmBtn) {
@@ -584,7 +584,7 @@ async function handleSummaryDateChange() {
                     confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
                 if (typeof window.showToast === 'function') {
-                    window.showToast('All beds in Room 5 are occupied for these dates. Please choose different dates.', 'error');
+                    window.showToast('All beds in Room 5 are booked for these dates. Please choose different dates.', 'error');
                 }
                 return;
             }
@@ -610,7 +610,7 @@ async function handleSummaryDateChange() {
                     statusBadgeText.textContent = 'Unavailable';
                 }
                 if (statusMsg) {
-                    statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> Occupied on selected dates. Please choose another date.';
+                    statusMsg.innerHTML = '<i class="fas fa-times-circle text-rose-500"></i> Unavailable on selected dates. Please choose another date.';
                     statusMsg.className = 'text-[11px] text-rose-600 font-medium flex items-center gap-1';
                 }
                 if (confirmBtn) {
@@ -618,7 +618,7 @@ async function handleSummaryDateChange() {
                     confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
                 if (typeof window.showToast === 'function') {
-                    window.showToast('Room is occupied on these dates. Please adjust your stay dates.', 'error');
+                    window.showToast('Room is unavailable on these dates. Please adjust your stay dates.', 'error');
                 }
                 return;
             }
@@ -671,7 +671,7 @@ async function handleSummaryDateChange() {
             const summaryPrice = document.getElementById('summary-price');
 
             if (dormRemainingBadge) {
-                dormRemainingBadge.textContent = `${activeBooking.remainingBeds} Bed${activeBooking.remainingBeds > 1 ? 's' : ''} Available (${availData.occupied_beds || (8 - activeBooking.remainingBeds)} Occupied / 8 Total)`;
+                dormRemainingBadge.textContent = `${activeBooking.remainingBeds} Bed${activeBooking.remainingBeds > 1 ? 's' : ''} Available`;
             }
             if (dormBedCountDisplay) dormBedCountDisplay.textContent = `${activeBooking.bedsCount} Bed${activeBooking.bedsCount > 1 ? 's' : ''}`;
             if (dormBedsInput) dormBedsInput.value = activeBooking.bedsCount;

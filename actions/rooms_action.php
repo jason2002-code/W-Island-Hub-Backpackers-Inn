@@ -62,6 +62,7 @@ function getRooms() {
                     WHERE b.room_id = ?
                       AND b.status IN ('Pending', 'Confirmed')
                       AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+                      AND COALESCE(b.is_archived, 0) = 0
                       AND COALESCE(b.check_in_date, b.check_in) <= ?
                       AND COALESCE(b.check_out_date, b.check_out) > ?
                 ");
@@ -72,6 +73,27 @@ function getRooms() {
                 $room['total_beds'] = $dormTotalBeds;
                 $room['max_capacity'] = $dormTotalBeds;
                 $room['capacity'] = $dormTotalBeds;
+                if ($occupiedBeds >= $dormTotalBeds && ($room['status'] ?? '') !== 'Maintenance') {
+                    $room['status'] = 'Occupied';
+                    $room['is_occupied'] = true;
+                }
+            } else {
+                $stmtOcc = $pdo->prepare("
+                    SELECT COUNT(*)
+                    FROM bookings b
+                    WHERE b.room_id = ?
+                      AND b.status IN ('Pending', 'Confirmed')
+                      AND b.booking_status NOT IN ('cancelled_expired', 'no_show')
+                      AND COALESCE(b.is_archived, 0) = 0
+                      AND COALESCE(b.check_in_date, b.check_in) <= ?
+                      AND COALESCE(b.check_out_date, b.check_out) > ?
+                ");
+                $stmtOcc->execute([$room['id'], $today, $today]);
+                $isBookedToday = ((int)$stmtOcc->fetchColumn() > 0);
+                if ($isBookedToday && ($room['status'] ?? '') !== 'Maintenance') {
+                    $room['status'] = 'Occupied';
+                    $room['is_occupied'] = true;
+                }
             }
         }
         unset($room);

@@ -247,12 +247,12 @@ function checkAvailability($data) {
 
             $isBooked = ($remainingBeds <= 0);
             $isCapacityMatch = ($remainingBeds >= $requestedGuests);
-            $isAvailable = (!$isMaintenance) && (!$isBooked) && $isCapacityMatch;
+            $isAvailable = (!$isMaintenance) && (!$isBooked);
 
             if ($isMaintenance) {
                 $message = 'Room is under maintenance';
             } elseif ($isBooked) {
-                $message = 'All 8 beds in Room 5 are occupied for selected dates';
+                $message = 'No beds available in Room 5 for selected dates';
             } elseif (!$isCapacityMatch) {
                 $message = "Only {$remainingBeds} bed(s) available for selected dates (requested {$requestedGuests})";
             } else {
@@ -263,6 +263,7 @@ function checkAvailability($data) {
                 'success' => true,
                 'available' => $isAvailable,
                 'is_booked' => $isBooked,
+                'is_capacity_match' => $isCapacityMatch,
                 'room' => $room,
                 'is_dorm' => true,
                 'total_beds' => $totalBeds,
@@ -290,14 +291,14 @@ function checkAvailability($data) {
         $roomLimit = (int)($room['max_capacity'] ?? $room['capacity'] ?? 1);
         $isBooked = ($overlapCount > 0);
         $isCapacityMatch = ($roomLimit >= $requestedGuests);
-        $isAvailable = (!$isBooked) && (!$isMaintenance) && $isCapacityMatch;
+        $isAvailable = (!$isBooked) && (!$isMaintenance);
         
         if ($isMaintenance) {
             $message = 'Room is under maintenance';
         } elseif ($isBooked) {
             $message = 'Room is already booked for selected dates';
         } elseif (!$isCapacityMatch) {
-            $message = 'Room capacity is insufficient for selected guests';
+            $message = "Room accommodates up to {$roomLimit} guests (requested {$requestedGuests})";
         } else {
             $message = 'Room is available for selected dates';
         }
@@ -306,6 +307,7 @@ function checkAvailability($data) {
             'success' => true,
             'available' => $isAvailable,
             'is_booked' => $isBooked,
+            'is_capacity_match' => $isCapacityMatch,
             'room' => $room,
             'overlaps' => $overlapCount,
             'remaining_capacity' => $isBooked ? 0 : $roomLimit,
@@ -546,7 +548,7 @@ function getRoomAvailability($data) {
                 'occupied_beds' => $occupiedBedsToday,
                 'remaining_beds' => $remainingBedsToday,
                 'bed_price' => $bedPrice,
-                'message' => $isOpenNow ? "Room 5 available now ({$remainingBedsToday} bed" . ($remainingBedsToday > 1 ? 's' : '') . " available)" : 'All beds in Room 5 are occupied today'
+                'message' => $isOpenNow ? "Room 5 available now ({$remainingBedsToday} bed" . ($remainingBedsToday > 1 ? 's' : '') . " available)" : 'No beds available in Room 5 today'
             ]);
             return;
         }

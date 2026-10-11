@@ -166,15 +166,28 @@ function submitReview($input = null) {
         return;
     }
 
-    // Check if at least one stay is completed or checkout date has arrived
+    // Check if at least one stay is truly completed:
+    // - booking_status is explicitly 'completed', OR
+    // - checkout date is strictly BEFORE today (guest has fully departed, not just today)
     $today = date('Y-m-d');
     $hasCompletedStay = false;
     foreach ($userBookings as $b) {
-        $bEnd = $b['end_date'];
+        $bEnd    = $b['end_date'];
         $bStatus = strtolower($b['booking_status'] ?? '');
-        $status = strtolower($b['status'] ?? '');
+        $status  = strtolower($b['status'] ?? '');
 
-        if ($bStatus === 'completed' || $status === 'completed' || (!empty($bEnd) && $bEnd <= $today)) {
+        // Require checkout to be strictly before today — guests cannot review
+        // a room on their checkout day (they may still be physically in the room).
+        $stayActuallyOver = !empty($bEnd) && $bEnd < $today;
+
+        if ($bStatus === 'completed' && $stayActuallyOver) {
+            // Explicitly marked completed AND already checked out
+            $hasCompletedStay = true;
+            break;
+        }
+
+        if (($status === 'confirmed' || $bStatus === 'confirmed') && $stayActuallyOver) {
+            // Confirmed booking whose checkout date has passed
             $hasCompletedStay = true;
             break;
         }

@@ -117,14 +117,11 @@ if ($pdo) {
                     
                     <div class="flex flex-wrap gap-2 mb-4">
                         <?php if ($is_dorm): 
-                            $dorm_avail    = intval($room['dorm_remaining_beds'] ?? 8);
-                            $dorm_occupied = intval($room['dorm_occupied_beds']  ?? 0);
-                            $dorm_total    = intval($room['dorm_total_beds']     ?? 8);
+                            $dorm_avail = intval($room['dorm_remaining_beds'] ?? 8);
                         ?>
                             <span class="text-xs text-brand-blue bg-blue-50 px-2.5 py-1 rounded font-semibold flex items-center gap-1.5 room-capacity-pill" data-room-id="<?php echo $room_id; ?>">
                                 <i class="fas fa-bed text-[11px] text-brand-blue"></i> 
-                                <span class="room-beds-text"><strong class="room-avail-beds"><?php echo $dorm_avail; ?></strong> Beds Available</span> 
-                                <span class="text-slate-400 font-normal text-[11px]">(<?php echo $dorm_occupied; ?> Occupied / <?php echo $dorm_total; ?> Total)</span>
+                                <span class="room-beds-text"><strong class="room-avail-beds"><?php echo $dorm_avail; ?></strong> Beds Available</span>
                             </span>
                         <?php else: ?>
                             <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1">
