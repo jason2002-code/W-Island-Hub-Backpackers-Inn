@@ -657,10 +657,10 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         }
 
          // 5. Staff Performance & Signatures
-        $owner = 'Welfrida Araneta Bolotaulo';
-        $frontDesk = 'Fredsil Araneta Bolotaulo, Michelle Nee Baco Bolotaulo';
-        $shiftLead = 'Fredsil Araneta Bolotaulo';
-        $supervisor = 'Fredsil Araneta Bolotaulo (Shift Lead)';
+        $owner = !empty($params['staff_executive']) ? trim($params['staff_executive']) : 'Welfrida Araneta Bolotaulo';
+        $frontDesk = !empty($params['staff_frontdesk']) ? trim($params['staff_frontdesk']) : 'Fredsil Araneta Bolotaulo, Michelle Nee Baco Bolotaulo';
+        $shiftLead = !empty($params['staff_nightaudit']) ? trim($params['staff_nightaudit']) : 'Fredsil Araneta Bolotaulo';
+        $supervisor = $shiftLead . ' (Night Audit)';
 
         // 6. Complaints and Feedback
         $complaintsReceived = intval($pdo->query("SELECT COUNT(*) FROM reports")->fetchColumn());
@@ -781,9 +781,9 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
                     'staff_performance' => [
                        'title' => 'Staff & Management',
                         'items' => [
-                            ['label' => 'Owner', 'value' => $owner],
                             ['label' => 'Front Desk', 'value' => $frontDesk],
-                            ['label' => 'Shift Lead', 'value' => $shiftLead],
+                            ['label' => 'Night Audit', 'value' => $shiftLead],
+                            ['label' => 'Executive', 'value' => $owner],
                         ]
                     ],
                     'complaints_feedback' => [
@@ -806,7 +806,7 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
                 'signoff' => [
                     'prepared_by' => $frontDesk,
                     'audited_by' => $shiftLead,
-                    'approved_by' => $owner . ' (Owner)'
+                    'approved_by' => $owner
                 ]
             ],
             'operational_snapshot' => [

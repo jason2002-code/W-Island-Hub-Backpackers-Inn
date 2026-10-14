@@ -186,6 +186,14 @@ function showVoucherModal(refIdOrBooking, bookingDetails = {}, apiResponse = {})
     const data = normalizeBookingData(refIdOrBooking, bookingDetails, apiResponse);
     currentActiveBookingContext = data;
 
+    const bStatus = String(data.bookingStatus || data.booking_status || data.status || '').toLowerCase();
+    if (bStatus === 'pending_verification' || bStatus === 'pending' || (bStatus === '' && String(data.status || '').toLowerCase() === 'pending')) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Voucher is unavailable while reservation is pending approval.', 'info');
+        }
+        return;
+    }
+
     const checkInFormatted = formatReadableDate(data.checkIn);
     const checkOutFormatted = formatReadableDate(data.checkOut);
     const arrivalTime12 = formatTime12H(data.expectedArrivalTime);
@@ -193,7 +201,6 @@ function showVoucherModal(refIdOrBooking, bookingDetails = {}, apiResponse = {})
 
     // Status Badge
     let statusBadgeHtml = '';
-    const bStatus = data.bookingStatus;
     if (bStatus === 'confirmed' || bStatus === 'completed') {
         statusBadgeHtml = `<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full font-bold text-xs shadow-xs"><i class="fas fa-check-circle text-emerald-600"></i> Confirmed (100% Paid)</span>`;
     } else if (bStatus === 'deposit_paid' || (data.isHotelPayment && data.paidAmount > 0)) {
@@ -386,6 +393,14 @@ function showInvoiceModal(refIdOrBooking, bookingDetails = {}, apiResponse = {})
 
     const data = normalizeBookingData(refIdOrBooking, bookingDetails, apiResponse);
     currentActiveBookingContext = data;
+
+    const bStatus = String(data.bookingStatus || data.booking_status || data.status || '').toLowerCase();
+    if (bStatus === 'pending_verification' || bStatus === 'pending' || (bStatus === '' && String(data.status || '').toLowerCase() === 'pending')) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Invoice is unavailable while reservation is pending approval.', 'info');
+        }
+        return;
+    }
 
     const checkInFormatted = formatReadableDate(data.checkIn);
     const checkOutFormatted = formatReadableDate(data.checkOut);

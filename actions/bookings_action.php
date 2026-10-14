@@ -383,6 +383,19 @@ function createBooking($data) {
         exit;
     }
 
+    // Check-in Time Policy: Standard check-in is 2:00 PM (14:00) onwards
+    if ($paymentMethod === 'pay_at_hotel' || !empty($expectedArrivalTime)) {
+        if (empty($expectedArrivalTime)) {
+            echo json_encode(['success' => false, 'message' => 'Please select your expected arrival time. Check-in is 2:00 PM onwards.']);
+            exit;
+        }
+        $arrivalShort = substr(trim($expectedArrivalTime), 0, 5);
+        if ($arrivalShort < '14:00') {
+            echo json_encode(['success' => false, 'message' => 'Check-in time is 2:00 PM onwards. Please select 2:00 PM (14:00) or later for your expected arrival time.']);
+            exit;
+        }
+    }
+
     $adults = max(1, intval($data['adults'] ?? 1));
     $children = max(0, intval($data['children'] ?? 0));
     $childrenAgesRaw = $data['children_ages'] ?? '[]';
@@ -1024,6 +1037,53 @@ function checkInAndCollectBalance($data) {
 }
 
 /**
+ * Admin Action: Mark No-Show if guest does not arrive on set check-in time
+ */
+function markBookingNoShow($data) {
+    $pdo = getDB();
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
+    }
+
+    $bookingId = intval($data['id'] ?? $data['booking_id'] ?? 0);
+    if (!$bookingId) {
+        echo json_encode(['success' => false, 'message' => 'Booking ID is required']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM bookings WHERE id = ?");
+        $stmt->execute([$bookingId]);
+        $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$booking) {
+            echo json_encode(['success' => false, 'message' => 'Booking not found']);
+            exit;
+        }
+
+        $updateStmt = $pdo->prepare("
+            UPDATE bookings
+            SET booking_status = 'no_show',
+                status = 'Cancelled',
+                expires_at = NULL,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+        $updateStmt->execute([$bookingId]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Reservation marked as No-Show. Room inventory has been released.',
+            'booking_status' => 'no_show',
+            'ref_id' => $booking['ref_id']
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'DB error: ' . $e->getMessage()]);
+    }
+}
+
+/**
  * Cancel booking
  */
 function cancelBooking($data) {
@@ -1525,6 +1585,10 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
             case 'check_in':
             case 'check_in_collect_balance':
                 checkInAndCollectBalance($input);
+                break;
+            case 'no_show':
+            case 'mark_no_show':
+                markBookingNoShow($input);
                 break;
             case 'cancel':
                 cancelBooking($input);

@@ -249,11 +249,11 @@
                     <button id="btn-modal-checkin" onclick="checkInFromModal()" class="w-full bg-brand-blue hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs flex items-center justify-center gap-2">
                         <i class="fas fa-concierge-bell"></i> Mark Checked-In & Collect Balance
                     </button>
+                    <button id="btn-modal-noshow" onclick="markNoShowFromModal()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl shadow transition text-xs flex items-center justify-center gap-2">
+                        <i class="fas fa-user-slash"></i> Mark as No-Show & Release Room
+                    </button>
                     <button id="btn-modal-archive" onclick="archiveFromModal()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold py-2 rounded-xl border border-amber-200 transition text-xs flex items-center justify-center gap-2">
                         <i class="fas fa-box-archive"></i> Archive Reservation
-                    </button>
-                    <button id="btn-modal-restore" onclick="restoreFromModal()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold py-2 rounded-xl border border-emerald-200 transition text-xs flex items-center justify-center gap-2">
-                        <i class="fas fa-rotate-left"></i> Restore to Active Bookings
                     </button>
                 </div>
             </div>
@@ -472,6 +472,77 @@ function formatTime(timeStr) {
     return `${hour12}:${m} ${ampm}`;
 }
 
+/**
+ * Checks if the guest has not arrived by their scheduled check-in date and expected arrival time.
+ * Standard check-in time starts at 2:00 PM (14:00) onwards.
+ */
+function isPastCheckInTime(b) {
+    if (!b || !b.checkIn) return false;
+    
+    // If the booking is already completed (checked in), no-show, or cancelled/expired, do not show
+    const bs = b.bookingStatus;
+    if (bs === 'completed' || bs === 'no_show' || bs === 'cancelled_expired' || b.status === 'Cancelled') {
+        return false;
+    }
+
+    // Determine target check-in date (YYYY-MM-DD)
+    const checkInDate = (b.checkIn || '').substring(0, 10);
+    if (!checkInDate || !checkInDate.includes('-')) return false;
+
+    // Determine arrival time (HH:mm) - standard check-in begins at 14:00 (2:00 PM) onwards
+    let timeStr = '14:00';
+    if (b.expectedArrivalTime && b.expectedArrivalTime.trim()) {
+        timeStr = b.expectedArrivalTime.trim().substring(0, 5);
+    }
+    if (timeStr < '14:00') {
+        timeStr = '14:00';
+    }
+
+    try {
+        const parts = checkInDate.split('-');
+        const timeParts = timeStr.split(':');
+        const targetDateTime = new Date(
+            parseInt(parts[0], 10),
+            parseInt(parts[1], 10) - 1,
+            parseInt(parts[2], 10),
+            parseInt(timeParts[0], 10),
+            parseInt(timeParts[1], 10),
+            0
+        );
+        const now = new Date();
+        return now >= targetDateTime;
+    } catch (err) {
+        return false;
+    }
+}
+
+/**
+ * Checks if a booking's payment method is Pay at Hotel.
+ */
+function isPayAtHotel(b) {
+    if (!b) return false;
+    const pMethod = (b.paymentMethod || '').toLowerCase();
+    const raw = (b.paymentMethodRaw || '').toLowerCase();
+    const channel = (b.paymentChannel || '').toLowerCase();
+    const type = (b.paymentType || '').toLowerCase();
+
+    return channel === 'hotel' ||
+           raw === 'pay_at_hotel' ||
+           raw.includes('hotel') ||
+           pMethod.includes('hotel') ||
+           type === 'pay_at_hotel';
+}
+
+/**
+ * Checks if a booking is in pending status (e.g. pending verification or arrival)
+ */
+function isBookingPending(b) {
+    if (!b) return false;
+    const status = String(b.status || '').toLowerCase();
+    const bStatus = String(b.bookingStatus || b.booking_status || '').toLowerCase();
+    return bStatus === 'pending_verification' || bStatus === 'pending' || (status === 'pending' && bStatus !== 'pending_arrival');
+}
+
 function switchBookingsView(view) {
     if (currentBookingsView === view) return;
     currentBookingsView = (view === 'archived') ? 'archived' : 'active';
@@ -517,7 +588,7 @@ function renderTableHead() {
             <th class="p-3.5 align-middle whitespace-nowrap">Paid / Balance Due</th>
             <th class="p-3.5 align-middle whitespace-nowrap">Status</th>
             <th class="p-3.5 align-middle whitespace-nowrap">Archived Date</th>
-            <th class="p-3.5 align-middle text-right whitespace-nowrap">Actions</th>
+            <th class="p-3.5 align-middle text-center whitespace-nowrap">Actions</th>
         `;
     } else {
         headRow.innerHTML = `
@@ -763,6 +834,10 @@ function renderBookings(bookings) {
             statusBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-gray-100 text-gray-700">${b.status}</span>`;
         }
 
+        if (!isArchivedView && isPastCheckInTime(b) && isPayAtHotel(b)) {
+            timerNotice += `<span class="inline-flex items-center gap-1 text-[10px] text-rose-700 font-bold bg-rose-100/90 px-2 py-0.5 rounded border border-rose-200 mt-1"><i class="fas fa-clock text-rose-600"></i> Past Check-In Time</span>`;
+        }
+
         // Payment Method Badge — accurately displays the specific payment method used (GCash, Maya, Credit Card, Cash, etc.)
         let paymentBadge;
         const pMethod = b.paymentMethod || b.paymentMethodRaw || 'Standard';
@@ -824,18 +899,16 @@ function renderBookings(bookings) {
         if (isArchivedView) {
             actionButtons = `
                 ${(b.receiptUrl || b.gcashRefNo) ? `
-                    <button onclick="openReceiptModal(${b.id})" class="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-brand-blue rounded-lg font-bold text-xs transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Review Proof of Payment">
-                        <i class="fas fa-search-dollar"></i> Review
+                    <button onclick="openReceiptModal(${b.id})" class="w-8 h-8 text-brand-blue hover:bg-blue-50 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Review Proof of Payment">
+                        <i class="fas fa-search-dollar"></i>
                     </button>
                 ` : ''}
 
-                <button onclick="restoreBooking(${b.id}, '${b.ref_id}')" class="h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer" title="Restore to active reservations">
-                    <i class="fas fa-rotate-left"></i> Restore
-                </button>
-
-                <button onclick="printAdminInvoice('${b.id}')" class="w-8 h-8 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Print Invoice / Voucher">
-                    <i class="fas fa-print"></i>
-                </button>
+                ${!isBookingPending(b) ? `
+                    <button onclick="printAdminInvoice('${b.id}')" class="w-8 h-8 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Print Invoice / Voucher">
+                        <i class="fas fa-print"></i>
+                    </button>
+                ` : ''}
 
                 <button onclick="permanentlyDeleteBooking(${b.id}, '${b.ref_id}')" class="w-8 h-8 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Permanently delete from database">
                     <i class="fas fa-trash"></i>
@@ -870,9 +943,17 @@ function renderBookings(bookings) {
                     </button>
                 ` : ''}
 
-                <button onclick="printAdminInvoice('${b.id}')" class="w-8 h-8 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Print Invoice / Voucher">
-                    <i class="fas fa-print"></i>
-                </button>
+                ${(isPastCheckInTime(b) && isPayAtHotel(b)) ? `
+                    <button onclick="markNoShow(${b.id}, '${b.ref_id}')" class="h-8 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer border border-rose-200" title="Guest not arrived at scheduled check-in time — Mark as No-Show">
+                        <i class="fas fa-user-slash"></i> No-Show
+                    </button>
+                ` : ''}
+
+                ${!isBookingPending(b) ? `
+                    <button onclick="printAdminInvoice('${b.id}')" class="w-8 h-8 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Print Invoice / Voucher">
+                        <i class="fas fa-print"></i>
+                    </button>
+                ` : ''}
                 
                 <button onclick="archiveBooking(${b.id}, '${b.ref_id}')" class="w-8 h-8 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer" title="Archive reservation">
                     <i class="fas fa-box-archive"></i>
@@ -942,8 +1023,8 @@ function renderBookings(bookings) {
                 ` : ''}
 
                 <!-- Actions -->
-                <td class="p-3.5 align-middle text-right">
-                    <div class="flex items-center justify-end gap-1.5 flex-nowrap">
+                <td class="p-3.5 align-middle ${isArchivedView ? 'text-center' : 'text-right'}">
+                    <div class="flex items-center ${isArchivedView ? 'justify-center' : 'justify-end'} gap-1.5 flex-nowrap">
                         ${actionButtons}
                     </div>
                 </td>
@@ -1347,19 +1428,20 @@ function openReceiptModal(bookingId) {
     const approveBtn = document.getElementById('btn-modal-approve');
     const rejectBtn = document.getElementById('btn-modal-reject');
     const checkinBtn = document.getElementById('btn-modal-checkin');
+    const noshowBtn = document.getElementById('btn-modal-noshow');
     const archiveBtn = document.getElementById('btn-modal-archive');
-    const restoreBtn = document.getElementById('btn-modal-restore');
 
     // Reset visibility
     if (approveBtn) approveBtn.classList.add('hidden');
     if (rejectBtn) rejectBtn.classList.add('hidden');
     if (checkinBtn) checkinBtn.classList.add('hidden');
+    if (noshowBtn) noshowBtn.classList.add('hidden');
     if (archiveBtn) archiveBtn.classList.add('hidden');
-    if (restoreBtn) restoreBtn.classList.add('hidden');
 
-    if (booking.isArchived) {
-        if (restoreBtn) restoreBtn.classList.remove('hidden');
-    } else {
+    if (!booking.isArchived) {
+        if (isPastCheckInTime(booking) && isPayAtHotel(booking)) {
+            if (noshowBtn) noshowBtn.classList.remove('hidden');
+        }
         if (booking.bookingStatus === 'pending_verification') {
             if (approveBtn) approveBtn.classList.remove('hidden');
             if (rejectBtn) rejectBtn.classList.remove('hidden');
@@ -1411,14 +1493,6 @@ function archiveFromModal() {
     const ref = activeModalBooking.ref_id;
     closeReceiptModal();
     archiveBooking(bId, ref);
-}
-
-function restoreFromModal() {
-    if (!activeModalBooking) return;
-    const bId = activeModalBooking.id;
-    const ref = activeModalBooking.ref_id;
-    closeReceiptModal();
-    restoreBooking(bId, ref);
 }
 
 // Action Handlers
@@ -1509,6 +1583,40 @@ function checkInBooking(bookingId) {
             showToast('Error checking in booking', 'error');
         });
     });
+}
+
+function markNoShow(bookingId, refId) {
+    const label = refId ? `reservation <strong>${refId}</strong>` : 'this reservation';
+    showConfirm(
+        `Mark ${label} as <strong>No-Show</strong>?<br><span class="text-xs text-rose-600 mt-1 block">The guest has not arrived on their scheduled check-in time. This will cancel the reservation, forfeit payment/deposit, and release the room back to available inventory.</span>`,
+        () => {
+            fetch('../actions/bookings_action.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'mark_no_show', id: bookingId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showToast(data.message || 'Marked as No-Show. Room inventory released.', data.success ? 'success' : 'error');
+                if (data.success) {
+                    loadBookings();
+                    if (typeof loadBookingCounts === 'function') loadBookingCounts();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error marking booking as No-Show', 'error');
+            });
+        }
+    );
+}
+
+function markNoShowFromModal() {
+    if (!activeModalBooking) return;
+    const bId = activeModalBooking.id;
+    const rId = activeModalBooking.ref_id;
+    closeReceiptModal();
+    markNoShow(bId, rId);
 }
 
 function archiveBooking(bookingId, refId) {
@@ -1666,6 +1774,11 @@ function openSameTabPrintWindow() {
 function printAdminInvoice(bookingId) {
     const booking = allBookings.find(b => b.id == bookingId);
     if (!booking) return;
+
+    if (isBookingPending(booking)) {
+        showToast('Invoice and Voucher cannot be printed while reservation is pending approval.', 'error');
+        return;
+    }
 
     const dateNow = new Date().toLocaleDateString();
     const guestName = booking.guestName || 'Guest';

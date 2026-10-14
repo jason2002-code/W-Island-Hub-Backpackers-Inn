@@ -3,7 +3,7 @@
 
         <div class="flex gap-3">
             <div class="relative">
-                <input id="reviews-search" type="text" placeholder="Search reviews..." class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple w-64">
+                <input id="reviews-search" type="text" placeholder="Search reviews..." class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-purple w-64" oninput="handleReviewSearch()">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
             </div>
         </div>
@@ -20,12 +20,11 @@
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Comment</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Visible</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Reply</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="reviews-tbody" class="divide-y divide-gray-100">
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                             <i class="fas fa-spinner fa-spin text-xl mb-2 block mx-auto"></i>
                             Loading reviews...
                         </td>
@@ -37,55 +36,96 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', initReviewsManagement);
+let allReviews = [];
+
+function escapeReviewHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 function initReviewsManagement() {
     loadReviews();
-    document.getElementById('reviews-search').addEventListener('input', debounce(loadReviews, 300));
+    const searchInput = document.getElementById('reviews-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleReviewSearch);
+    }
 }
 
-let allReviews = [];
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReviewsManagement);
+} else {
+    initReviewsManagement();
+}
+
+function handleReviewSearch() {
+    const searchInput = document.getElementById('reviews-search');
+    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    if (allReviews && allReviews.length > 0) {
+        renderReviews(search);
+    } else {
+        loadReviews();
+    }
+}
 
 function loadReviews() {
-    const search = document.getElementById('reviews-search').value.toLowerCase();
+    const searchInput = document.getElementById('reviews-search');
+    const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const tbody = document.getElementById('reviews-tbody');
 
     fetch('../actions/admin_reviews_action.php?action=get_reviews')
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                allReviews = data.reviews;
+                allReviews = data.reviews || [];
                 renderReviews(search);
             } else {
-                tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-red-500">Failed to load reviews</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-red-500">Failed to load reviews</td></tr>';
             }
         })
         .catch(() => {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-red-500">Network error</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-red-500">Network error</td></tr>';
         });
 }
 
 function renderReviews(search = '') {
     const tbody = document.getElementById('reviews-tbody');
-    const filtered = allReviews.filter(r => 
-        r.user_name.toLowerCase().includes(search) || 
-        r.room_name.toLowerCase().includes(search) || 
-        r.comment.toLowerCase().includes(search)
-    );
+    const term = (search || '').toLowerCase().trim();
+
+    const filtered = allReviews.filter(r => {
+        if (!term) return true;
+        const userName = (r.user_name || 'Anonymous').toLowerCase();
+        const roomName = (r.room_name || 'N/A').toLowerCase();
+        const comment = (r.comment || '').toLowerCase();
+        const adminReply = (r.admin_reply || '').toLowerCase();
+        const rating = String(r.rating || '');
+        const date = (r.date || '').toLowerCase();
+
+        return userName.includes(term) || 
+               roomName.includes(term) || 
+               comment.includes(term) || 
+               adminReply.includes(term) || 
+               rating.includes(term) || 
+               date.includes(term);
+    });
 
     if (filtered.length) {
         tbody.innerHTML = filtered.map(review => `
             <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium text-gray-900">${review.user_name || 'Anonymous'}</td>
-                <td class="px-6 py-4 text-sm text-gray-700">${review.room_name || 'N/A'}</td>
+                <td class="px-6 py-4 font-medium text-gray-900">${escapeReviewHtml(review.user_name || 'Anonymous')}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">${escapeReviewHtml(review.room_name || 'N/A')}</td>
                 <td class="px-6 py-4">
                     <div class="flex gap-0.5">
                         ${[...Array(5)].map((_, i) => `<i class="fas fa-star text-yellow-400 ${i < Math.round(review.rating) ? '' : 'opacity-30'}"></i>`).join('')}
                     </div>
-                    <span class="text-sm text-gray-500">${review.rating}</span>
+                    <span class="text-sm text-gray-500">${escapeReviewHtml(review.rating)}</span>
                 </td>
                 <td class="px-6 py-4 max-w-md">
-                    <p class="text-sm text-gray-900">${review.comment}</p>
+                    <p class="text-sm text-gray-900">${escapeReviewHtml(review.comment || '')}</p>
                 </td>
                 <td class="px-6 py-4">
                     <button onclick="toggleVisible(${review.id}, ${review.visible})" class="visible-toggle p-2 rounded-lg ${review.visible ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'} transition">
@@ -95,23 +135,19 @@ function renderReviews(search = '') {
                 <td class="px-6 py-4">
                     ${review.admin_reply ? `
                         <div class="bg-blue-50 p-3 rounded-lg mb-2">
-                            <p class="text-sm text-blue-900">${review.admin_reply}</p>
+                            <p class="text-sm text-blue-900">${escapeReviewHtml(review.admin_reply)}</p>
                             <button onclick="showReply(${review.id})" class="text-xs text-blue-600 hover:underline">Edit</button>
                         </div>
                     ` : ''}
-                    <textarea id="reply-${review.id}" placeholder="Reply to this review..." class="reply-textarea w-full p-2 border rounded-lg resize-vertical hidden" rows="2">${review.admin_reply || ''}</textarea>
+                    <textarea id="reply-${review.id}" placeholder="Reply to this review..." class="reply-textarea w-full p-2 border rounded-lg resize-vertical hidden" rows="2">${escapeReviewHtml(review.admin_reply || '')}</textarea>
                     <button onclick="saveReply(${review.id})" id="save-reply-btn-${review.id}" class="save-reply-btn bg-brand-purple hover:bg-purple-700 text-white px-3 py-1 rounded text-sm hidden ml-2">Save</button>
                     <button onclick="showReply(${review.id})" id="show-reply-btn-${review.id}" class="show-reply-btn text-sm text-gray-600 hover:text-brand-purple ${review.admin_reply ? 'hidden' : ''}">Reply</button>
-                </td>
-                <td class="px-6 py-4 text-sm font-medium">
-                    <button onclick="deleteReview(${review.id})" class="text-red-600 hover:text-red-800">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
                 </td>
             </tr>
         `).join('');
     } else {
-        tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-gray-500">No reviews found</td></tr>';
+        const emptyMsg = term ? `No reviews matching "${escapeReviewHtml(term)}" found` : 'No reviews found';
+        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-gray-500">${emptyMsg}</td></tr>`;
     }
 }
 

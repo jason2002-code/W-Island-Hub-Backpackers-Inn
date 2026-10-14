@@ -54,7 +54,11 @@ async function init() {
                 .then(data => {
                     if (data.success && data.booking) {
                         const b = data.booking;
-                        const modalFn = (typeof window.showVoucherModal === 'function') ? window.showVoucherModal : window.showInvoiceModal;
+                        const bStatus = String(b.booking_status || b.status || '').toLowerCase();
+                        if (bStatus === 'pending_verification' || (bStatus === 'pending' && bStatus !== 'pending_arrival')) {
+                            return;
+                        }
+                        const modalFn = (typeof window.showInvoiceModal === 'function') ? window.showInvoiceModal : window.showVoucherModal;
                         if (typeof modalFn === 'function') {
                             modalFn(b.ref_id, {
                                 roomName: b.room_name || 'Room Stay',

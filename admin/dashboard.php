@@ -280,6 +280,9 @@ if (isset($_SESSION['admin_id']) && $_SESSION['admin_role'] === 'admin') {
                     loadAmenities();
                 }
             }
+            if (sectionId === 'manage-reviews' && typeof loadReviews === 'function') {
+                loadReviews();
+            }
         }
 
         // Load booking counts for sidebar badge

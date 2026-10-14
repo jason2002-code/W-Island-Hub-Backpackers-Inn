@@ -415,7 +415,7 @@ function handleSuccessReturn() {
             </div>
 
             <div class="text-xs text-gray-400 mb-4 flex items-center justify-center gap-2">
-                <i class="fas fa-spinner fa-spin text-brand-blue"></i> Redirecting you back to your booking voucher...
+                <i class="fas fa-spinner fa-spin text-brand-blue"></i> Redirecting you to your folio invoice...
             </div>
 
             <a href="<?php echo htmlspecialchars($finalRedirectUrl); ?>" class="w-full inline-block bg-brand-blue hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-xl transition shadow text-xs">

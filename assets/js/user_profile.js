@@ -27,6 +27,16 @@ function initGuestProfile() {
 }
 
 /**
+ * Checks if a booking is in pending status (e.g. pending verification or arrival)
+ */
+function isBookingPending(b) {
+    if (!b) return false;
+    const status = String(b.status || '').toLowerCase();
+    const bStatus = String(b.bookingStatus || b.booking_status || '').toLowerCase();
+    return bStatus === 'pending_verification' || bStatus === 'pending' || (status === 'pending' && bStatus !== 'pending_arrival');
+}
+
+/**
  * Dynamically computes and updates Profile Header Stats (Total Spent, Upcoming Stays, Total Reservations)
  */
 function updateProfileStats() {
@@ -370,12 +380,18 @@ function renderOverviewTab(selectedBookingId = null) {
                     </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="openVoucherModal(${upcoming.id})" class="bg-gradient-to-r from-brand-blue to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer">
-                        <i class="fas fa-ticket-alt"></i> View Voucher
-                    </button>
-                    <button onclick="openInvoiceModal(${upcoming.id})" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition flex items-center gap-2 cursor-pointer">
-                        <i class="fas fa-file-invoice-dollar text-emerald-600"></i> View Invoice
-                    </button>
+                    ${!isBookingPending(upcoming) ? `
+                        <button onclick="openVoucherModal(${upcoming.id})" class="bg-gradient-to-r from-brand-blue to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer">
+                            <i class="fas fa-ticket-alt"></i> View Voucher
+                        </button>
+                        <button onclick="openInvoiceModal(${upcoming.id})" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs hover:shadow transition flex items-center gap-2 cursor-pointer">
+                            <i class="fas fa-file-invoice-dollar text-emerald-600"></i> View Invoice
+                        </button>
+                    ` : `
+                        <span class="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl font-medium">
+                            <i class="fas fa-hourglass-half text-amber-600"></i> Voucher &amp; Invoice available once approved
+                        </span>
+                    `}
                     ${balance > 0 && bStatus !== 'cancelled_expired' && bStatus !== 'no_show' ? `
                         <button onclick="payBookingWithPayMongo(${upcoming.id}, '${upcoming.ref_id || upcoming.refId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer" title="Settle balance online">
                             <i class="fas fa-bolt"></i> Pay Balance (₱${balance.toFixed(2)})
@@ -710,12 +726,14 @@ function renderBookingsList() {
                                 <i class="fas fa-bolt text-emerald-600"></i> Pay Online
                             </button>
                         ` : ''}
-                        <button onclick="openVoucherModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="View Stay Pass & Voucher">
-                            <i class="fas fa-ticket-alt text-teal-600"></i> Voucher
-                        </button>
-                        <button onclick="openInvoiceModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="View Official Folio Invoice / Receipt">
-                            <i class="fas fa-file-invoice-dollar text-emerald-600"></i> Invoice
-                        </button>
+                        ${!isBookingPending(b) ? `
+                            <button onclick="openVoucherModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="View Stay Pass & Voucher">
+                                <i class="fas fa-ticket-alt text-teal-600"></i> Voucher
+                            </button>
+                            <button onclick="openInvoiceModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer" title="View Official Folio Invoice / Receipt">
+                                <i class="fas fa-file-invoice-dollar text-emerald-600"></i> Invoice
+                            </button>
+                        ` : ''}
                         ${isUpcomingActive ? `
                             <button onclick="openLateArrivalModal(${b.id})" class="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer" title="Report Delay / Late Check-in">
                                 <i class="fas fa-clock text-amber-600"></i> Report Delay
@@ -736,8 +754,14 @@ function renderBookingsList() {
  * Open Booking Voucher Modal
  */
 function openVoucherModal(bookingId) {
+    const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => String(b.id) === String(bookingId) || String(b.ref_id) === String(bookingId) || String(b.refId) === String(bookingId));
+    if (booking && isBookingPending(booking)) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Voucher is unavailable while reservation is pending verification.', 'info');
+        }
+        return;
+    }
     if (typeof window.showVoucherModal === 'function') {
-        const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => String(b.id) === String(bookingId) || String(b.ref_id) === String(bookingId) || String(b.refId) === String(bookingId));
         if (booking) {
             window.showVoucherModal(booking);
             return;
@@ -752,8 +776,14 @@ function openVoucherModal(bookingId) {
  * Open Official Folio Invoice / Receipt Modal
  */
 function openInvoiceModal(bookingId) {
+    const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => String(b.id) === String(bookingId) || String(b.ref_id) === String(bookingId) || String(b.refId) === String(bookingId));
+    if (booking && isBookingPending(booking)) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Invoice is unavailable while reservation is pending verification.', 'info');
+        }
+        return;
+    }
     if (typeof window.showInvoiceModal === 'function') {
-        const booking = ((window.appState && window.appState.bookings) ? window.appState.bookings : []).find(b => String(b.id) === String(bookingId) || String(b.ref_id) === String(bookingId) || String(b.refId) === String(bookingId));
         if (booking) {
             window.showInvoiceModal(booking);
             return;
@@ -1614,14 +1644,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof switchTab === 'function') {
             switchTab('bookings');
         }
-        // Auto-open voucher if booking found
-        if (refId && window.appState && window.appState.bookings) {
-            const b = window.appState.bookings.find(item => (item.ref_id === refId || item.refId === refId));
-            if (b) {
-                setTimeout(() => {
-                    openVoucherModal(b.id);
-                }, 400);
-            }
+        // Auto-open invoice modal if payment is complete
+        if (refId) {
+            setTimeout(() => {
+                const b = (window.appState && window.appState.bookings) ? window.appState.bookings.find(item => (item.ref_id === refId || item.refId === refId)) : null;
+                if (b) {
+                    if (!isBookingPending(b)) {
+                        openInvoiceModal(b.id);
+                    }
+                } else if (typeof openInvoiceModal === 'function') {
+                    openInvoiceModal(refId);
+                }
+            }, 400);
         }
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);

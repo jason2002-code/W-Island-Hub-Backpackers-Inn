@@ -313,26 +313,26 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-serif font-bold text-slate-900">Booking Cancellations, Safety & Emergency Procedures</h2>
-                        <p class="text-xs text-slate-500">Fair cancellation schedules, personal security, and 24/7 hotline directory</p>
+                        <p class="text-xs text-slate-500">Strict non-refundable cancellation policy, personal security, and 24/7 hotline directory</p>
                     </div>
                 </div>
 
-                <!-- Cancellation Tier Cards -->
+                <!-- Cancellation Policy Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                    <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 text-center">
-                        <span class="text-xs uppercase font-bold text-emerald-700 block mb-1">48+ Hours Prior</span>
-                        <strong class="text-2xl font-bold text-emerald-900 block mb-1">100% Free</strong>
-                        <p class="text-xs text-emerald-700">Full refund or free date modification</p>
-                    </div>
-                    <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 text-center">
-                        <span class="text-xs uppercase font-bold text-amber-700 block mb-1">24 – 48 Hours</span>
-                        <strong class="text-2xl font-bold text-amber-900 block mb-1">50% Charge</strong>
-                        <p class="text-xs text-amber-700">50% of the first night charge retained</p>
+                    <div class="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 text-center">
+                        <span class="text-xs uppercase font-bold text-rose-700 block mb-1">Cancellation Policy</span>
+                        <strong class="text-2xl font-bold text-rose-900 block mb-1">Non-Refundable</strong>
+                        <p class="text-xs text-rose-700">All bookings are strictly non-refundable once confirmed</p>
                     </div>
                     <div class="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 text-center">
-                        <span class="text-xs uppercase font-bold text-rose-700 block mb-1">&lt;24 Hours / No-Show</span>
-                        <strong class="text-2xl font-bold text-rose-900 block mb-1">Non-Refundable</strong>
-                        <p class="text-xs text-rose-700">Online payments & 20% deposits forfeited; room released</p>
+                        <span class="text-xs uppercase font-bold text-rose-700 block mb-1">Date Modifications</span>
+                        <strong class="text-2xl font-bold text-rose-900 block mb-1">No Free Changes</strong>
+                        <p class="text-xs text-rose-700">No refunds, cancellations, or free date modifications</p>
+                    </div>
+                    <div class="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 text-center">
+                        <span class="text-xs uppercase font-bold text-rose-700 block mb-1">No-Show & Forfeiture</span>
+                        <strong class="text-2xl font-bold text-rose-900 block mb-1">100% Forfeited</strong>
+                        <p class="text-xs text-rose-700">Online payments & deposits are forfeited; room released</p>
                     </div>
                 </div>
 

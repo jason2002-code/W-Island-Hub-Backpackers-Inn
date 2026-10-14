@@ -897,6 +897,58 @@ function initBookingForm() {
     if (!bookingForm || bookingForm.dataset.initialized) return;
     bookingForm.dataset.initialized = 'true';
 
+    // Live validation for arrival time (Check-in from 2:00 PM onwards; must not be in the past if today)
+    const arrivalTimeInput = document.getElementById('book-arrival-time');
+    if (arrivalTimeInput && !arrivalTimeInput.dataset.bound) {
+        arrivalTimeInput.dataset.bound = 'true';
+        const validateArrivalTime = function() {
+            const errorEl = document.getElementById('arrival-time-error');
+            const val = arrivalTimeInput.value;
+            if (!val) {
+                if (errorEl) errorEl.classList.add('hidden');
+                arrivalTimeInput.classList.remove('border-rose-400', 'bg-rose-50/50');
+                return;
+            }
+            // Check minimum 2:00 PM rule
+            if (val < '14:00') {
+                if (errorEl) {
+                    errorEl.innerHTML = '<i class="fas fa-exclamation-circle text-rose-500 flex-shrink-0"></i> <span>Check-in time is 2:00 PM onwards. Please select 2:00 PM (14:00) or later.</span>';
+                    errorEl.classList.remove('hidden');
+                }
+                arrivalTimeInput.classList.add('border-rose-400', 'bg-rose-50/50');
+                return;
+            }
+            // Check if check-in is TODAY — if so, arrival time must not have passed
+            const activeBooking = window.pendingBooking;
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (activeBooking && activeBooking.checkIn === todayStr) {
+                const now = new Date();
+                const nowHHMM = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                if (val <= nowHHMM) {
+                    const [h, m] = val.split(':');
+                    const hour12 = ((parseInt(h) % 12) || 12);
+                    const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
+                    const selectedLabel = `${hour12}:${m} ${ampm}`;
+                    const [nh, nm] = nowHHMM.split(':');
+                    const nowHour12 = ((parseInt(nh) % 12) || 12);
+                    const nowAmpm = parseInt(nh) >= 12 ? 'PM' : 'AM';
+                    const nowLabel = `${nowHour12}:${nm} ${nowAmpm}`;
+                    if (errorEl) {
+                        errorEl.innerHTML = `<i class="fas fa-exclamation-circle text-rose-500 flex-shrink-0"></i> <span>The arrival time <strong>${selectedLabel}</strong> has already passed (current time: <strong>${nowLabel}</strong>). Please select a future arrival time.</span>`;
+                        errorEl.classList.remove('hidden');
+                    }
+                    arrivalTimeInput.classList.add('border-rose-400', 'bg-rose-50/50');
+                    return;
+                }
+            }
+            // All good
+            if (errorEl) errorEl.classList.add('hidden');
+            arrivalTimeInput.classList.remove('border-rose-400', 'bg-rose-50/50');
+        };
+        arrivalTimeInput.addEventListener('input', validateArrivalTime);
+        arrivalTimeInput.addEventListener('change', validateArrivalTime);
+    }
+
     bookingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -1000,12 +1052,63 @@ function initBookingForm() {
 
         // Pathway-specific validations
         if (paymentMethod === 'pay_at_hotel') {
-            const arrivalTime = document.getElementById('book-arrival-time') ? document.getElementById('book-arrival-time').value : '';
+            const arrivalTimeInput = document.getElementById('book-arrival-time');
+            const arrivalTime = arrivalTimeInput ? arrivalTimeInput.value : '';
+            const errorEl = document.getElementById('arrival-time-error');
+
             if (!arrivalTime) {
+                if (errorEl) {
+                    errorEl.innerHTML = '<i class="fas fa-exclamation-circle text-rose-500 flex-shrink-0"></i> <span>Please select your expected arrival time.</span>';
+                    errorEl.classList.remove('hidden');
+                }
                 window.showToast("Please select your expected arrival time.", 'error');
-                document.getElementById('book-arrival-time').focus();
+                if (arrivalTimeInput) arrivalTimeInput.focus();
                 return;
             }
+
+            if (arrivalTime < '14:00') {
+                if (errorEl) {
+                    errorEl.innerHTML = '<i class="fas fa-exclamation-circle text-rose-500 flex-shrink-0"></i> <span>Check-in time is 2:00 PM onwards. Please select 2:00 PM (14:00) or later.</span>';
+                    errorEl.classList.remove('hidden');
+                }
+                if (arrivalTimeInput) {
+                    arrivalTimeInput.classList.add('border-rose-400', 'bg-rose-50/50');
+                    arrivalTimeInput.focus();
+                }
+                window.showToast("Check-in time is 2:00 PM onwards. Please select 2:00 PM (14:00) or later.", 'error');
+                return;
+            }
+
+            // If check-in is TODAY, the arrival time must not have already passed
+            const todayStr = new Date().toISOString().slice(0, 10);
+            if (activeBooking.checkIn === todayStr) {
+                const now = new Date();
+                const nowHHMM = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                if (arrivalTime <= nowHHMM) {
+                    const [h, m] = arrivalTime.split(':');
+                    const hour12 = ((parseInt(h) % 12) || 12);
+                    const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
+                    const selectedLabel = `${hour12}:${m} ${ampm}`;
+                    const [nh, nm] = nowHHMM.split(':');
+                    const nowHour12 = ((parseInt(nh) % 12) || 12);
+                    const nowAmpm = parseInt(nh) >= 12 ? 'PM' : 'AM';
+                    const nowLabel = `${nowHour12}:${nm} ${nowAmpm}`;
+                    if (errorEl) {
+                        errorEl.innerHTML = `<i class="fas fa-exclamation-circle text-rose-500 flex-shrink-0"></i> <span>The arrival time <strong>${selectedLabel}</strong> has already passed (current time: <strong>${nowLabel}</strong>). Please select a future arrival time.</span>`;
+                        errorEl.classList.remove('hidden');
+                    }
+                    if (arrivalTimeInput) {
+                        arrivalTimeInput.classList.add('border-rose-400', 'bg-rose-50/50');
+                        arrivalTimeInput.focus();
+                    }
+                    window.showToast(`Arrival time ${selectedLabel} has already passed. Please select a future time.`, 'error');
+                    return;
+                }
+            }
+
+            if (errorEl) errorEl.classList.add('hidden');
+            if (arrivalTimeInput) arrivalTimeInput.classList.remove('border-rose-400', 'bg-rose-50/50');
+
             formData.append('expected_arrival_time', arrivalTime);
         }
 
@@ -1037,11 +1140,18 @@ function initBookingForm() {
                     return;
                 }
 
-                window.showToast(`Reservation Created! Ref: ${data.ref_id}`, 'success');
-                if (typeof window.showVoucherModal === 'function') {
-                    window.showVoucherModal(data.ref_id, activeBooking, data);
-                } else if (typeof window.showInvoiceModal === 'function') {
-                    window.showInvoiceModal(data.ref_id, activeBooking, data);
+                const bStatus = String(data.booking_status || data.bookingStatus || data.status || '').toLowerCase();
+                const isPending = bStatus === 'pending_verification' || (bStatus === 'pending' && bStatus !== 'pending_arrival') || (!data.checkout_url && !data.is_confirmed && bStatus !== 'pending_arrival');
+
+                if (isPending) {
+                    window.showToast(`Reservation Created! Ref: ${data.ref_id}. Your booking is pending verification.`, 'success');
+                } else {
+                    window.showToast(`Reservation Created! Ref: ${data.ref_id}`, 'success');
+                    if (typeof window.showInvoiceModal === 'function') {
+                        window.showInvoiceModal(data.ref_id, activeBooking, data);
+                    } else if (typeof window.showVoucherModal === 'function') {
+                        window.showVoucherModal(data.ref_id, activeBooking, data);
+                    }
                 }
             } else {
                 window.showToast("Booking Failed: " + (data.message || 'Unknown error'), 'error');

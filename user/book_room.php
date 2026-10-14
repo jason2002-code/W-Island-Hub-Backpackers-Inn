@@ -417,11 +417,15 @@ if ($pdo) {
                                 <div id="arrival-time-section" class="hidden bg-purple-50/70 p-5 rounded-2xl border border-purple-200 space-y-3">
                                     <div class="flex items-center justify-between">
                                         <label class="block text-xs font-bold text-purple-900 uppercase tracking-wide">
-                                            <i class="fas fa-clock mr-1 text-purple-600"></i> Expected Arrival Time <span class="text-purple-600 font-normal">(Check-in from 2:00 PM)</span>
+                                            <i class="fas fa-clock mr-1 text-purple-600"></i> Expected Arrival Time <span class="text-purple-600 font-normal">(Check-in from 2:00 PM onwards)</span>
                                         </label>
                                         <span class="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">Arrival Details</span>
                                     </div>
-                                    <input type="time" id="book-arrival-time" class="w-full border border-purple-300 bg-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none font-semibold text-gray-800" value="14:00">
+                                    <input type="time" id="book-arrival-time" min="14:00" class="w-full border border-purple-300 bg-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none font-semibold text-gray-800 transition" value="14:00">
+                                    <div id="arrival-time-error" class="hidden text-xs text-rose-600 font-bold flex items-center gap-1.5 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                                        <i class="fas fa-exclamation-circle text-rose-500 flex-shrink-0"></i>
+                                        <span>Check-in time is 2:00 PM onwards. Please select 2:00 PM (14:00) or later.</span>
+                                    </div>
                                     <div class="p-3 bg-white/90 rounded-xl text-xs text-purple-900 border border-purple-100 flex items-start gap-2">
                                         <i class="fas fa-shield-alt text-purple-600 mt-0.5 flex-shrink-0"></i>
                                         <span id="arrival-time-notice"><strong>No-Show Security Policy:</strong> Your 20% online deposit secures your room hold if you do not arrive during check-in time. The remaining full payment of <strong>80% balance</strong> is paid upon arrival at the hotel front desk.</span>
