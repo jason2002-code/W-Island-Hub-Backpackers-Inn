@@ -445,8 +445,8 @@ function generateHotelReport($postData = null) {
         $averageDailyRate = $totalNightsSold > 0 ? ($confirmedRevenue / $totalNightsSold) : 0.00;
         $revPAR = $availableRoomNights > 0 ? round($confirmedRevenue / $availableRoomNights, 2) : 0.00;
         $averageBookingValue = $confirmedCount > 0 ? ($confirmedRevenue / $confirmedCount) : 0.00;
-        $taxAndFeesPortion = $confirmedCount * 15.00;
-        $netRoomRevenue = max(0, $confirmedRevenue - $taxAndFeesPortion);
+        $taxAndFeesPortion = 0.00; // Property is Non-VAT Registered; no arbitrary per-booking tax
+        $netRoomRevenue = $confirmedRevenue;
 
         // Sort Daily Trend
         ksort($dailySummary);
@@ -562,20 +562,6 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         $totalCancellations = intval($trans['total_cancellations'] ?? 0);
         $totalNoShows = intval($trans['total_no_shows'] ?? 0);
 
-        // Fallback: If date range has sparse records, pull active count to present non-empty operational stats
-        if ($totalRoomReservations === 0) {
-            $stmtAllConf = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status != 'Cancelled'");
-            $totalRoomReservations = intval($stmtAllConf->fetchColumn());
-        }
-        if ($totalCancellations === 0) {
-            $stmtAllCanc = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'Cancelled' OR booking_status = 'cancelled_expired'");
-            $totalCancellations = intval($stmtAllCanc->fetchColumn());
-        }
-        if ($totalNoShows === 0) {
-            $stmtAllNoShow = $pdo->query("SELECT COUNT(*) FROM bookings WHERE booking_status = 'no_show'");
-            $totalNoShows = intval($stmtAllNoShow->fetchColumn());
-        }
-
         // 2. Room Occupancy Statistics
         $stmtAllRooms = $pdo->query("SELECT * FROM rooms ORDER BY id ASC");
         $allRooms = $stmtAllRooms ? $stmtAllRooms->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -592,14 +578,14 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         ");
         $stmtInHouse->execute([':s' => $startDate, ':e' => $endDate]);
         $inHouseCount = intval($stmtInHouse->fetchColumn());
-        $roomsOccupied = min($totalRooms, max(1, $inHouseCount));
+        $roomsOccupied = min($totalRooms, $inHouseCount);
         $roomsAvailable = max(0, $totalRooms - $roomsOccupied - $maintenanceRooms);
         $occupancyRate = $totalRooms > 0 ? round(($roomsOccupied / $totalRooms) * 100) : 0;
 
         // 3. Revenue Statistics
         $stmtRev = $pdo->prepare("
             SELECT 
-                COALESCE(SUM(total_price), 0) as room_rev,
+                COALESCE(SUM(COALESCE(NULLIF(total_amount, 0), total_price)), 0) as room_rev,
                 COUNT(*) as conf_count
             FROM bookings
             WHERE status = 'Confirmed'
@@ -610,20 +596,14 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         $roomRevenue = floatval($revRow['room_rev'] ?? 0);
         $confCount = intval($revRow['conf_count'] ?? 0);
 
-        if ($roomRevenue <= 0) {
-            $stmtAllRev = $pdo->query("SELECT COALESCE(SUM(total_price), 0) as room_rev, COUNT(*) as conf_count FROM bookings WHERE status = 'Confirmed'");
-            $allRevRow = $stmtAllRev->fetch(PDO::FETCH_ASSOC);
-            $roomRevenue = floatval($allRevRow['room_rev'] ?? 0);
-            $confCount = intval($allRevRow['conf_count'] ?? 0);
-        }
-        $extraServicesRevenue = max(0.00, round($confCount * 250.00, 2)); // Add-ons, tours, transfers
-        $totalRevenue = $roomRevenue + $extraServicesRevenue;
+        $extraServicesRevenue = 0.00;
+        $totalRevenue = $roomRevenue;
 
         // 4. Payment Summary
-         $stmtPay = $pdo->prepare("
+        $stmtPay = $pdo->prepare("
             SELECT 
                 payment_method,
-                COALESCE(SUM(total_price), 0) as amt
+                COALESCE(SUM(COALESCE(NULLIF(total_amount, 0), total_price)), 0) as amt
             FROM bookings
             WHERE status = 'Confirmed'
               AND (DATE(created_at) BETWEEN :s AND :e OR COALESCE(check_in_date, check_in) BETWEEN :s AND :e)
@@ -631,11 +611,6 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         ");
         $stmtPay->execute([':s' => $startDate, ':e' => $endDate]);
         $payRows = $stmtPay->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($payRows) && $confCount > 0) {
-            $stmtAllPay = $pdo->query("SELECT payment_method, COALESCE(SUM(total_price), 0) as amt FROM bookings WHERE status = 'Confirmed' GROUP BY payment_method");
-            $payRows = $stmtAllPay ? $stmtAllPay->fetchAll(PDO::FETCH_ASSOC) : [];
-        }
 
         $cash = 0.00;
         $gcash = 0.00;
@@ -696,10 +671,10 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
         }
         $roomTypeAvailability = implode(' | ', $availPieces);
         if (empty($roomTypeAvailability)) {
-            $roomTypeAvailability = "Single: 5 | Double: 10 | Suite: 2 | Luxury: 3";
+            $roomTypeAvailability = 'None Available';
         }
 
-        // Ledger Rows for detailed drill-down
+        // Ledger Rows for detailed drill-down (filtered by selected date range)
         $stmtBookings = $pdo->prepare("
             SELECT b.*, r.name as room_name, r.type as room_type, r.price as room_base_price, r.capacity as room_capacity,
                    COALESCE(b.guest_name, u.name, 'Guest') as final_guest_name,
@@ -708,10 +683,12 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
             FROM bookings b
             LEFT JOIN rooms r ON b.room_id = r.id
             LEFT JOIN users u ON b.user_id = u.id
+            WHERE (DATE(b.created_at) BETWEEN :s AND :e)
+               OR (COALESCE(b.check_in_date, b.check_in) BETWEEN :s AND :e)
+               OR (COALESCE(b.check_out_date, b.check_out) BETWEEN :s AND :e)
             ORDER BY b.created_at DESC
-            LIMIT 50
         ");
-        $stmtBookings->execute();
+        $stmtBookings->execute([':s' => $startDate, ':e' => $endDate]);
         $rows = $stmtBookings->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as &$r) {
             $charges = floatval($r['total_amount'] > 0 ? $r['total_amount'] : ($r['total_price'] ?? 0));
@@ -828,7 +805,7 @@ function generateFrontDeskDailyReport($pdo, $startDate, $endDate, $rangeLabel, $
                 'total_deposits_collected' => $totalRevenue,
                 'gross_folio_value' => $totalRevenue,
                 'net_room_revenue' => $roomRevenue,
-                'taxes_and_fees' => $extraServicesRevenue,
+                'taxes_and_fees' => 0.00,
                 'available_room_nights' => $totalRooms,
                 'days_in_period' => 1
             ],
@@ -896,7 +873,14 @@ function generateDailyManifest($pdo, $targetDate, $rangeLabel) {
         $stmtTotalRooms = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status != 'Maintenance'");
         $activeRoomsCount = $stmtTotalRooms ? intval($stmtTotalRooms->fetchColumn()) : 1;
 
-        $totalOccupiedToday = count($inHouse) + count($arrivals);
+        $occupiedRoomIds = [];
+        foreach ($inHouse as $ih) {
+            if (!empty($ih['room_id'])) $occupiedRoomIds[$ih['room_id']] = true;
+        }
+        foreach ($arrivals as $ar) {
+            if (!empty($ar['room_id'])) $occupiedRoomIds[$ar['room_id']] = true;
+        }
+        $totalOccupiedToday = count($occupiedRoomIds);
         $estimatedOccupancyRate = $activeRoomsCount > 0 ? min(100, round(($totalOccupiedToday / $activeRoomsCount) * 100, 1)) : 0;
 
         echo json_encode([
@@ -943,9 +927,9 @@ function generateRoomPerformanceReport($pdo, $startDate, $endDate, $rangeLabel) 
             JOIN rooms r ON b.room_id = r.id
             WHERE b.status = 'Confirmed'
               AND (
-                  (b.check_in BETWEEN :start_date AND :end_date) OR
-                  (b.check_out BETWEEN :start_date AND :end_date) OR
-                  (b.check_in <= :start_date AND b.check_out >= :end_date)
+                  (COALESCE(b.check_in_date, b.check_in) BETWEEN :start_date AND :end_date) OR
+                  (COALESCE(b.check_out_date, b.check_out) BETWEEN :start_date AND :end_date) OR
+                  (COALESCE(b.check_in_date, b.check_in) <= :start_date AND COALESCE(b.check_out_date, b.check_out) >= :end_date)
               )
         ");
         $stmtBookings->execute([':start_date' => $startDate, ':end_date' => $endDate]);
@@ -970,7 +954,7 @@ function generateRoomPerformanceReport($pdo, $startDate, $endDate, $rangeLabel) 
             $nightsSold = 0;
 
             foreach ($roomBookings as $rb) {
-                $revenue += floatval($rb['total_price']);
+                $revenue += floatval($rb['total_amount'] > 0 ? $rb['total_amount'] : ($rb['total_price'] ?? 0));
                 
                 $chkIn = strtotime(date('Y-m-d', strtotime($rb['check_in_date'] ?: $rb['check_in'])));
                 $chkOut = strtotime(date('Y-m-d', strtotime($rb['check_out_date'] ?: $rb['check_out'])));

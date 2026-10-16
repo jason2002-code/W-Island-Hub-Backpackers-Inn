@@ -1,4 +1,4 @@
-﻿<!-- ================= Hotel Reports & Feedback Center ================= -->
+<!-- ================= Hotel Reports & Feedback Center ================= -->
 <div id="manage-reports" class="page-section">
     <div class="p-6">
         <!-- Header & Tab Navigation -->
@@ -37,13 +37,13 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Report Type</label>
                         <select id="hotel-report-type" onchange="handleReportTypeChange()" class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium">
-                            <option value="front_desk_daily" selected>Ã°Å¸â€œâ€¹ Hotel Front Desk Business Daily Report</option>
-                            <option value="daily_summary">Ã°Å¸â€œÅ  Daily Reservation Summary (Night Audit)</option>
-                            <option value="bookings">Ã°Å¸â€œâ€˜ Main Reservation Ledger</option>
-                            <option value="financial">Ã°Å¸â€™Â° Financial & Revenue Summary</option>
-                            <option value="daily_manifest">Ã°Å¸â€ºÅ½Ã¯Â¸Â Front Desk Daily Manifest</option>
-                            <option value="room_performance">Ã°Å¸â€ºÂÃ¯Â¸Â Room Occupancy & Performance</option>
-                            <option value="feedback">Ã¢Â­Â Guest Feedback & Satisfaction</option>
+                            <option value="front_desk_daily" selected>Hotel Front Desk Business Daily Report</option>
+                            <option value="daily_summary">Daily Reservation Summary (Night Audit)</option>
+                            <option value="bookings">Main Reservation Ledger</option>
+                            <option value="financial">Financial & Revenue Summary</option>
+                            <option value="daily_manifest">Front Desk Daily Manifest</option>
+                            <option value="room_performance">Room Occupancy & Performance</option>
+                            <option value="feedback">Guest Feedback & Satisfaction</option>
                         </select>
                     </div>
 
@@ -109,7 +109,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-gray-100 mt-4">
                     <div class="flex items-center gap-2 text-xs text-gray-500">
                         <i class="fas fa-info-circle text-blue-500"></i>
-                        <span id="active-filter-summary">Showing: This Month Ã¢â‚¬Â¢ All Statuses Ã¢â‚¬Â¢ All Types</span>
+                        <span id="active-filter-summary">Showing: This Month • All Statuses • All Types</span>
                     </div>
 
                     <div class="flex flex-wrap gap-2">
@@ -137,56 +137,35 @@
                 <!-- 1. DOCUMENT HEADER -->
                 <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 border-b border-gray-100 pb-6">
-                        <!-- Brand Identity & Verified Property Credentials -->
+                        <!-- Brand Identity -->
                         <div class="flex items-start sm:items-center gap-4">
-                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-purple via-indigo-600 to-brand-blue text-white flex flex-col items-center justify-center font-serif font-black shadow-md shrink-0 border border-white/20">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-purple via-indigo-600 to-brand-blue text-white flex flex-col items-center justify-center font-serif font-black shadow-md shrink-0 border border-white/20">
                                 <span class="text-2xl leading-none">W</span>
-                                <span class="text-[9px] font-sans font-bold tracking-widest uppercase text-teal-200">ISLAND</span>
+                                <span class="text-[8px] font-sans font-bold tracking-widest uppercase text-teal-200">ISLAND</span>
                             </div>
                             <div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h2 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">W Island Backpackers Inn</h2>
-                                    <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Official PMS</span>
-                                </div>
-                                <p class="text-xs font-semibold text-brand-purple mt-0.5">
-                                    Cozy Island Haven, Traveler Hub & Bohol Tour Gateway
-                                </p>
+                                <h2 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">W Island Backpackers Inn</h2>
                                 <p class="text-xs text-gray-600 mt-1 flex items-center gap-1.5 flex-wrap">
                                     <span class="font-medium"><i class="fas fa-map-marker-alt text-red-500 mr-1"></i>Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</span>
-                                    <span class="text-gray-400">Ã¢â‚¬Â¢</span>
-                                    <span class="text-gray-500 text-[11px]"><i class="fas fa-plane-departure text-brand-blue mr-1"></i>~4.5 km from Bohol-Panglao Int'l Airport (BIA)</span>
                                 </p>
                                 <div class="text-[11px] text-gray-500 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                                     <span><i class="fas fa-phone-alt text-brand-purple mr-1"></i>+63 945 688 2266</span>
-                                    <span>Ã¢â‚¬Â¢</span>
+                                    <span>•</span>
                                     <span><i class="fas fa-envelope text-brand-blue mr-1"></i>wislandhub2025@gmail.com</span>
-                                    <span>Ã¢â‚¬Â¢</span>
-                                    <span><i class="fas fa-globe text-emerald-600 mr-1"></i>www.wislandhub.com</span>
-                                </div>
-                                <div class="mt-2 flex flex-wrap gap-1.5 text-[10px] font-bold">
-                                    <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">DOT Region VII: DOT-R7-ACC-2024-0318</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">BIR TIN: 432-876-543-00000 (Non-VAT)</span>
-                                    <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">LGU Dauis Permit: BP-2024-DAUIS-0521</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Document Classification -->
+                        <!-- Report Information -->
                         <div class="flex flex-col items-start lg:items-end w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-gray-100">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-extrabold bg-red-50 text-red-700 border border-red-200 tracking-wider uppercase mb-1.5 shadow-2xs">
-                                <i class="fas fa-shield-alt"></i> Confidential // Official Property Audit Report
-                            </span>
                             <h3 class="text-base font-bold text-gray-800 text-left lg:text-right" id="report-doc-title">Daily Reservation Summary & Front Office Night Audit</h3>
                             <div class="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 mt-1 font-mono">
                                 <span><strong>Cycle:</strong> <span id="report-doc-cycle">Current Period</span></span>
-                                <span>Ã¢â‚¬Â¢</span>
+                                <span>•</span>
                                 <span><strong>Audit Ref:</strong> <span id="report-doc-ref" class="text-brand-purple font-bold">RES-AUDIT</span></span>
                             </div>
                             <div class="text-[11px] text-gray-400 mt-1 text-left lg:text-right">
                                 Generated: <span id="report-doc-timestamp" class="font-medium text-gray-600">-</span>
-                            </div>
-                            <div class="text-[10px] text-gray-400 mt-0.5 text-left lg:text-right">
-                                Certified: <span class="text-emerald-700 font-bold">Night Audit & Operations Verified</span>
                             </div>
                         </div>
                     </div>
@@ -194,32 +173,6 @@
                 <!-- ================= HOTEL FRONT DESK BUSINESS DAILY REPORT ================= -->
                 <div id="front-desk-daily-section" class="space-y-6">
                     <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-200">
-                        <!-- Official Document Header Strip -->
-                        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b-2 border-gray-800 pb-5 mb-6">
-                            <div class="flex items-center gap-3">
-                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-purple via-indigo-600 to-brand-blue text-white flex flex-col items-center justify-center font-serif font-black shadow-md shrink-0 border border-white/20">
-                                    <span class="text-2xl leading-none">W</span>
-                                    <span class="text-[8px] font-sans font-bold tracking-widest uppercase text-teal-200">ISLAND</span>
-                                </div>
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <h3 class="font-black text-gray-900 text-lg sm:text-xl tracking-tight">W Island Backpackers Inn</h3>
-                                        <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold px-2 py-0.5 rounded-full uppercase">Official Form</span>
-                                    </div>
-                                    <p class="text-xs font-semibold text-brand-purple">Cozy Island Haven, Traveler Hub & Bohol Tour Gateway</p>
-                                    <p class="text-xs text-gray-500">Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</p>
-                                    <div class="text-[10px] text-gray-400 font-medium mt-0.5">DOT Region VII: DOT-R7-ACC-2024-0318 Ã¢â‚¬Â¢ BIR TIN: 432-876-543-00000 Ã¢â‚¬Â¢ BP-2024-DAUIS-0521</div>
-                                </div>
-                            </div>
-                            <div class="text-center sm:text-right">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-extrabold bg-red-50 text-red-700 border border-red-200 uppercase tracking-wider mb-1 shadow-2xs">
-                                    <i class="fas fa-shield-alt"></i> Confidential Property Audit Report
-                                </span>
-                                <div class="text-xs font-mono text-gray-600">Audit Ref: <span id="fdb-report-ref" class="font-bold text-brand-purple">FDBR-READY</span></div>
-                                <div class="text-[11px] text-gray-400">Shift Hours: 08:00 AM - 08:00 PM PHT</div>
-                            </div>
-                        </div>
-
                         <!-- The Exact Spreadsheet Table Matching Uploaded Image -->
                         <div class="overflow-x-auto">
                             <table class="w-full border-collapse border border-gray-400 font-sans text-sm mx-auto max-w-4xl" id="fdb-spreadsheet-table">
@@ -234,13 +187,13 @@
                             </table>
                         </div>
 
-                        <!-- Official Sign-off and Multi-tier Signatures Footer -->
+                        <!-- Sign-off and Signatures Footer -->
                         <div class="mt-8 pt-6 border-t-2 border-gray-200">
-                            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
-                                <div class="text-xs text-gray-500 italic text-center sm:text-left max-w-2xl">
-                                    "I hereby certify that all room counts, movements, folios, and daily collections recorded in this Front Desk Business Daily Report are reconciled and verified against the physical property management registers of W Island Backpackers Inn."
-                                </div>
-                                <button type="button" onclick="openEditReportStaffModal()" class="shrink-0 bg-white hover:bg-purple-50 text-brand-purple border border-purple-200 hover:border-brand-purple text-xs font-bold px-3 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition">
+                            <div class="flex items-center justify-between mb-6">
+                                <h4 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                    <i class="fas fa-file-signature text-brand-purple"></i> Report Signatories
+                                </h4>
+                                <button type="button" onclick="openEditReportStaffModal()" class="shrink-0 bg-white hover:bg-purple-50 text-brand-purple border border-purple-200 hover:border-brand-purple text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 transition">
                                     <i class="fas fa-user-edit"></i> Edit Signatories
                                 </button>
                             </div>
@@ -249,12 +202,12 @@
                                 <!-- Prepared By -->
                                 <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col justify-between">
                                     <div>
-                                        <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Front Desk Shift Operations</div>
+                                        <div class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Front Desk</div>
                                         <div class="text-xs font-bold text-gray-800">PREPARED BY</div>
                                     </div>
                                     <div class="mt-8 pt-2 border-t border-gray-400">
-                                        <div class="font-semibold text-xs text-gray-900" id="fdb-sign-prepared">Fredsil Araneta Bolotaulo, Michelle Nee Baco Bolotaulo</div>
-                                        <div class="text-[10px] text-gray-500">Front Desk Receptionist / Shift Lead</div>
+                                        <div class="font-semibold text-xs text-gray-900" id="fdb-sign-prepared">Front Desk Receptionist</div>
+                                        <div class="text-[10px] text-gray-500">Front Desk / Shift Lead</div>
                                         <div class="text-[10px] text-gray-400 mt-1">Date: ____________________</div>
                                     </div>
                                 </div>
@@ -262,12 +215,12 @@
                                 <!-- Audited By -->
                                 <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col justify-between">
                                     <div>
-                                        <div class="text-[10px] font-bold uppercase tracking-wider text-brand-purple mb-1">Night Audit & Verification</div>
+                                        <div class="text-[10px] font-bold uppercase tracking-wider text-brand-purple mb-1">Night Audit</div>
                                         <div class="text-xs font-bold text-gray-800">AUDITED BY</div>
                                     </div>
                                     <div class="mt-8 pt-2 border-t border-gray-400">
-                                        <div class="font-semibold text-xs text-gray-900" id="fdb-sign-audited">Fredsil Araneta Bolotaulo</div>
-                                        <div class="text-[10px] text-gray-500">Night Auditor / Shift Supervisor</div>
+                                        <div class="font-semibold text-xs text-gray-900" id="fdb-sign-audited">Night Auditor</div>
+                                        <div class="text-[10px] text-gray-500">Shift Supervisor</div>
                                         <div class="text-[10px] text-gray-400 mt-1">Date: ____________________</div>
                                     </div>
                                 </div>
@@ -275,24 +228,14 @@
                                 <!-- Approved By -->
                                 <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 flex flex-col justify-between">
                                     <div>
-                                        <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-1">Executive Administration</div>
+                                        <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-1">Management</div>
                                         <div class="text-xs font-bold text-gray-800">APPROVED BY</div>
                                     </div>
                                     <div class="mt-8 pt-2 border-t border-gray-400">
-                                        <div class="font-semibold text-xs text-gray-900" id="fdb-sign-approved">Welfrida Araneta Bolotaulo</div>
-                                        <div class="text-[10px] text-gray-500">General Manager / Executive Lead</div>
+                                        <div class="font-semibold text-xs text-gray-900" id="fdb-sign-approved">General Manager</div>
+                                        <div class="text-[10px] text-gray-500">Executive Administration</div>
                                         <div class="text-[10px] text-gray-400 mt-1">Date: ____________________</div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- Legal Privacy and Node Stamp Line -->
-                            <div class="mt-6 pt-3 border-t border-dashed border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-gray-400">
-                                <div>
-                                    <strong>CONFIDENTIAL HOTEL BUSINESS RECORD</strong> Ã¢â‚¬Â¢ Protected under Republic Act No. 10173 (Philippine Data Privacy Act of 2012)
-                                </div>
-                                <div>
-                                    W Island Hub PMS v2.4.0 Ã¢â‚¬Â¢ DB: <code>w_island_hub</code> Ã¢â‚¬Â¢ Node: <code>PH-BOHOL-PANGLAO-01</code>
                                 </div>
                             </div>
                         </div>
@@ -371,24 +314,24 @@
                             <div class="space-y-2 mt-2">
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">Gross Room Sales:</span>
-                                    <span class="text-base font-extrabold text-emerald-700 font-mono" id="kpi-room-sales">Ã¢â€šÂ±0.00</span>
+                                    <span class="text-base font-extrabold text-emerald-700 font-mono" id="kpi-room-sales">₱0.00</span>
                                 </div>
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">Net Room Revenue:</span>
-                                    <span class="text-xs font-bold text-gray-800 font-mono" id="kpi-net-sales">Ã¢â€šÂ±0.00</span>
+                                    <span class="text-xs font-bold text-gray-800 font-mono" id="kpi-net-sales">₱0.00</span>
                                 </div>
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">Average Daily Rate (ADR):</span>
-                                    <span class="text-xs font-bold text-gray-800 font-mono" id="kpi-adr-val">Ã¢â€šÂ±0.00 / nt</span>
+                                    <span class="text-xs font-bold text-gray-800 font-mono" id="kpi-adr-val">₱0.00 / nt</span>
                                 </div>
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">RevPAR (Avail Room):</span>
-                                    <span class="text-xs font-bold text-brand-purple font-mono" id="kpi-revpar-val">Ã¢â€šÂ±0.00 / nt</span>
+                                    <span class="text-xs font-bold text-brand-purple font-mono" id="kpi-revpar-val">₱0.00 / nt</span>
                                 </div>
                             </div>
                         </div>
                         <div class="mt-3 pt-2.5 border-t border-gray-50 flex items-center justify-between text-[10.5px] text-gray-400">
-                            <span>Pipeline Folio: <strong id="kpi-gross-folio" class="text-gray-700">Ã¢â€šÂ±0.00</strong></span>
+                            
                         </div>
                     </div>
 
@@ -404,20 +347,20 @@
                             <div class="space-y-2 mt-2">
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">Deposits Collected:</span>
-                                    <span class="text-sm font-extrabold text-emerald-600 font-mono" id="kpi-deposits-collected">Ã¢â€šÂ±0.00</span>
+                                    <span class="text-sm font-extrabold text-emerald-600 font-mono" id="kpi-deposits-collected">₱0.00</span>
                                 </div>
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">Outstanding Balances:</span>
-                                    <span class="text-sm font-extrabold text-amber-600 font-mono" id="kpi-pending-balance">Ã¢â€šÂ±0.00</span>
+                                    <span class="text-sm font-extrabold text-amber-600 font-mono" id="kpi-pending-balance">₱0.00</span>
                                 </div>
                                 <div class="flex justify-between items-baseline">
                                     <span class="text-xs text-gray-500 font-medium">Panglao Tourism / Eco:</span>
-                                    <span class="text-xs font-bold text-gray-700 font-mono" id="kpi-taxes-portion">Ã¢â€šÂ±0.00</span>
+                                    <span class="text-xs font-bold text-gray-700 font-mono" id="kpi-taxes-portion">₱0.00</span>
                                 </div>
                             </div>
                         </div>
                         <div class="mt-3 pt-2.5 border-t border-gray-50 flex items-center justify-between text-[10.5px] text-gray-400">
-                            <span>Front Desk Status: <strong class="text-emerald-700 font-bold">Balanced Folio</strong></span>
+                            
                         </div>
                     </div>
                 </div>
@@ -487,59 +430,40 @@
                     <div class="border-b border-gray-100 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h4 class="font-bold text-gray-800 text-base flex items-center gap-2">
-                                <i class="fas fa-file-signature text-brand-purple"></i> Verification and Sign-Off Block
+                                <i class="fas fa-file-signature text-brand-purple"></i> Verification & Sign-Off
                             </h4>
-                            <p class="text-xs text-gray-400 mt-0.5">Dual-authorization accountability signatures & front-office handover remarks</p>
                         </div>
                         <button type="button" onclick="openEditReportStaffModal()" class="shrink-0 bg-white hover:bg-purple-50 text-brand-purple border border-purple-200 hover:border-brand-purple text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5 transition">
                             <i class="fas fa-user-edit"></i> Edit Signatories
                         </button>
                     </div>
 
-                    <!-- Special Remarks & Handover Notes -->
+                    <!-- Front-Desk Handover Notes -->
                     <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200/70">
-                        <div class="flex items-center justify-between mb-2">
-                            <h5 class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                                <i class="fas fa-clipboard-list text-amber-500"></i> Special Remarks & Front-Desk Handover Notes
-                            </h5>
-                            <span class="text-[11px] text-gray-400">Flight Delays Ã¢â‚¬Â¢ Maintenance Holds Ã¢â‚¬Â¢ Guest Arrangements</span>
+                        <div class="mb-2">
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fas fa-clipboard-list text-brand-purple"></i> Duty Handover Notes
+                            </label>
                         </div>
-                        <div id="special-remarks-container" class="space-y-2 mb-3">
-                            <p class="text-xs text-gray-400 italic">No special flight delays or maintenance holds recorded for this reporting cycle.</p>
-                        </div>
+                        <div id="special-remarks-container" class="space-y-2 mb-3"></div>
                         <div>
-                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Supervisor Duty Handover Remarks (Front-Desk Log):</label>
-                            <textarea id="handover-notes-input" rows="2" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" placeholder="Add duty handover notes, flight delay updates, maintenance check notes, or cash drawer handover details..."></textarea>
+                            <textarea id="handover-notes-input" rows="2" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" placeholder="Add duty handover notes or operational remarks..."></textarea>
                         </div>
                     </div>
 
-                    <!-- Accountability Signatures Grid -->
+                    <!-- Signatures Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
                         <!-- Signature 1: Front Office Supervisor -->
                         <div class="p-5 rounded-xl border border-gray-200 bg-gray-50/40 flex flex-col justify-between">
                             <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[11px] font-bold text-brand-purple uppercase tracking-wider">Accountability Seal 1</span>
-                                    <span class="text-[10px] bg-purple-50 text-brand-purple font-bold px-2 py-0.5 rounded">Front Office Shift</span>
-                                </div>
-                                <p class="text-[11px] text-gray-500 leading-relaxed italic mb-4">
-                                    "I hereby certify that all room inventory counts, arrivals/departures movements, key handovers, and front-desk cash collections for this operational cycle have been personally verified and matched against physical room status at W Island Backpackers Inn."
-                                </p>
-                                <div class="flex items-center gap-4 text-xs font-semibold text-gray-600 mb-4 bg-white p-2 rounded-lg border border-gray-200">
-                                    <span class="text-[10px] font-bold uppercase text-gray-400">Shift Verified:</span>
-                                    <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="rounded text-brand-purple"> AM Shift</label>
-                                    <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="rounded text-brand-purple"> PM Shift</label>
-                                    <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="rounded text-brand-purple"> Night Audit</label>
-                                </div>
+                                <div class="text-[10px] font-bold text-brand-purple uppercase tracking-wider mb-1">Front Office</div>
+                                <div class="text-xs font-bold text-gray-800">PREPARED BY</div>
                             </div>
-                            <div>
-                                <div class="border-b border-gray-300 mb-2 h-10 flex items-end">
-                                    <span class="text-xs text-gray-400 italic">Signature over Printed Name</span>
-                                </div>
+                            <div class="mt-8 pt-2 border-t border-gray-300">
                                 <div class="flex justify-between items-baseline text-xs">
                                     <div>
                                         <div class="font-bold text-gray-800" id="sign-supervisor-name">Front-Office Supervisor on Duty</div>
-                                        <div class="text-[11px] text-gray-400">Operations & Front Desk Lead Ã¢â‚¬Â¢ Dauis, Bohol</div>
+                                        <div class="text-[11px] text-gray-400">Operations & Front Desk Lead</div>
                                     </div>
                                     <div class="text-right text-[11px] text-gray-500">
                                         Date: _________________
@@ -551,28 +475,14 @@
                         <!-- Signature 2: Night Auditor / General Manager -->
                         <div class="p-5 rounded-xl border border-gray-200 bg-gray-50/40 flex flex-col justify-between">
                             <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider">Accountability Seal 2</span>
-                                    <span class="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Night Audit & Executive</span>
-                                </div>
-                                <p class="text-[11px] text-gray-500 leading-relaxed italic mb-4">
-                                    "I have audited and balanced the reservation folio ledger, end-of-day revenue transactions, payment channel reconciliations (GCash / Card / Cash), and confirmed outstanding balances for hotel administration."
-                                </p>
-                                <div class="flex items-center justify-between text-xs font-semibold text-gray-600 mb-4 bg-white p-2 rounded-lg border border-gray-200">
-                                    <span class="text-[10px] font-bold uppercase text-gray-400">Audit Status:</span>
-                                    <span class="text-[11px] font-bold text-emerald-700"><i class="fas fa-check-double mr-1"></i>Reconciled & Balanced</span>
-                                    <span class="text-[10px] text-gray-400">[ Official Seal Affixed ]</span>
-                                </div>
+                                <div class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Management</div>
+                                <div class="text-xs font-bold text-gray-800">AUDITED & APPROVED BY</div>
                             </div>
-                            <div>
-                                <div class="border-b border-gray-300 mb-2 h-10 flex items-end justify-between">
-                                    <span class="text-xs text-gray-400 italic">Signature over Printed Name</span>
-                                    <span class="text-[10px] font-mono text-gray-400 mb-1 border border-dashed border-gray-300 px-2 py-0.5 rounded">[ Official Property Stamp ]</span>
-                                </div>
+                            <div class="mt-8 pt-2 border-t border-gray-300">
                                 <div class="flex justify-between items-baseline text-xs">
                                     <div>
                                         <div class="font-bold text-gray-800" id="sign-manager-name">Night Auditor / General Manager</div>
-                                        <div class="text-[11px] text-gray-400">Executive Administration & Financial Sign-Off</div>
+                                        <div class="text-[11px] text-gray-400">Executive Administration</div>
                                     </div>
                                     <div class="text-right text-[11px] text-gray-500">
                                         Date: _________________
@@ -583,43 +493,18 @@
                     </div>
                 </div>
 
-                <!-- 5. SYSTEM & LEGAL FOOTER -->
-                <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 text-xs text-gray-500 space-y-3">
-                    <!-- Property Details Line -->
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-gray-200/80 pb-2.5 text-[11px]">
-                        <div class="font-bold text-gray-800 flex items-center gap-1.5">
-                            <i class="fas fa-hotel text-brand-purple"></i> W Island Backpackers Inn
-                            <span class="text-gray-400 font-normal">Ã¢â‚¬Â¢ Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines</span>
+                <!-- 5. SYSTEM FOOTER -->
+                <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 text-xs text-gray-500">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3 text-[11px]">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-hotel text-brand-purple"></i>
+                            <span class="font-bold text-gray-700">W Island Backpackers Inn</span>
+                            <span class="text-gray-400">• Dauis, Panglao Island, Bohol</span>
                         </div>
-                        <div class="text-gray-600 font-mono text-[10px]">
-                            DOT-R7-ACC-2024-0318 Ã¢â‚¬Â¢ TIN: 432-876-543-00000 Ã¢â‚¬Â¢ BP-2024-DAUIS-0521
-                        </div>
-                    </div>
-
-                    <!-- Legal & Data Privacy Notice -->
-                    <div class="text-[10.5px] text-gray-500 leading-relaxed bg-white p-3 rounded-xl border border-gray-200/60">
-                        <strong class="text-gray-700 uppercase tracking-wider text-[10px] block mb-0.5">
-                            <i class="fas fa-shield-alt text-red-500 mr-1"></i> Confidential Property Audit Record & Compliance Notice:
-                        </strong>
-                        This operational and financial audit report contains proprietary business and financial records of W Island Backpackers Inn. Unauthorized reproduction, modification, or dissemination is strictly prohibited under Republic Act No. 10173 (Philippine Data Privacy Act of 2012) and applicable hospitality governing laws.
-                    </div>
-
-                    <!-- System Node & Reference Line -->
-                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-1 text-[11px]">
-                        <div class="flex flex-wrap items-center gap-2 text-center sm:text-left">
-                            <strong class="text-gray-700 font-semibold flex items-center gap-1.5">
-                                <i class="fas fa-server text-brand-purple"></i> W Island Hub PMS v2.4.0 (Enterprise Reservation Engine)
-                            </strong>
-                            <span class="hidden sm:inline text-gray-300">Ã¢â‚¬Â¢</span>
-                            <span>DB: <code class="bg-white px-1.5 py-0.5 rounded border border-gray-200 text-gray-700 font-mono">w_island_hub</code></span>
-                            <span class="hidden sm:inline text-gray-300">Ã¢â‚¬Â¢</span>
-                            <span>Node: <code class="bg-white px-1.5 py-0.5 rounded border border-gray-200 text-gray-700 font-mono">PH-BOHOL-PANGLAO-01</code></span>
-                            <span class="hidden sm:inline text-gray-300">Ã¢â‚¬Â¢</span>
+                        <div class="flex items-center gap-3">
                             <span id="footer-db-ref" class="font-mono font-bold text-brand-purple">Ref: RES-AUDIT</span>
-                        </div>
-                        <div class="flex items-center gap-3 text-[11px] shrink-0">
-                            <span>Audit Timestamp: <strong id="footer-timestamp" class="text-gray-700">-</strong></span>
-                            <span class="bg-white px-2.5 py-1 rounded-lg border border-gray-200 font-bold text-gray-600 shadow-2xs">Page 1 of 1</span>
+                            <span class="text-gray-300">•</span>
+                            <span>Generated: <strong id="footer-timestamp" class="text-gray-700">-</strong></span>
                         </div>
                     </div>
                 </div>
@@ -657,7 +542,7 @@
             <button onclick="closeReplyModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
         </div>
         <input type="hidden" id="reply-report-id">
-        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Your Official Response</label>
+        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Reply Message</label>
         <textarea id="reply-message" rows="4" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-brand-purple outline-none mb-4 text-sm" placeholder="Type your response to the guest..."></textarea>
         <div class="flex gap-2">
             <button onclick="submitReply()" class="flex-1 bg-brand-purple text-white py-2.5 rounded-xl font-bold hover:bg-purple-700 transition shadow">Send Reply</button>
@@ -676,7 +561,7 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-bold text-gray-900 leading-snug">Edit Report Staff & Signatories</h3>
-                    <p class="text-xs text-gray-400">Configure Front Desk, Night Audit, and Executive staff for reports and exports</p>
+                    <p class="text-xs text-gray-400">Configure Front Desk, Night Audit, and Executive staff names</p>
                 </div>
             </div>
             <button onclick="closeEditReportStaffModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"><i class="fas fa-times"></i></button>
@@ -685,47 +570,35 @@
         <div class="space-y-4 mb-5">
             <!-- 1. Front Desk (Prepared By) -->
             <div>
-                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>Front Desk Staff (Prepared By)</span>
-                    <span class="text-[10px] text-gray-400 font-normal">Shift Operations</span>
-                </label>
+                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Front Desk (Prepared By)</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
                         <i class="fas fa-concierge-bell text-xs"></i>
                     </span>
-                    <input type="text" id="staff-input-frontdesk" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium" placeholder="e.g. Fredsil Araneta Bolotaulo, Michelle Nee Baco Bolotaulo">
+                    <input type="text" id="staff-input-frontdesk" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium" placeholder="e.g. Front Desk Staff">
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">Appears under "PREPARED BY" and Section 5 "Front Desk".</p>
             </div>
 
             <!-- 2. Night Audit (Audited By) -->
             <div>
-                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>Night Audit Staff (Audited By)</span>
-                    <span class="text-[10px] text-gray-400 font-normal">Night Audit & Verification</span>
-                </label>
+                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Night Audit (Audited By)</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
                         <i class="fas fa-moon text-xs"></i>
                     </span>
-                    <input type="text" id="staff-input-nightaudit" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium" placeholder="e.g. Fredsil Araneta Bolotaulo">
+                    <input type="text" id="staff-input-nightaudit" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium" placeholder="e.g. Night Auditor">
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">Appears under "AUDITED BY" and Section 5 "Night Audit".</p>
             </div>
 
             <!-- 3. Executive (Approved By) -->
             <div>
-                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-                    <span>Executive / Management (Approved By)</span>
-                    <span class="text-[10px] text-gray-400 font-normal">Executive Administration</span>
-                </label>
+                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Executive / Management (Approved By)</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
                         <i class="fas fa-award text-xs"></i>
                     </span>
-                    <input type="text" id="staff-input-executive" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium" placeholder="e.g. Welfrida Araneta Bolotaulo">
+                    <input type="text" id="staff-input-executive" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple font-medium" placeholder="e.g. General Manager">
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1">Appears under "APPROVED BY" and Section 5 "Executive".</p>
             </div>
         </div>
 
@@ -863,7 +736,7 @@ function applyStaffToCurrentReport(staff) {
 // Format Philippine Peso
 function formatCurrency(amount) {
     const num = parseFloat(amount) || 0;
-    return 'Ã¢â€šÂ±' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '₱' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Switch between Reports and Feedback tabs
@@ -1154,7 +1027,7 @@ function renderReportView(data) {
         document.getElementById('report-ref-badge').innerText = `Ref: ${data.report_ref || 'RPT-READY'}`;
     }
     if (document.getElementById('active-filter-summary')) {
-        document.getElementById('active-filter-summary').innerText = `Scope: ${data.date_range_label || 'Current Period'} Ã¢â‚¬Â¢ Ref: ${data.report_ref || 'RPT-OFFICIAL'}`;
+        document.getElementById('active-filter-summary').innerText = `Scope: ${data.date_range_label || 'Current Period'} • Ref: ${data.report_ref || 'RPT-OFFICIAL'}`;
     }
 
     // Always update Section 1 (Header) & Section 5 (Footer) metadata
@@ -1446,7 +1319,7 @@ function renderFinancialOrBookingsView(data) {
         tableTitle.innerHTML = '<i class="fas fa-book-open text-brand-purple mr-1.5"></i> ' + (data.report_type === 'financial' ? 'Financial & Revenue Ledger' : 'Main Reservation Ledger');
     }
     if (document.getElementById('report-table-subtitle')) {
-        document.getElementById('report-table-subtitle').innerText = `Period: ${data.date_range_label} Ã¢â‚¬Â¢ Showing ${data.rows ? data.rows.length : 0} reservation records`;
+        document.getElementById('report-table-subtitle').innerText = `Period: ${data.date_range_label} • Showing ${data.rows ? data.rows.length : 0} reservation records`;
     }
     if (document.getElementById('record-count-badge')) {
         document.getElementById('record-count-badge').innerText = `${data.rows ? data.rows.length : 0} Records`;
@@ -1491,7 +1364,7 @@ function renderFinancialOrBookingsView(data) {
                     </td>
                     <td class="p-3.5 align-top">
                         <div class="font-bold text-gray-900">${b.final_guest_name}</div>
-                        <div class="text-[11px] text-gray-500">${b.guest_email || 'N/A'} Ã¢â‚¬Â¢ ${b.guest_phone || 'N/A'}</div>
+                        <div class="text-[11px] text-gray-500">${b.guest_email || 'N/A'} • ${b.guest_phone || 'N/A'}</div>
                         <div class="text-[11px] text-brand-purple font-semibold mt-0.5 flex items-center gap-1">
                             <i class="fas fa-user-friends text-[10px]"></i> ${occupants}
                         </div>
@@ -1513,7 +1386,7 @@ function renderFinancialOrBookingsView(data) {
                         <div class="text-[10px] ${paid > 0 ? 'text-emerald-600 font-bold' : 'text-gray-400'}">${b.deposit_status || (paid > 0 ? `Deposit Paid: ${formatCurrency(paid)}` : 'Unpaid')}</div>
                     </td>
                     <td class="p-3.5 pr-5 align-top text-right">
-                        <div class="font-bold font-mono text-sm ${balance > 0 ? 'text-amber-600' : 'text-emerald-600'}">${balance > 0 ? formatCurrency(balance) : 'Ã¢â€šÂ±0.00 Cleared'}</div>
+                        <div class="font-bold font-mono text-sm ${balance > 0 ? 'text-amber-600' : 'text-emerald-600'}">${balance > 0 ? formatCurrency(balance) : '₱0.00 Cleared'}</div>
                         <div class="text-[10px] ${balance > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}">${balance > 0 ? 'Outstanding Due' : 'Folio Settled'}</div>
                     </td>
                 </tr>
@@ -1557,7 +1430,7 @@ function renderFinancialOrBookingsView(data) {
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${catColor} shrink-0">${r.category}</span>
                         <div class="flex-1">
                             <span class="font-bold text-gray-800 font-mono">${r.ref_id}</span>
-                            <span class="text-gray-400 font-normal">(${r.room} Ã¢â‚¬Â¢ ${r.guest}):</span>
+                            <span class="text-gray-400 font-normal">(${r.room} • ${r.guest}):</span>
                             <span class="text-gray-700 ml-1">${r.note}</span>
                         </div>
                     </div>
@@ -1587,7 +1460,7 @@ function renderManifestView(data) {
     if (document.getElementById('kpi-maintenance-inventory')) document.getElementById('kpi-maintenance-inventory').innerText = 0;
 
     document.getElementById('report-table-title').innerText = `Daily Front Desk Operations Manifest`;
-    document.getElementById('report-table-subtitle').innerText = `Date: ${data.target_date_formatted || data.target_date} Ã¢â‚¬Â¢ Operational Room & Guest Schedule`;
+    document.getElementById('report-table-subtitle').innerText = `Date: ${data.target_date_formatted || data.target_date} • Operational Room & Guest Schedule`;
 
     const arrivals = data.arrivals || [];
     const departures = data.departures || [];
@@ -1754,7 +1627,7 @@ function renderFeedbackReportView(data) {
                 </td>
                 <td class="p-3.5 font-medium text-gray-700">${r.room_name || 'General'}</td>
                 <td class="p-3.5">
-                    <span class="text-yellow-500 font-bold">${'Ã¢Ëœâ€¦'.repeat(Math.round(r.rating || 5))}</span>
+                    <span class="text-yellow-500 font-bold">${'★'.repeat(Math.round(r.rating || 5))}</span>
                     <span class="text-xs text-gray-400 font-semibold ml-1">(${r.rating})</span>
                 </td>
                 <td class="p-3.5 text-sm text-gray-700 max-w-xs">${r.comment || 'No comment provided'}</td>
@@ -1832,7 +1705,7 @@ function printHotelReport(customWindow = null) {
                     @page { 
                         size: portrait; 
                         margin: 10mm 12mm; 
-                        @bottom-left { content: "W Island Backpackers Inn Ã¢â‚¬Â¢ Front Desk Daily Business Report"; font-size: 8px; color: #64748b; }
+                        @bottom-left { content: "W Island Backpackers Inn • Front Desk Daily Business Report"; font-size: 8px; color: #64748b; }
                         @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8px; font-weight: bold; color: #64748b; }
                     }
                     body {
@@ -2025,11 +1898,11 @@ function printHotelReport(customWindow = null) {
                         <div>
                             <div class="hotel-title">${hotelName}</div>
                             <div class="hotel-address">${hotelAddress}</div>
-                            <div class="hotel-credentials">DOT Region VII: DOT-R7-ACC-2024-0318 &bull; BIR TIN: 432-876-543-00000 (Non-VAT) &bull; BP-2024-DAUIS-0521</div>
+                            
                         </div>
                     </div>
                     <div class="report-meta">
-                        <div class="confidential-tag">CONFIDENTIAL // DAILY BUSINESS REPORT</div>
+                        
                         <div><strong>Ref:</strong> ${reportRef}</div>
                         <div><strong>Generated:</strong> ${generatedDate}</div>
                     </div>
@@ -2165,8 +2038,8 @@ function printHotelReport(customWindow = null) {
 
                 <!-- Legal Privacy and Node Info -->
                 <div class="legal-footer">
-                    <div><strong>CONFIDENTIAL HOTEL BUSINESS RECORD</strong> &bull; Protected under RA 10173 (Philippine Data Privacy Act)</div>
-                    <div>PMS v2.4.0 &bull; DB: w_island_hub &bull; Node: PH-BOHOL-PANGLAO-01 &bull; <strong>Ref:</strong> ${reportRef}</div>
+                    <div>W Island Backpackers Inn &bull; Dauis, Panglao Island, Bohol</div>
+                    <div><strong>Ref:</strong> ${reportRef}</div>
                 </div>
 
                 <script>
@@ -2212,7 +2085,7 @@ function printHotelReport(customWindow = null) {
                     <span style="font-size: 9.5px; color: #64748b; font-weight: 600;">(${ops.occupied_rooms || 0}/${ops.rentable_rooms || 0} Rooms)</span>
                 </div>
                 <div style="font-size: 8.5px; color: #64748b; margin-top: 2px; border-top: 1px solid #e2e8f0; padding-top: 2px;">
-                    Total: <strong>${ops.total_inventory || 0}</strong> Ã¢â‚¬Â¢ Rentable: <strong>${ops.rentable_rooms || 0}</strong> Ã¢â‚¬Â¢ Maint: <strong>${ops.maintenance_rooms || 0}</strong>
+                    Total: <strong>${ops.total_inventory || 0}</strong> • Rentable: <strong>${ops.rentable_rooms || 0}</strong> • Maint: <strong>${ops.maintenance_rooms || 0}</strong>
                 </div>
             </div>
 
@@ -2414,7 +2287,7 @@ function printHotelReport(customWindow = null) {
                 <tr style="page-break-inside: avoid;">
                     <td style="padding: 5px; border: 1px solid #cbd5e1; font-weight: bold;">${r.user_name || 'Guest'}<br><span style="font-size: 8.5px; color: #64748b; font-weight: normal;">${r.user_email || ''}</span></td>
                     <td style="padding: 5px; border: 1px solid #cbd5e1;">${r.room_name || 'General'}</td>
-                    <td style="padding: 5px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #d97706;">${'Ã¢Ëœâ€¦'.repeat(Math.round(r.rating || 5))} (${r.rating})</td>
+                    <td style="padding: 5px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #d97706;">${'★'.repeat(Math.round(r.rating || 5))} (${r.rating})</td>
                     <td style="padding: 5px; border: 1px solid #cbd5e1; font-size: 9px;">${r.comment || 'No comment provided'}</td>
                     <td style="padding: 5px; border: 1px solid #cbd5e1; font-size: 8.5px; color: #334155;">${r.admin_reply || '<span style="color:#94a3b8; font-style:italic;">No reply yet</span>'}</td>
                     <td style="padding: 5px; border: 1px solid #cbd5e1; font-size: 8.5px; color: #64748b;">${r.created_at ? r.created_at.substring(0, 10) : '-'}</td>
@@ -2472,7 +2345,7 @@ function printHotelReport(customWindow = null) {
                         </td>
                         <td style="padding: 5px 6px; border: 1px solid #cbd5e1;">
                             <strong style="color: #0f172a; font-size: 10px;">${b.final_guest_name}</strong><br>
-                            <span style="font-size: 8.5px; color: #64748b;">${b.guest_email || 'N/A'} Ã¢â‚¬Â¢ ${b.guest_phone || 'N/A'}</span><br>
+                            <span style="font-size: 8.5px; color: #64748b;">${b.guest_email || 'N/A'} • ${b.guest_phone || 'N/A'}</span><br>
                             <span style="font-size: 8px; color: #4338ca; font-weight: bold;">${occupants}</span>
                         </td>
                         <td style="padding: 5px 6px; border: 1px solid #cbd5e1;">
@@ -2496,7 +2369,7 @@ function printHotelReport(customWindow = null) {
                             ${paid > 0 ? formatCurrency(paid) : 'Unpaid'}
                         </td>
                         <td style="padding: 5px 6px; border: 1px solid #cbd5e1; text-align: right; font-family: monospace; font-weight: bold; font-size: 9.5px; ${balance > 0 ? 'color: #b45309;' : 'color: #15803d;'}">
-                            ${balance > 0 ? formatCurrency(balance) : 'Ã¢â€šÂ±0.00'}
+                            ${balance > 0 ? formatCurrency(balance) : '₱0.00'}
                         </td>
                     </tr>
                 `;
@@ -2571,7 +2444,7 @@ function printHotelReport(customWindow = null) {
                 @page { 
                     size: landscape; 
                     margin: 7mm 8mm; 
-                    @bottom-left { content: "W Island Backpackers Inn Ã¢â‚¬Â¢ Dauis, Panglao Island, Bohol"; font-size: 8px; color: #64748b; }
+                    @bottom-left { content: "W Island Backpackers Inn • Dauis, Panglao Island, Bohol"; font-size: 8px; color: #64748b; }
                     @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8px; font-weight: bold; color: #64748b; }
                 }
                 body {
@@ -2725,7 +2598,7 @@ function printHotelReport(customWindow = null) {
         <body>
             <div class="no-print">
                 <div>
-                    <strong>W Island Backpackers Inn &bull; Official Property Management System</strong> &bull; Print Preview
+                    <strong>W Island Backpackers Inn</strong> &bull; Print Preview
                 </div>
                 <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
             </div>
@@ -2736,15 +2609,12 @@ function printHotelReport(customWindow = null) {
                     <div class="brand-emblem">W</div>
                     <div>
                         <div class="hotel-title">${hotelName}</div>
-                        <div class="hotel-tagline">Cozy Island Haven, Traveler Hub & Bohol Tour Gateway</div>
-                        <div class="hotel-address">${hotelAddress} &bull; Near Airport (BIA) & Hinagdanan Cave</div>
-                        <div class="hotel-credentials">DOT Region VII: DOT-R7-ACC-2024-0318 &bull; BIR TIN: 432-876-543-00000 (Non-VAT) &bull; BP-2024-DAUIS-0521</div>
+                        <div class="hotel-address">${hotelAddress}</div>
                     </div>
                 </div>
                 <div class="report-meta">
-                    <div class="classification-tag">CONFIDENTIAL // OFFICIAL PROPERTY AUDIT</div>
                     <div><strong>Audit Ref #:</strong> <span style="font-family: monospace;">${reportRef}</span></div>
-                    <div><strong>Fiscal Window:</strong> ${datePeriod}</div>
+                    <div><strong>Period:</strong> ${datePeriod}</div>
                     <div><strong>Generated:</strong> ${generatedDate}</div>
                 </div>
             </div>
@@ -2752,7 +2622,6 @@ function printHotelReport(customWindow = null) {
             <!-- Title Strip -->
             <div class="report-title-strip">
                 <span>${reportTitle}</span>
-                <span style="font-size: 10px; color: #475569; font-weight: normal;">Hotel Location: <strong>Dauis, Panglao Island, Bohol</strong></span>
             </div>
 
             <!-- 2. OPERATIONAL & REVENUE SNAPSHOT -->
@@ -2764,55 +2633,42 @@ function printHotelReport(customWindow = null) {
             <!-- 4. VERIFICATION AND SIGN-OFF BLOCK -->
             <div class="sign-off-container">
                 <div style="font-size: 10px; font-weight: bold; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    4. Verification and Sign-Off Block &bull; Special Remarks & Accountability Signatures
+                    Verification & Sign-Off
                 </div>
 
-                <!-- Special Remarks -->
+                <!-- Duty Handover Remarks -->
                 <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 8px; margin-bottom: 8px;">
-                    <div style="font-size: 9px; font-weight: bold; text-transform: uppercase; color: #64748b; margin-bottom: 3px;">
-                        Special Remarks & Flight / Tour Arrangements:
-                    </div>
-                    ${remarksListHtml}
-                    <div style="margin-top: 4px; font-size: 9px; color: #1e293b; background: #f8fafc; padding: 4px 6px; border-left: 3px solid #4338ca; border-radius: 2px;">
-                        <strong>Front-Desk Handover Log:</strong> ${handoverText}
+                    <div style="font-size: 9px; color: #1e293b; background: #f8fafc; padding: 4px 6px; border-left: 3px solid #4338ca; border-radius: 2px;">
+                        <strong>Front-Desk Handover Notes:</strong> ${handoverText}
                     </div>
                 </div>
 
-                <!-- Accountability Signatures -->
+                <!-- Signatures -->
                 <div class="sign-off-grid">
                     <div>
-                        <div style="font-size: 9px; color: #475569; font-style: italic; margin-bottom: 20px; min-height: 24px;">
-                            "I hereby certify that all room inventory counts, arrivals/departures movements, key handovers, and front-desk cash collections for this operational cycle have been personally verified and matched against physical room status at W Island Backpackers Inn."
-                        </div>
+                        <div style="font-size: 9px; font-weight: bold; color: #4338ca; text-transform: uppercase; margin-bottom: 24px;">Prepared By (Front Desk)</div>
                         <div class="signature-box">
                             <strong>${printStaff.frontDesk}</strong> &bull; Operations & Front Desk Lead<br>
-                            <span>Printed Name & Signature &bull; Shift: [  ] AM [  ] PM [  ] Night &bull; Date: _________________</span>
+                            <span>Printed Name & Signature &bull; Date: _________________</span>
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 9px; color: #475569; font-style: italic; margin-bottom: 20px; min-height: 24px;">
-                            "I have audited and balanced the reservation folio ledger, end-of-day revenue transactions, payment channel reconciliations (GCash / Card / Cash), and confirmed outstanding balances for hotel administration."
-                        </div>
-                        <div class="signature-box" style="display: flex; justify-content: space-between; align-items: flex-end;">
-                            <div>
-                                <strong>${printStaff.executive}</strong> &bull; Executive Sign-Off (Night Audit: ${printStaff.nightAudit})<br>
-                                <span>Printed Name & Signature &bull; Date: _________________</span>
-                            </div>
-                            <div style="border: 1px dashed #94a3b8; padding: 2px 6px; font-size: 8px; color: #64748b; font-family: monospace;">
-                                [ OFFICIAL PROPERTY STAMP ]
-                            </div>
+                        <div style="font-size: 9px; font-weight: bold; color: #1e293b; text-transform: uppercase; margin-bottom: 24px;">Audited & Approved By (Management)</div>
+                        <div class="signature-box">
+                            <strong>${printStaff.executive}</strong> &bull; Executive Sign-Off (Night Audit: ${printStaff.nightAudit})<br>
+                            <span>Printed Name & Signature &bull; Date: _________________</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 5. SYSTEM & LEGAL FOOTER -->
+            <!-- 5. SYSTEM FOOTER -->
             <div class="system-footer">
                 <div>
-                    <strong>W Island Hub PMS v2.4.0 (Enterprise Reservation Engine)</strong> &bull; DB: <code>w_island_hub</code> &bull; Node: <code>PH-BOHOL-PANGLAO-01</code> &bull; Ref: ${reportRef}
+                    <strong>W Island Backpackers Inn</strong> &bull; Dauis, Panglao Island, Bohol &bull; Ref: ${reportRef}
                 </div>
                 <div>
-                    CONFIDENTIAL &bull; Official Hotel Audit Record under RA 10173 (Data Privacy Act) &bull; Generated: ${generatedDate}
+                    Generated: ${generatedDate}
                 </div>
             </div>
 
@@ -2851,7 +2707,7 @@ function exportReportCSV() {
         const sec = fdb.sections || {};
         csvRows.push([`"W Island Backpackers Inn - Front Desk Business Daily Report"`]);
         csvRows.push([`"Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines"`]);
-        csvRows.push([`"DOT Region VII: DOT-R7-ACC-2024-0318 | BIR TIN: 432-876-543-00000 | BP-2024-DAUIS-0521"`]);
+        
         csvRows.push([`"Contact: +63 945 688 2266 | wislandhub2025@gmail.com | www.wislandhub.com"`]);
         csvRows.push([]);
         csvRows.push([`"Hotel Front Desk Business Daily Report"`]);
@@ -2878,7 +2734,7 @@ function exportReportCSV() {
         csvRows.push([`"Revenue Statistics"`]);
         if (sec.revenue_statistics && sec.revenue_statistics.items) {
             sec.revenue_statistics.items.forEach(it => {
-                const val = it.is_currency ? 'Ã¢â€šÂ±' + parseFloat(it.value).toLocaleString('en-PH', {minimumFractionDigits: 2}) : it.value;
+                const val = it.is_currency ? '₱' + parseFloat(it.value).toLocaleString('en-PH', {minimumFractionDigits: 2}) : it.value;
                 csvRows.push([`"${it.label}"`, `"${val}"`]);
             });
         }
@@ -2887,7 +2743,7 @@ function exportReportCSV() {
         csvRows.push([`"Payment Summary"`]);
         if (sec.payment_summary && sec.payment_summary.items) {
             sec.payment_summary.items.forEach(it => {
-                const val = it.is_currency ? 'Ã¢â€šÂ±' + parseFloat(it.value).toLocaleString('en-PH', {minimumFractionDigits: 2}) : it.value;
+                const val = it.is_currency ? '₱' + parseFloat(it.value).toLocaleString('en-PH', {minimumFractionDigits: 2}) : it.value;
                 csvRows.push([`"${it.label}"`, `"${val}"`]);
             });
         }
@@ -2934,8 +2790,8 @@ function exportReportCSV() {
         csvRows.push([`"Audited By (Night Audit): ${csvStaff.nightAudit.replace(/"/g, '""')}"`, `"Signature: __________________"`, `"Date: ____________"`]);
         csvRows.push([`"Approved By (Executive): ${csvStaff.executive.replace(/"/g, '""')}"`, `"Signature: __________________"`, `"Date: ____________"`]);
         csvRows.push([]);
-        csvRows.push([`"Confidential Property Record Ã¢â‚¬Â¢ Governed under Republic Act No. 10173 (Data Privacy Act of 2012)"`]);
-        csvRows.push([`"System Node: PH-BOHOL-PANGLAO-01 Ã¢â‚¬Â¢ Ref: ${d.report_ref || 'FDBR'}"`]);
+        
+        
         
         let csvContent = "\uFEFF" + csvRows.map(e => e.join(",")).join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2953,10 +2809,10 @@ function exportReportCSV() {
     // 1. Header Meta & Classification
     csvRows.push([`"W Island Backpackers Inn - Official Property Management System"`]);
     csvRows.push([`"Dao, Dauis - Panglao Center Road, Dauis, Panglao Island, Bohol 6339, Philippines"`]);
-    csvRows.push([`"DOT Region VII: DOT-R7-ACC-2024-0318 | BIR TIN: 432-876-543-00000 (Non-VAT) | BP-2024-DAUIS-0521"`]);
+    
     csvRows.push([`"Contact: +63 945 688 2266 | wislandhub2025@gmail.com | www.wislandhub.com"`]);
     csvRows.push([`"Report Title"`, `"${(d.report_title || 'DAILY RESERVATION SUMMARY & FRONT OFFICE NIGHT AUDIT').toUpperCase()}"`]);
-    csvRows.push([`"Classification"`, `"CONFIDENTIAL // OFFICIAL PROPERTY AUDIT"`]);
+    
     csvRows.push([`"Reference #"`, `"${d.report_ref || ''}"`]);
     csvRows.push([`"Reporting Cycle"`, `"${d.date_range_label || ''}"`]);
     csvRows.push([`"Generated At"`, `"${d.generated_at_formatted || d.generated_at || ''}"`]);
@@ -3031,8 +2887,8 @@ function exportReportCSV() {
     csvRows.push([`"Night Audit: ${genStaff.nightAudit.replace(/"/g, '""')}"`, `"Signature: __________________"`, `"Date: ____________"`]);
     csvRows.push([`"Executive: ${genStaff.executive.replace(/"/g, '""')}"`, `"Signature: __________________"`, `"Date: ____________"`]);
     csvRows.push([]);
-    csvRows.push([`"CONFIDENTIAL PROPERTY AUDIT RECORD - W Island Backpackers Inn, Dauis, Panglao, Bohol"`]);
-    csvRows.push([`"Generated via W Island Hub PMS v2.4.0 under RA 10173 (Philippine Data Privacy Act)"`]);
+    
+    
 
     const csvContent = "\uFEFF" + csvRows.map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -3084,7 +2940,7 @@ function loadGuestFeedback() {
                             <p class="text-gray-600 text-sm mt-1">${report.message}</p>
                             <p class="text-xs text-gray-400 mt-2 flex items-center gap-2">
                                 <span><i class="fas fa-user mr-1"></i> ${report.user_name || 'Guest'}</span>
-                                <span>Ã¢â‚¬Â¢</span>
+                                <span>•</span>
                                 <span><i class="fas fa-clock mr-1"></i> ${report.created_at || 'Recent'}</span>
                             </p>
                             ${report.admin_response ? `

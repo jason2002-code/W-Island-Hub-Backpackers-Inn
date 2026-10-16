@@ -328,8 +328,8 @@
     </section>
 
     <!-- Fullscreen Gallery Lightbox Modal -->
-    <div id="gallery-lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="relative max-w-5xl w-full flex flex-col items-center animate-fadeIn">
+    <div id="gallery-lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden items-center justify-center p-4 cursor-pointer" onclick="closeGalleryLightbox()">
+        <div class="relative max-w-5xl w-full flex flex-col items-center animate-fadeIn cursor-default" onclick="event.stopPropagation()">
             <!-- Close Button -->
             <button onclick="closeGalleryLightbox()" 
                     aria-label="Close Lightbox" 
@@ -443,16 +443,28 @@
                         $imgUrl = !empty($amenity['image_url']) ? htmlspecialchars($amenity['image_url']) : '';
                         $gradClass = $amenityGradients[$category] ?? 'from-amber-400 to-yellow-600 text-slate-950';
                     ?>
-                    <div class="amenity-card-item bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between shadow-xl overflow-hidden">
+                    <div class="amenity-card-item bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between shadow-xl overflow-hidden cursor-pointer"
+                         data-img="<?php echo htmlspecialchars($imgUrl, ENT_QUOTES); ?>"
+                         data-title="<?php echo htmlspecialchars($title, ENT_QUOTES); ?>"
+                         data-cat="<?php echo htmlspecialchars($category, ENT_QUOTES); ?>"
+                         data-desc="<?php echo htmlspecialchars($desc, ENT_QUOTES); ?>"
+                         data-icon="<?php echo htmlspecialchars($iconClass, ENT_QUOTES); ?>"
+                         data-grad="<?php echo htmlspecialchars($gradClass, ENT_QUOTES); ?>"
+                         onclick="openAmenityFromCard(this)"
+                         title="Click to view photo & details">
                         <div>
                             <!-- Card Image Banner -->
                             <?php if ($imgUrl): ?>
-                            <div class="h-48 sm:h-52 w-full overflow-hidden relative bg-slate-900">
-                                <img src="<?php echo $imgUrl; ?>" alt="<?php echo $title; ?>" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out">
+                            <div class="h-48 sm:h-52 w-full overflow-hidden relative bg-slate-900 group/img">
+                                <img src="<?php echo $imgUrl; ?>" alt="<?php echo $title; ?>" class="w-full h-full object-cover group-hover/img:scale-108 transition-transform duration-700 ease-out">
                                 <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
                                 <span class="absolute top-4 left-4 text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
                                     <?php echo $category; ?>
                                 </span>
+                                <!-- Zoom Icon Overlay -->
+                                <div class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-950/70 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md">
+                                    <i class="fas fa-expand text-xs text-amber-400"></i>
+                                </div>
                             </div>
                             <?php endif; ?>
 
@@ -461,11 +473,10 @@
                                     <div class="w-13 h-13 rounded-2xl bg-gradient-to-br <?php echo $gradClass; ?> flex items-center justify-center text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                                         <i class="<?php echo $iconClass; ?>"></i>
                                     </div>
-                                    <?php if (!$imgUrl): ?>
-                                    <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-white/10 px-3 py-1 rounded-full border border-white/15">
-                                        <?php echo $category; ?>
+                                    <span class="text-xs font-semibold text-amber-400 group-hover:text-amber-300 flex items-center gap-1.5 transition-colors bg-white/5 group-hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+                                        <i class="fas fa-image text-xs"></i>
+                                        <span>View Photo</span>
                                     </span>
-                                    <?php endif; ?>
                                 </div>
 
                                 <h3 class="text-xl font-bold text-white mb-2.5 group-hover:text-amber-300 transition-colors">
@@ -484,6 +495,62 @@
         </div>
     </section>
 
+    <!-- ================= AMENITY IMAGE & DETAILS MODAL ================= -->
+    <div id="amenity-image-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden items-center justify-center p-3 sm:p-6 transition-all duration-300 opacity-0 cursor-pointer" onclick="closeAmenityImageModal(event)">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden my-auto transform transition-all duration-300 scale-95 flex flex-col max-h-[92vh] cursor-default" onclick="event.stopPropagation()">
+            
+            <!-- Image Header Banner -->
+            <div class="relative h-64 sm:h-80 w-full bg-slate-950 overflow-hidden flex-shrink-0 group/modalimg">
+                <img id="amenity-modal-img" src="" alt="Amenity Photo" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-black/40"></div>
+                
+                <!-- Close Button -->
+                <button onclick="closeAmenityImageModal()" type="button" class="absolute top-4 right-4 bg-black/60 hover:bg-black/90 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-md transition-all duration-200 border border-white/20 shadow-lg cursor-pointer z-20" aria-label="Close modal">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+                
+                <!-- Category Badge -->
+                <div class="absolute top-4 left-4 z-20">
+                    <span id="amenity-modal-category" class="text-xs font-bold uppercase tracking-wider text-amber-300 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 shadow-md">
+                        Amenity
+                    </span>
+                </div>
+
+                <!-- Fullscreen Hint in Image Banner -->
+                <button type="button" onclick="if(window.openGalleryLightbox && document.getElementById('amenity-modal-img').src) { closeAmenityImageModal(); window.openGalleryLightbox(document.getElementById('amenity-modal-img').src, document.getElementById('amenity-modal-title').textContent); }" class="absolute bottom-4 right-4 z-20 text-[11px] font-semibold text-white/80 hover:text-white bg-black/50 hover:bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15 transition-all flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-expand text-amber-400 text-xs"></i>
+                    <span>Fullscreen</span>
+                </button>
+            </div>
+
+            <!-- Content Details Area -->
+            <div class="p-6 sm:p-8 overflow-y-auto">
+                <div class="flex items-center gap-4 mb-4">
+                    <div id="amenity-modal-icon-wrap" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-slate-950 flex items-center justify-center text-xl shadow-lg flex-shrink-0">
+                        <i id="amenity-modal-icon" class="fas fa-star"></i>
+                    </div>
+                    <div>
+                        <h3 id="amenity-modal-title" class="text-2xl font-serif font-bold text-white leading-tight"></h3>
+                        <p class="text-xs text-amber-400 font-medium mt-0.5">W Island Hub Signature Feature</p>
+                    </div>
+                </div>
+
+                <p id="amenity-modal-desc" class="text-slate-300 text-sm sm:text-base leading-relaxed bg-white/5 p-4 rounded-2xl border border-white/10"></p>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-slate-950/60 border-t border-white/10 flex items-center justify-between gap-3 flex-shrink-0">
+                <span class="text-xs text-slate-400 flex items-center gap-1.5">
+                    <i class="fas fa-map-marker-alt text-amber-400"></i> Dauis, Panglao Island, Bohol
+                </span>
+                <button onclick="closeAmenityImageModal()" type="button" class="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition cursor-pointer border border-white/10">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <script>
     // Horizontal carousel scroll for amenities section
     function slideAmenitiesCarousel(direction) {
@@ -492,6 +559,91 @@
         const scrollAmount = (container.clientWidth * 0.8) * direction;
         container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
+
+    // Modal Functions for Amenities
+    function openAmenityImageModal(imgSrc, title, category, description, iconClass, gradClass) {
+        const modal = document.getElementById('amenity-image-modal');
+        const modalImg = document.getElementById('amenity-modal-img');
+        const modalTitle = document.getElementById('amenity-modal-title');
+        const modalCat = document.getElementById('amenity-modal-category');
+        const modalDesc = document.getElementById('amenity-modal-desc');
+        const modalIcon = document.getElementById('amenity-modal-icon');
+        const modalIconWrap = document.getElementById('amenity-modal-icon-wrap');
+
+        if (!modal) return;
+
+        if (modalImg) modalImg.src = imgSrc || 'assets/image/background.jpg';
+        if (modalTitle) modalTitle.textContent = title || 'Inn Amenity';
+        if (modalCat) modalCat.textContent = category || 'Amenity';
+        if (modalDesc) modalDesc.textContent = description || 'Experience modern comfort and authentic island living at W Island Hub.';
+        if (modalIcon) modalIcon.className = iconClass || 'fas fa-star';
+        if (modalIconWrap && gradClass) {
+            modalIconWrap.className = 'w-12 h-12 rounded-2xl bg-gradient-to-br ' + gradClass + ' flex items-center justify-center text-xl shadow-lg flex-shrink-0';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        void modal.offsetWidth;
+        modal.classList.remove('opacity-0');
+
+        const dialog = modal.querySelector('div');
+        if (dialog) {
+            dialog.classList.remove('scale-95');
+            dialog.classList.add('scale-100');
+        }
+
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAmenityImageModal(e) {
+        if (e && e.target) {
+            const dialogBox = e.target.closest && e.target.closest('#amenity-image-modal > div');
+            if (dialogBox && !e.target.closest('button[onclick*="closeAmenityImageModal"]')) {
+                return;
+            }
+        }
+
+        const modal = document.getElementById('amenity-image-modal');
+        if (!modal) return;
+
+        modal.classList.add('opacity-0');
+        const dialog = modal.querySelector('div');
+        if (dialog) {
+            dialog.classList.remove('scale-100');
+            dialog.classList.add('scale-95');
+        }
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }, 200);
+    }
+
+    function openAmenityFromCard(el) {
+        const card = el.closest ? el.closest('.amenity-card-item') : el;
+        if (!card) return;
+        const img = card.dataset.img || 'assets/image/background.jpg';
+        const title = card.dataset.title || '';
+        const cat = card.dataset.cat || 'Amenity';
+        const desc = card.dataset.desc || '';
+        const icon = card.dataset.icon || 'fas fa-star';
+        const grad = card.dataset.grad || 'from-amber-400 to-yellow-600 text-slate-950';
+        openAmenityImageModal(img, title, cat, desc, icon, grad);
+    }
+
+    window.openAmenityImageModal = openAmenityImageModal;
+    window.closeAmenityImageModal = closeAmenityImageModal;
+    window.openAmenityFromCard = openAmenityFromCard;
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('amenity-image-modal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeAmenityImageModal();
+            }
+        }
+    });
 
     // Dynamic Live Hydration for Amenities (Auto-refreshes if admin updates image/text)
     async function syncLandingAmenities() {
@@ -521,24 +673,46 @@
                 return div.innerHTML;
             };
 
+            const escAttr = (s) => {
+                return (s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            };
+
             track.innerHTML = data.amenities.map(amenity => {
                 const cat = esc(amenity.category || 'General');
                 const iconClass = esc(amenity.icon || 'fas fa-star');
                 const title = esc(amenity.title || '');
                 const desc = esc(amenity.description || '');
-                const imgUrl = amenity.image_url ? esc(amenity.image_url) : '';
+                const imgUrl = amenity.image_url ? esc(amenity.image_url) : 'assets/image/background.jpg';
                 const gradClass = gradients[amenity.category] || 'from-amber-400 to-yellow-600 text-slate-950';
 
+                const attrImg = escAttr(amenity.image_url || 'assets/image/background.jpg');
+                const attrTitle = escAttr(amenity.title || '');
+                const attrCat = escAttr(amenity.category || 'General');
+                const attrDesc = escAttr(amenity.description || '');
+                const attrIcon = escAttr(amenity.icon || 'fas fa-star');
+                const attrGrad = escAttr(gradClass);
+
                 return `
-                <div class="amenity-card-item bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between shadow-xl overflow-hidden">
+                <div class="amenity-card-item bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 hover:border-amber-400/50 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between shadow-xl overflow-hidden cursor-pointer"
+                     data-img="${attrImg}"
+                     data-title="${attrTitle}"
+                     data-cat="${attrCat}"
+                     data-desc="${attrDesc}"
+                     data-icon="${attrIcon}"
+                     data-grad="${attrGrad}"
+                     onclick="openAmenityFromCard(this)"
+                     title="Click to view photo & details">
                     <div>
                         ${imgUrl ? `
-                        <div class="h-48 sm:h-52 w-full overflow-hidden relative bg-slate-900">
-                            <img src="${imgUrl}" alt="${title}" class="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out">
+                        <div class="h-48 sm:h-52 w-full overflow-hidden relative bg-slate-900 group/img">
+                            <img src="${imgUrl}" alt="${title}" class="w-full h-full object-cover group-hover/img:scale-108 transition-transform duration-700 ease-out">
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
                             <span class="absolute top-4 left-4 text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
                                 ${cat}
                             </span>
+                            <div class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-950/70 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md">
+                                <i class="fas fa-expand text-xs text-amber-400"></i>
+                            </div>
                         </div>` : ''}
 
                         <div class="p-6 sm:p-8">
@@ -546,10 +720,10 @@
                                 <div class="w-13 h-13 rounded-2xl bg-gradient-to-br ${gradClass} flex items-center justify-center text-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                                     <i class="${iconClass}"></i>
                                 </div>
-                                ${!imgUrl ? `
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-white/10 px-3 py-1 rounded-full border border-white/15">
-                                    ${cat}
-                                </span>` : ''}
+                                <span class="text-xs font-semibold text-amber-400 group-hover:text-amber-300 flex items-center gap-1.5 transition-colors bg-white/5 group-hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+                                    <i class="fas fa-image text-xs"></i>
+                                    <span>View Photo</span>
+                                </span>
                             </div>
 
                             <h3 class="text-xl font-bold text-white mb-2.5 group-hover:text-amber-300 transition-colors">

@@ -531,7 +531,8 @@ function renderRooms(filterDate = null) {
                     ` : `
                         <span class="text-xs text-brand-blue bg-blue-50 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="fas fa-user-friends text-[10px]"></i> Up to ${roomMaxCap} Guest${roomMaxCap > 1 ? 's' : ''}</span>
                     `}
-                    ${room.amenities.slice(0,3).map(a => `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${a}</span>`).join('')}
+                    ${room.amenities.slice(0,3).map(a => `<button type="button" onclick="openRoomInfoModal(${room.id}, 'amenities')" class="text-xs text-gray-600 bg-gray-100 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 border border-transparent px-2 py-1 rounded transition-colors cursor-pointer" title="View all amenities">${a}</button>`).join('')}
+                    ${room.amenities.length > 3 ? `<button type="button" onclick="openRoomInfoModal(${room.id}, 'amenities')" class="text-xs text-brand-blue bg-blue-50 hover:bg-blue-100 border border-blue-100 px-2 py-1 rounded font-semibold transition-colors cursor-pointer" title="View all amenities">+${room.amenities.length - 3} more</button>` : ''}
                 </div>
                 
                 <!-- Reviews Quick Action Button (Opens Horizontal Reviews in Modal) -->
@@ -1434,6 +1435,16 @@ function populateAndShowRoomModal(room, scrollToSection = null) {
             const revSection = document.getElementById('modal-reviews-section');
             if (revSection) {
                 revSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 300);
+    } else if (scrollToSection === 'amenities') {
+        setTimeout(() => {
+            const amenSection = document.getElementById('modal-room-amenities');
+            if (amenSection) {
+                amenSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // Briefly highlight the amenities section to draw attention
+                amenSection.classList.add('ring-2', 'ring-amber-400', 'ring-offset-2', 'rounded-2xl');
+                setTimeout(() => amenSection.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-2', 'rounded-2xl'), 1500);
             }
         }, 300);
     }

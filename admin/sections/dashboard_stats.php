@@ -315,7 +315,7 @@ function viewRoomDetails(roomId) {
                 if (room) {
                     // Display room info
                     document.getElementById('room-details-title').innerText = room.name;
-                    document.getElementById('room-details-type').innerText = room.type + ' • Capacity: ' + room.capacity + ' guests';
+                    document.getElementById('room-details-type').innerText = room.type;
                     document.getElementById('room-details-price').innerText = '₱' + room.price;
                     document.getElementById('room-details-capacity').innerText = room.capacity + ' Guest(s)';
                     const modalIsOccupied = room.status === 'Occupied' || room.is_occupied || (room.remaining_beds !== undefined && room.remaining_beds === 0);

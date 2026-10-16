@@ -86,6 +86,7 @@ if ($pdo) {
                 $room_capacity = intval($room['capacity'] ?? 2); 
                 $room_max_capacity = intval($room['max_capacity'] ?? $room_capacity);
                 $is_dorm = ($room['type'] === 'Dorm' || $room_id === 5);
+                $dorm_total_price = 0.00;
                 if ($is_dorm) {
                     $room_max_capacity = 8;
                     $dorm_bed_price = 460.00;
@@ -129,8 +130,11 @@ if ($pdo) {
                             </span>
                         <?php endif; ?>
                         <?php foreach (array_slice($amenities, 0, 3) as $amenity): ?>
-                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded"><?php echo htmlspecialchars($amenity); ?></span>
+                            <button type="button" onclick="openRoomInfoModal(<?php echo $room_id; ?>, 'amenities')" class="text-xs text-gray-600 bg-gray-100 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 border border-transparent px-2 py-1 rounded transition-colors cursor-pointer" title="View all amenities"><?php echo htmlspecialchars($amenity); ?></button>
                         <?php endforeach; ?>
+                        <?php if (count($amenities) > 3): ?>
+                            <button type="button" onclick="openRoomInfoModal(<?php echo $room_id; ?>, 'amenities')" class="text-xs text-brand-blue bg-blue-50 hover:bg-blue-100 border border-blue-100 px-2 py-1 rounded font-semibold transition-colors cursor-pointer" title="View all amenities">+<?php echo count($amenities) - 3; ?> more</button>
+                        <?php endif; ?>
                     </div>
                     
                     <!-- Reviews Quick Action Button (Opens Horizontal Reviews in Modal) -->

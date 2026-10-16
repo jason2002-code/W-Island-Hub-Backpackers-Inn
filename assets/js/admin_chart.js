@@ -326,8 +326,7 @@
                             <!-- Controls Row -->
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
                                 <div>
-                                    <h4 class="font-bold text-gray-800 text-base">Performance Overview</h4>
-                                    <p class="text-xs text-gray-400" id="trend-period-label">Select timeframe to update metrics</p>
+                                    <span class="text-xs text-gray-500 font-medium" id="trend-period-label">Select timeframe to update metrics</span>
                                 </div>
                                 <div class="flex items-center gap-2.5">
                                     <label for="trend-timeframe" class="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:inline">Timeframe:</label>
@@ -389,7 +388,6 @@
                                         <i class="fas fa-peso-sign text-brand-purple/60"></i>
                                     </div>
                                     <div id="trend-summary-revenue" class="text-2xl font-bold text-gray-800 mt-2">₱0.00</div>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">Total confirmed earnings</p>
                                 </div>
                                 <div class="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-2xl p-4 shadow-xs">
                                     <div class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center justify-between">
@@ -397,7 +395,6 @@
                                         <i class="fas fa-calendar-check text-emerald-500/60"></i>
                                     </div>
                                     <div id="trend-summary-bookings" class="text-2xl font-bold text-gray-800 mt-2">0</div>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">Total reservations</p>
                                 </div>
                                 <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl p-4 shadow-xs">
                                     <div class="text-[11px] font-bold text-brand-blue uppercase tracking-wider flex items-center justify-between">
@@ -405,7 +402,6 @@
                                         <i class="fas fa-calculator text-brand-blue/60"></i>
                                     </div>
                                     <div id="trend-summary-avg" class="text-2xl font-bold text-gray-800 mt-2">₱0.00</div>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">Revenue per booking</p>
                                 </div>
                             </div>
 
@@ -418,7 +414,6 @@
                             <div>
                                 <div class="flex items-center justify-between mb-3">
                                     <h4 class="font-bold text-gray-700 text-sm">Detailed Breakdown</h4>
-                                    <span id="trend-record-count" class="text-xs text-gray-400 font-medium">0 periods</span>
                                 </div>
                                 <div class="overflow-x-auto border border-gray-100 rounded-2xl shadow-xs">
                                     <table class="w-full text-left border-collapse">
