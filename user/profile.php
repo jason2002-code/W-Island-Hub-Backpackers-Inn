@@ -24,6 +24,12 @@ if (!$user) {
     exit();
 }
 
+// Admins should manage the property via the Admin Dashboard, not the Guest Profile
+if (isset($user['role']) && $user['role'] === 'admin') {
+    header("Location: ../admin/dashboard.php");
+    exit();
+}
+
 // Parse preferences if JSON
 $preferences = [];
 if (!empty($user['travel_preferences'])) {

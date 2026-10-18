@@ -64,7 +64,6 @@ if (!empty($_SESSION['user_id'])) {
         <script src="assets/js/modules/ui.js?v=<?= time() ?>"></script>
         <script src="assets/js/modules/router.js?v=<?= time() ?>"></script>
         <script src="assets/js/modules/carousel.js?v=<?= time() ?>"></script>
-        <script src="assets/js/modules/email_verification.js?v=<?= time() ?>"></script>
         <script src="assets/js/modules/auth.js?v=<?= time() ?>"></script>
         <script src="assets/js/modules/rooms.js?v=<?= time() ?>"></script>
         <script src="assets/js/modules/booking.js?v=<?= time() ?>"></script>

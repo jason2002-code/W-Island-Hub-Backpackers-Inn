@@ -531,11 +531,30 @@ async function saveAmenity(e) {
     const spinner = document.getElementById('save-amenity-spinner');
     const id = document.getElementById('amenity-id').value;
     const action = id ? 'update' : 'create';
+    const titleVal = (document.getElementById('amenity-title').value || '').trim();
+    if (!titleVal) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Amenity title is required', 'warning');
+        }
+        return;
+    }
+
+    // Check for duplicate amenity title client-side (case-insensitive & trimmed)
+    const isDuplicate = allAmenities.some(a => 
+        (a.title || '').trim().toLowerCase() === titleVal.toLowerCase() &&
+        (!id || parseInt(a.id) !== parseInt(id))
+    );
+    if (isDuplicate) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(`An amenity with the title "${titleVal}" already exists.`, 'warning');
+        }
+        return;
+    }
 
     const formData = new FormData();
     formData.append('action', action);
     if (id) formData.append('id', id);
-    formData.append('title', document.getElementById('amenity-title').value.trim());
+    formData.append('title', titleVal);
     formData.append('category', document.getElementById('amenity-category').value);
     formData.append('sort_order', document.getElementById('amenity-sort-order').value);
     formData.append('icon', document.getElementById('amenity-icon').value.trim());

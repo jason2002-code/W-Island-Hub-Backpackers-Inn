@@ -144,6 +144,14 @@ function createAmenity() {
         return;
     }
 
+    // Prevent duplicate amenity with the same title (case-insensitive & trimmed)
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM `amenities` WHERE TRIM(LOWER(`title`)) = TRIM(LOWER(?))");
+    $stmtCheck->execute([$title]);
+    if ($stmtCheck->fetchColumn() > 0) {
+        echo json_encode(['success' => false, 'message' => "An amenity with the title \"$title\" already exists."]);
+        return;
+    }
+
     if (empty($description)) {
         echo json_encode(['success' => false, 'message' => 'Amenity description is required']);
         return;
@@ -213,6 +221,14 @@ function updateAmenity() {
 
     if (empty($title)) {
         echo json_encode(['success' => false, 'message' => 'Amenity title is required']);
+        return;
+    }
+
+    // Prevent duplicate amenity with the same title (case-insensitive & trimmed, excluding current)
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM `amenities` WHERE TRIM(LOWER(`title`)) = TRIM(LOWER(?)) AND `id` != ?");
+    $stmtCheck->execute([$title, $id]);
+    if ($stmtCheck->fetchColumn() > 0) {
+        echo json_encode(['success' => false, 'message' => "An amenity with the title \"$title\" already exists."]);
         return;
     }
 

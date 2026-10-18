@@ -32,27 +32,6 @@ if (!$pdo) {
 }
 
 try {
-    // If provider is Google, ensure the user has verified the email via the code/link sent to their Gmail
-    if (strtolower($provider) === 'google') {
-        $stmtVer = $pdo->prepare("
-            SELECT id FROM email_verifications 
-            WHERE email = ? AND verified = 1 AND verified_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            ORDER BY id DESC LIMIT 1
-        ");
-        $stmtVer->execute([$email]);
-        if (!$stmtVer->fetch()) {
-            echo json_encode([
-                'success' => false,
-                'requires_verification' => true,
-                'email' => $email,
-                'name' => $name,
-                'provider' => $provider,
-                'message' => 'Please enter the verification code sent to your Gmail to confirm your account.'
-            ]);
-            exit;
-        }
-    }
-
     // Check if user already exists
     $stmt = $pdo->prepare("SELECT id, name, email, role FROM users WHERE email = ?");
     $stmt->execute([$email]);

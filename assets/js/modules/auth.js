@@ -61,12 +61,6 @@ function updateAuthUI() {
                                 </div>
                                 <span>Admin Panel</span>
                             </a>
-                            <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-brand-blue transition-colors group">
-                                <div class="w-7 h-7 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
-                                    <i class="fas fa-user-circle"></i>
-                                </div>
-                                <span>My Profile</span>
-                            </a>
                         ` : `
                             <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-brand-blue transition-colors group">
                                 <div class="w-7 h-7 rounded-lg bg-blue-50 text-brand-blue flex items-center justify-center text-xs group-hover:scale-105 transition-transform">
@@ -113,10 +107,6 @@ function updateAuthUI() {
                         <a href="${basePath}admin/dashboard.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors">
                             <i class="fas fa-shield-alt text-amber-500 w-5 text-center"></i>
                             <span>Admin Panel</span>
-                        </a>
-                        <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-brand-blue transition-colors">
-                            <i class="fas fa-user-circle text-brand-blue w-5 text-center"></i>
-                            <span>My Profile</span>
                         </a>
                     ` : `
                         <a href="${basePath}user/profile.php" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-brand-blue transition-colors">
@@ -399,23 +389,7 @@ function handleSocialLogin(provider) {
  * @param {string} name - User display name.
  */
 function processSocialLogin(provider, email, name) {
-    if (provider === 'Google' && typeof window.checkEmailVerified === 'function') {
-        window.checkEmailVerified(email).then(isVerified => {
-            if (!isVerified) {
-                window.showToast("A verification code & link have been sent to your Gmail (" + email + ").", 'info');
-                if (typeof window.triggerEmailVerification === 'function') {
-                    window.emailVerificationState.onSuccessCallback = () => {
-                        executeSocialLoginRequest(provider, email, name);
-                    };
-                    window.triggerEmailVerification('google', email, name);
-                }
-                return;
-            }
-            executeSocialLoginRequest(provider, email, name);
-        });
-    } else {
-        executeSocialLoginRequest(provider, email, name);
-    }
+    executeSocialLoginRequest(provider, email, name);
 }
 
 function executeSocialLoginRequest(provider, email, name) {
@@ -431,14 +405,6 @@ function executeSocialLoginRequest(provider, email, name) {
             window.saveState();
             updateAuthUI();
             window.router('home');
-        } else if (data.requires_verification) {
-            window.showToast(data.message || 'Please verify your Gmail account.', 'info');
-            if (typeof window.triggerEmailVerification === 'function') {
-                window.emailVerificationState.onSuccessCallback = () => {
-                    executeSocialLoginRequest(provider, email, name);
-                };
-                window.triggerEmailVerification('google', email, name);
-            }
         } else {
             window.showToast(data.message, 'error');
         }

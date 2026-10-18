@@ -143,6 +143,8 @@
 </div>
 
 <script>
+let allLoadedRooms = [];
+
 // Loads all rooms from the backend API (actions/rooms_action.php) and dynamically renders them as cards in the grid
 function loadRooms() {
     fetch('../actions/rooms_action.php')
@@ -151,6 +153,7 @@ function loadRooms() {
             const container = document.getElementById('rooms-grid');
             
             if (data.success && data.rooms.length > 0) {
+                allLoadedRooms = data.rooms;
                 container.innerHTML = data.rooms.map(room => `
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden flex flex-col transition hover:shadow-md cursor-pointer" onclick="viewRoomFeatures('${room.id}')">
                         <img src="${room.image.startsWith('http') ? room.image : '../' + room.image}" class="w-full h-48 object-cover bg-gray-200" alt="${room.name}">
@@ -281,13 +284,29 @@ function saveRoom(event) {
     event.preventDefault();
     
     const roomId = document.getElementById('room-id').value;
+    const roomName = document.getElementById('room-name').value.trim();
+
+    if (!roomName) {
+        showToast('Room name is required', 'error');
+        return;
+    }
+
+    // Check for duplicate room name client-side (case-insensitive & trimmed)
+    const isDuplicate = allLoadedRooms.some(r => 
+        (r.name || '').trim().toLowerCase() === roomName.toLowerCase() && 
+        (!roomId || parseInt(r.id) !== parseInt(roomId))
+    );
+    if (isDuplicate) {
+        showToast('A room with this name already exists. Please choose a different room name.', 'error');
+        return;
+    }
     
-      // Process amenities from checkboxes to JSON string
+    // Process amenities from checkboxes to JSON string
     const checkedAmenities = Array.from(document.querySelectorAll('.amenity-cb:checked')).map(cb => cb.value);
     const amenitiesJson = JSON.stringify(checkedAmenities);
 
     const formData = new FormData();
-    formData.append('name', document.getElementById('room-name').value);
+    formData.append('name', roomName);
     formData.append('type', document.getElementById('room-type').value);
     formData.append('capacity', parseInt(document.getElementById('room-capacity').value));
     formData.append('image', document.getElementById('room-image').value || 'assets/image/background.jpg');

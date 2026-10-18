@@ -95,46 +95,14 @@
 
         // --- UI UTILS ---
         function toggleAdminSidebar() {
-            const sidebar = document.getElementById('admin-sidebar');
-            const overlay = document.getElementById('admin-sidebar-overlay');
-            if(sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
+            if (typeof window.toggleAdminSidebar === 'function') {
+                window.toggleAdminSidebar();
             }
         }
 
         function setActiveAdminLink(element) {
-            document.querySelectorAll('.admin-link').forEach(link => {
-                link.classList.remove('bg-blue-50', 'text-brand-purple', 'font-medium');
-                link.classList.add('text-gray-600');
-            });
-            if (element) {
-                element.classList.add('bg-blue-50', 'text-brand-purple', 'font-medium');
-                element.classList.remove('text-gray-600');
-            }
-            
-            // Update parent Rooms button styling and dropdown open state
-            const roomsParent = document.getElementById('rooms-parent-btn');
-            const roomsDropdown = document.getElementById('rooms-dropdown-menu');
-            if (roomsParent && roomsDropdown) {
-                if (element && roomsDropdown.contains(element)) {
-                    roomsParent.classList.add('text-brand-purple', 'font-semibold', 'bg-blue-50/50');
-                    roomsParent.classList.remove('text-gray-600');
-                    if (typeof toggleRoomsDropdown === 'function') {
-                        toggleRoomsDropdown(true);
-                    }
-                } else {
-                    roomsParent.classList.remove('text-brand-purple', 'font-semibold', 'bg-blue-50/50');
-                    roomsParent.classList.add('text-gray-600');
-                }
-            }
-            
-            // Close sidebar on mobile after clicking
-            if(window.innerWidth < 768) {
-                toggleAdminSidebar();
+            if (typeof window.setActiveAdminLink === 'function') {
+                window.setActiveAdminLink(element);
             }
         }
 
@@ -261,18 +229,18 @@
             // Do not change the title here, keep the one from PHP
             // document.getElementById('admin-page-title').innerText = "Analytics Overview";
         
-            // Update stat cards by finding them in the container
-            const revenueCard = container.querySelector('h3.text-2xl.font-bold');
+            // Update stat cards by ID with selector fallback
+            const revenueCard = document.getElementById('dash-total-revenue') || container.querySelector('h3.text-2xl.font-bold');
             if (revenueCard) revenueCard.innerHTML = `₱${totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         
-            const bookingCard = container.querySelectorAll('h3.text-2xl.font-bold')[1];
+            const bookingCard = document.getElementById('dash-total-bookings') || container.querySelectorAll('h3.text-2xl.font-bold')[1];
             if (bookingCard) bookingCard.textContent = totalBookings.toLocaleString();
         
-            const userCard = container.querySelectorAll('h3.text-2xl.font-bold')[2];
+            const userCard = document.getElementById('dash-total-users') || container.querySelectorAll('h3.text-2xl.font-bold')[2];
             if (userCard) userCard.textContent = totalUsers.toLocaleString();
         
-            const roomCard = container.querySelectorAll('h3.text-2xl.font-bold')[3];
-            if(roomCard) roomCard.textContent = totalRooms.toLocaleString();
+            const roomCard = document.getElementById('dash-total-rooms') || container.querySelectorAll('h3.text-2xl.font-bold')[3];
+            if (roomCard) roomCard.textContent = totalRooms.toLocaleString();
         
             // Initialize charts with the new data
             initCharts();

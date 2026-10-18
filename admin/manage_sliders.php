@@ -425,7 +425,27 @@ function saveSlider() {
         sort_order: parseInt(document.getElementById('slider-sort-order').value) || 0
     };
     console.log('Form data:', data);
-    
+
+    const titleVal = (data.title || '').trim();
+    if (!titleVal) {
+        showToast('Please enter a slider title', 'warning');
+        resetSaveButton();
+        return;
+    }
+
+    // Check for duplicate slider title in the same carousel type
+    const isDuplicate = allSliders.some(s => 
+        (s.title || '').trim().toLowerCase() === titleVal.toLowerCase() &&
+        s.type === data.type &&
+        (!id || parseInt(s.id) !== parseInt(id))
+    );
+    if (isDuplicate) {
+        const carouselName = data.type === 'hero' ? 'Hero Carousel' : 'Island Gallery Carousel';
+        showToast(`A slider with the title "${titleVal}" already exists in ${carouselName}.`, 'warning');
+        resetSaveButton();
+        return;
+    }
+
     if (!data.image_url) {
         showToast('Please enter an image URL', 'warning');
         resetSaveButton();

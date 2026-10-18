@@ -537,10 +537,14 @@
 <!-- Guest Reply Modal -->
 <div id="reply-modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-        <div class="flex justify-between items-center mb-4">
+        <div class="flex justify-between items-center mb-3">
             <h3 class="text-xl font-bold text-gray-800">Reply to Guest</h3>
             <button onclick="closeReplyModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
         </div>
+        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4 flex items-center gap-2">
+            <i class="fas fa-info-circle shrink-0"></i>
+            Sending a reply <strong>does not</strong> resolve the ticket. Use <strong>Mark as Resolved</strong> on the inquiry card when the issue is fully handled.
+        </p>
         <input type="hidden" id="reply-report-id">
         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Reply Message</label>
         <textarea id="reply-message" rows="4" class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-brand-purple outline-none mb-4 text-sm" placeholder="Type your response to the guest..."></textarea>
@@ -2921,20 +2925,35 @@ function loadGuestFeedback() {
                     badge.classList.add('hidden');
                 }
 
-                container.innerHTML = data.reports.map(report => `
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                container.innerHTML = data.reports.map(report => {
+                    const isResolved = report.status === 'Resolved';
+                    const hasReply = !!report.admin_response;
+
+                    // Status badge: Pending | Reply Sent (still open) | Resolved
+                    let statusLabel = report.status;
+                    let statusColor = getFeedbackStatusColor(report.status);
+                    if (!isResolved && hasReply) {
+                        statusLabel = 'Reply Sent';
+                        statusColor = 'bg-blue-100 text-blue-700';
+                    } else if (!isResolved && !hasReply) {
+                        statusLabel = 'Pending';
+                        statusColor = 'bg-yellow-100 text-yellow-700';
+                    }
+
+                    return `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border ${isResolved ? 'border-green-100' : 'border-gray-100'} flex flex-col md:flex-row gap-4 items-start md:items-center">
                         <div class="w-12 h-12 rounded-2xl ${getFeedbackTypeColor(report.type)} flex items-center justify-center shrink-0 text-lg">
                             <i class="${getFeedbackTypeIcon(report.type)}"></i>
                         </div>
                         <div class="flex-1">
                             <div class="flex justify-between items-start mb-1">
-                                <h4 class="font-bold text-gray-800 text-base">${report.subject || 'Guest Message'} 
+                                <h4 class="font-bold text-gray-800 text-base">${report.subject || 'Guest Message'}
                                     <span class="text-xs font-normal text-gray-400 ml-2">
                                         ${report.room_name ? 'regarding ' + report.room_name : ''}
                                     </span>
                                 </h4>
-                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${getFeedbackStatusColor(report.status)}">
-                                    ${report.status}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${statusColor}">
+                                    ${statusLabel}
                                 </span>
                             </div>
                             <p class="text-gray-600 text-sm mt-1">${report.message}</p>
@@ -2949,16 +2968,29 @@ function loadGuestFeedback() {
                                     <span class="text-gray-700">${report.admin_response}</span>
                                 </div>
                             ` : ''}
+                            ${!isResolved ? `
+                                <p class="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Click <strong>Mark as Resolved</strong> only when the issue has been fully addressed.
+                                </p>
+                            ` : ''}
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="openReplyModal('${report.id}')" class="bg-purple-50 text-brand-purple hover:bg-purple-100 p-2.5 rounded-xl transition" title="Reply to Guest"><i class="fas fa-reply"></i></button>
-                            ${report.status !== 'Resolved' ? `<button onclick="updateFeedbackStatus('${report.id}', 'Resolved')" class="bg-green-50 text-green-600 hover:bg-green-100 p-2.5 rounded-xl transition" title="Mark as Resolved"><i class="fas fa-check"></i></button>` : ''}
-                            <button onclick="deleteFeedbackItem('${report.id}')" class="bg-gray-50 text-gray-400 hover:text-red-600 p-2.5 rounded-xl transition" title="Delete">
-                                <i class="fas fa-trash"></i>
+                        <div class="flex flex-col gap-2 shrink-0">
+                            <button onclick="openReplyModal('${report.id}')" class="flex items-center gap-1.5 bg-purple-50 text-brand-purple hover:bg-purple-100 px-3 py-2 rounded-xl transition text-xs font-semibold" title="${hasReply ? 'Update Reply' : 'Reply to Guest'}">
+                                <i class="fas fa-reply"></i> ${hasReply ? 'Update Reply' : 'Reply'}
+                            </button>
+                            ${!isResolved ? `
+                                <button onclick="updateFeedbackStatus('${report.id}', 'Resolved')" class="flex items-center gap-1.5 bg-green-50 text-green-700 hover:bg-green-100 px-3 py-2 rounded-xl transition text-xs font-semibold border border-green-200" title="Mark as Resolved">
+                                    <i class="fas fa-check-circle"></i> Mark Resolved
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteFeedbackItem('${report.id}')" class="flex items-center gap-1.5 bg-gray-50 text-gray-400 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl transition text-xs font-semibold" title="Delete">
+                                <i class="fas fa-trash"></i> Delete
                             </button>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             } else {
                 container.innerHTML = '<div class="bg-white p-12 text-center text-gray-400 rounded-2xl border border-gray-100">No guest inquiries or feedback received yet.</div>';
                 badge.classList.add('hidden');

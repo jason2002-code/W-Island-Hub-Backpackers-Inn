@@ -134,6 +134,15 @@ function createSlider() {
         return;
     }
 
+    // Prevent duplicate slider with the same title in this carousel type (case-insensitive & trimmed)
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM carousel_sliders WHERE TRIM(LOWER(title)) = TRIM(LOWER(?)) AND type = ?");
+    $stmtCheck->execute([$title, $type]);
+    if ($stmtCheck->fetchColumn() > 0) {
+        $carouselName = ($type === 'hero') ? 'Hero Carousel' : 'Island Gallery Carousel';
+        echo json_encode(['success' => false, 'message' => "A slider with the title \"$title\" already exists in $carouselName."]);
+        return;
+    }
+
     // Handle file upload (Priority: File Input > Manual URL)
     if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] === UPLOAD_ERR_OK) {
         if (!is_dir($upload_base)) mkdir($upload_base, 0755, true);
@@ -200,6 +209,20 @@ function updateSlider() {
     $title = trim($_POST['title'] ?? '');
     $type = in_array($_POST['type'] ?? 'hero', ['hero', 'marquee']) ? $_POST['type'] : 'hero';
     $sort_order = max(0, intval($_POST['sort_order'] ?? 0));
+
+    if (empty($title)) {
+        echo json_encode(['success' => false, 'message' => 'Title required']);
+        return;
+    }
+
+    // Prevent duplicate slider with the same title in this carousel type (case-insensitive & trimmed, excluding current)
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM carousel_sliders WHERE TRIM(LOWER(title)) = TRIM(LOWER(?)) AND type = ? AND id != ?");
+    $stmtCheck->execute([$title, $type, $id]);
+    if ($stmtCheck->fetchColumn() > 0) {
+        $carouselName = ($type === 'hero') ? 'Hero Carousel' : 'Island Gallery Carousel';
+        echo json_encode(['success' => false, 'message' => "A slider with the title \"$title\" already exists in $carouselName."]);
+        return;
+    }
 
     // Get existing
     $stmt_old = $pdo->prepare("SELECT image_url FROM carousel_sliders WHERE id = ?");

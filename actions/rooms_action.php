@@ -111,7 +111,7 @@ function addRoom() {
         exit;
     }
     $data = json_decode(file_get_contents('php://input'), true) ?: $_POST;
-    $name = $data['name'] ?? null;
+    $name = isset($data['name']) ? trim($data['name']) : '';
     $type = $data['type'] ?? null;
     $price = $data['price'] ?? null;
     $description = $data['description'] ?? null;
@@ -130,8 +130,16 @@ function addRoom() {
         }
     }
     
-    if (!$name || !$type || !$price) {
+    if (empty($name) || !$type || !$price) {
         echo json_encode(['success' => false, 'message' => 'Name, type, price required']);
+        exit;
+    }
+
+    // Prevent duplicate room with the same room name (case-insensitive & trimmed)
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE TRIM(LOWER(name)) = TRIM(LOWER(?))");
+    $stmtCheck->execute([$name]);
+    if ($stmtCheck->fetchColumn() > 0) {
+        echo json_encode(['success' => false, 'message' => 'A room with this name already exists. Please choose a different room name.']);
         exit;
     }
     try {
@@ -187,10 +195,26 @@ function updateRoom() {
         echo json_encode(['success' => false, 'message' => 'ID required']);
         exit;
     }
+
+    // Check for duplicate room name on update (case-insensitive & trimmed, excluding current room)
+    if (isset($data['name'])) {
+        $trimmedName = trim($data['name']);
+        if (empty($trimmedName)) {
+            echo json_encode(['success' => false, 'message' => 'Room name cannot be empty']);
+            exit;
+        }
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE TRIM(LOWER(name)) = TRIM(LOWER(?)) AND id != ?");
+        $stmtCheck->execute([$trimmedName, $roomId]);
+        if ($stmtCheck->fetchColumn() > 0) {
+            echo json_encode(['success' => false, 'message' => 'A room with this name already exists. Please choose a different room name.']);
+            exit;
+        }
+    }
+
     try {
         $updates = [];
         $params = [];
-        if (isset($data['name'])) { $updates[] = 'name = ?'; $params[] = $data['name']; }
+        if (isset($data['name'])) { $updates[] = 'name = ?'; $params[] = trim($data['name']); }
         if (isset($data['type'])) { $updates[] = 'type = ?'; $params[] = $data['type']; }
         if (isset($data['price'])) { $updates[] = 'price = ?'; $params[] = $data['price']; }
         if (isset($data['description'])) { $updates[] = 'description = ?'; $params[] = $data['description']; }

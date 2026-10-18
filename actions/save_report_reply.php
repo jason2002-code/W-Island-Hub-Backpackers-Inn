@@ -25,11 +25,11 @@ try {
         $pdo->exec("ALTER TABLE reports ADD COLUMN admin_response TEXT DEFAULT NULL");
     }
 
-    // Save the reply and mark as Resolved
-    $stmt = $pdo->prepare("UPDATE reports SET admin_response = ?, status = 'Resolved' WHERE id = ?");
+    // Save the reply WITHOUT changing status — admin must manually mark as Resolved
+    $stmt = $pdo->prepare("UPDATE reports SET admin_response = ? WHERE id = ?");
     $stmt->execute([$replyMessage, $reportId]);
 
-    echo json_encode(['success' => true, 'message' => 'Reply saved successfully']);
+    echo json_encode(['success' => true, 'message' => 'Reply sent to guest. Mark as Resolved when the issue is fully addressed.']);
 } catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
 }
